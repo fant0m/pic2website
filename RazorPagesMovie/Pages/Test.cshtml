@@ -1,0 +1,49 @@
+﻿@page
+@model TestModel
+@{
+}
+
+<div class="container">
+    <div class="row">
+        <div class="col-xs-8" style="overflow-x: scroll">
+            <img id="img" src="images/output.png " class="border rounded" />
+        </div>
+        <div class="col-xs-4" id="options">
+            <form id="form" class="form-horizontal" method="post">
+                <div class="form-group">
+                    <label for="canny1" class="col-sm-2 control-label">Canny 1</label>
+                    <div class="col-sm-10">
+                        <input type="text" class="form-control" name="canny1" id="canny1" value="20">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="canny2" class="col-sm-2 control-label">Canny 2</label>
+                    <div class="col-sm-10">
+                        <input type="text" class="form-control" name="canny2" id="canny2" value="50">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="blur" class="col-sm-2 control-label">Blur</label>
+                    <div class="col-sm-10">
+                        <input type="text" class="form-control" name="blur" id="blur" value="3">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="col-sm-offset-2 col-sm-10">
+                        <button type="submit" class="btn btn-default">Submit</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<iframe id="content" width="500" height="500"></iframe>
+
+
+<script type="text/javascript">
+    var doc = document.getElementById('content').contentWindow.document;
+    doc.open();
+    doc.write('@Html.Raw(Model.Output)');
+    doc.close();
+</script>

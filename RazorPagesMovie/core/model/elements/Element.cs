@@ -1,16 +1,19 @@
 ﻿using System;
+using OpenCvSharp;
 
 namespace RazorPagesMovie.core.model.elements
 {
     public abstract class Element
     {
-        protected int Id;
-        protected double Padding;
-        protected double Margin;
-        protected double Width;
-        protected double Height;
-        protected int[] Color;
-        protected string Class;
+        public int Id;
+        public double Padding;
+        public double Margin;
+        public double Width;
+        public int Height;
+        public int[] Color;
+        public string Class;
+        public Border Border;
+        public Scalar BackgroundColor;
 
         // @todo tu asi bude musieť byť list sub elementov
 

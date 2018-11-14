@@ -26,7 +26,7 @@ namespace RazorPagesMovie.Pages
 
         public void OnGet()
         {
-            Output = Test();
+            Output = TestParser();
             //Output = TestConvertor();
 
 
@@ -47,7 +47,7 @@ namespace RazorPagesMovie.Pages
                 }
             }*/
 
-
+            //Test3();
 
 
             //OCRTesseract ocr = OCRTesseract.Create("C:/users/tomsh/desktop/", "eng", psmode: 1);
@@ -55,6 +55,38 @@ namespace RazorPagesMovie.Pages
             //Console.WriteLine(text);
 
 
+        }
+
+        private void Test3()
+        {
+            byte[] imageData = System.IO.File.ReadAllBytes(@"./wwwroot/images/template2.png");
+            Mat img1 = Mat.FromImageData(imageData, ImreadModes.Color);
+            Mat gray1 = Mat.FromImageData(imageData, ImreadModes.GrayScale);
+
+            //gray1 = gray1.GaussianBlur (new OpenCvSharp.Size(3, 3), 0);
+            gray1 = gray1.AdaptiveThreshold(255, AdaptiveThresholdTypes.GaussianC, ThresholdTypes.BinaryInv, 105, 2); // 11,2 ; 75,10 ; 60,255
+            //gray1 = gray1.Threshold(60, 255, ThresholdTypes.BinaryInv);
+
+
+            //Canny Edge Detector
+            //Image<Gray, Byte> cannyGray = gray1.Canny(20, 50);
+            //Image<Bgr, Byte> imageResult = img1.Copy();
+            //Mat cannyGray = gray1.Canny(20, 35); // 0, 12, blur 9; 2, 17,  blur 7; 0, 25 blur 13; 20 35 blur 0
+            //var cannyGray = gray1;
+
+
+            //Cv2.FindContours(cannyGray, out var contours, out var hierarchy, mode: RetrievalModes.Tree, method: ContourApproximationModes.ApproxSimple);
+
+
+            Mat copy = gray1.Clone();
+            copy.SaveImage("wwwroot/images/output.png");
+        }
+
+        private string TestParser()
+        {
+            var templateParser = new TemplateParser("menu.png");
+
+            return templateParser.Analyse();
         }
 
         private string TestConvertor()
@@ -76,13 +108,16 @@ namespace RazorPagesMovie.Pages
 
         private string Test()
         {
-            var tess = new TesseractEngine(@"./wwwroot/tessdata", "eng", EngineMode.LstmOnly);
+           /* var tess = new TesseractEngine(@"./wwwroot/tessdata", "eng", EngineMode.LstmOnly);
             
-            byte[] imageData = System.IO.File.ReadAllBytes(@"./wwwroot/images/template2.png");
+            byte[] imageData = System.IO.File.ReadAllBytes(@"./wwwroot/images/menu.png");
             Mat img1 = Mat.FromImageData(imageData, ImreadModes.Color);
             //Convert the img1 to grayscale and then filter out the noise
-            Mat gray1 = Mat.FromImageData(imageData, ImreadModes.GrayScale)/*.PyrDown().PyrUp()*/;
-            gray1 = gray1.GaussianBlur (new OpenCvSharp.Size(13, 13), 0);
+            Mat gray1 = Mat.FromImageData(imageData, ImreadModes.GrayScale)/*.PyrDown().PyrUp()*/
+            ;
+            /*
+            // @todo neberie to šedú farbu takže asi menší blur / iné canny hodnoty
+            gray1 = gray1.GaussianBlur (new OpenCvSharp.Size(3, 3), 0);
             //gray1 = gray1.AdaptiveThreshold(255, AdaptiveThresholdTypes.GaussianC, ThresholdTypes.BinaryInv, 105, 2); // 11,2 ; 75,10 ; 60,255
             //gray1 = gray1.Threshold(60, 255, ThresholdTypes.BinaryInv);
 
@@ -91,36 +126,49 @@ namespace RazorPagesMovie.Pages
             //Canny Edge Detector
             //Image<Gray, Byte> cannyGray = gray1.Canny(20, 50);
             //Image<Bgr, Byte> imageResult = img1.Copy();
-            Mat cannyGray = gray1.Canny(0, 25); // 0, 12, blur 9
+            Mat cannyGray = gray1.Canny(20, 35); // 0, 12, blur 9; 2, 17,  blur 7; 0, 25 blur 13; 20 35 blur 0
             //var cannyGray = gray1;
 
             // treba aj GaussianBlur, adaptiveThreshold
 
-            String htmlStart = "<!DOCTYPE html><html><head><meta charset='UTF-8'><title>Test</title><style>section { width: 100%; }</style></head><body>";
-            String htmlBody = "";
-            String htmlEnd = "</body></html>";
 
             Random r = new Random();
             int lastY = 0;
 
-            Point[][] contours; //vector<vector<Point>> contours;
-            
-            HierarchyIndex[] hierarchy; //vector<Vec4i> hierarchy;
-            int draw = 0;
+            Cv2.FindContours(cannyGray, out var contours, out var hierarchy, mode: RetrievalModes.Tree, method: ContourApproximationModes.ApproxSimple);
 
-            Cv2.FindContours(cannyGray, out contours, out hierarchy, mode: RetrievalModes.Tree, method: ContourApproximationModes.ApproxSimple);
+            var layout = DetectLayout(contours, hierarchy, cannyGray.Width, cannyGray.Height);
+            var structure = new TemplateStructure(layout);
 
-            Layout layout = DetectLayout(contours, hierarchy, cannyGray.Width, cannyGray.Height);
 
             Mat copy = img1.Clone();
-            //Cv2.DrawContours(copy, contours, -1, Scalar.Aqua);
-            
-            for (int i = contours.Length - 1; i >= 0; i--)
+            Cv2.DrawContours(copy, contours, -1, Scalar.Orange);
+
+            var j = 0;
+            var count = 0;
+            while (j != -1)
+            {
+                var index = hierarchy[j];
+                if (index.Parent != -1)
+                {
+                    j = index.Next;
+                    continue;
+                }
+
+                Scalar scalar = Scalar.FromRgb(r.Next(0, 255), r.Next(0, 255), r.Next(0, 255));
+                Cv2.DrawContours(copy, contours, j, scalar);
+                count++;
+
+                j = index.Next;
+            }
+            Debug.WriteLine("Poèet" + count);
+
+            /*for (var j = contours.Length - 1; j >= 0; j--)
             {
                 Scalar scalar = Scalar.FromRgb(r.Next(0, 255), r.Next(0, 255), r.Next(0, 255));
-                Cv2.DrawContours(copy, contours, i, scalar);
-            }
-            
+                Cv2.DrawContours(copy, contours, j, scalar);
+            }*/
+            /*
             copy.SaveImage("wwwroot/images/output.png");
 
 
@@ -129,6 +177,55 @@ namespace RazorPagesMovie.Pages
             Debug.WriteLine(hierarchy.Length);
             Debug.WriteLine(hierarchy[0].Next);
 
+            var limit = 0;
+            var i = 0;
+            while (i != -1)
+            {
+                // Find current item
+                var index = hierarchy[i];
+
+                // Filter only outer contours
+                if (index.Parent != -1)
+                {
+                    i = index.Next;
+                    continue;
+                }
+
+                limit++;
+
+                // Edges
+                var edges = contours[i];
+
+                // Bounding box
+                var rect = Cv2.BoundingRect(edges);
+
+                // Area
+                var area = Cv2.ContourArea(edges, false);
+
+                // Polygon Approximations
+                var contoursAp = Cv2.ApproxPolyDP(edges, Cv2.ArcLength(edges, true) * 0.05, true);
+
+
+                var roi = img1.Clone(rect);
+                roi.SaveImage("image-" + i + ".png");
+
+
+                Debug.WriteLine(contoursAp.Length);
+                Debug.WriteLine("left: " + rect.Left + ", top: " + rect.Top);
+
+                // Process only outer structure
+                if (limit == 9999999)
+                {
+                    i = -1;
+                }
+                else
+                {
+                    i = index.Next;
+                }
+            }
+
+
+            return Convertor.Convert(structure);
 
             /*
                    for (int i = contours.Length - 1; i >= 0; i--)
@@ -158,22 +255,6 @@ namespace RazorPagesMovie.Pages
 
 
                        Console.WriteLine(contoursAp.Length);
-
-                       if (draw == 5)
-                       {
-                           //CvInvoke.DrawContours(imageResult, contours, i, color);
-
-
-                           //Console.WriteLine(i + " " + color.V0 + " " + color.V1 + " " + color.V2 + " " + color.V3);
-                           //Console.WriteLine("ap " + contoursAP.Size);
-                           //Console.WriteLine("area " + CvInvoke.ContourArea(contours[i], true));
-                           //Console.WriteLine("width " + rect.Width + " height " + rect.Height + " x " + rect.X + " y " + rect.Y);
-                           //Console.WriteLine();
-
-                           //Console.WriteLine((rect.Width * 2 + rect.Height * 2 > 40 && contoursAP.Size >= 4));
-                       }
-                       draw++;
-
 
 
                        Boolean check = true;
@@ -261,64 +342,10 @@ namespace RazorPagesMovie.Pages
                        }
                    }
                    */
-            htmlBody += $"<section style=\'height:{cannyGray.Height - lastY}px;background:rgb(255, 0, 0);\'></section>";
+            //htmlBody += $"<section style=\'height:{cannyGray.Height - lastY}px;background:rgb(255, 0, 0);\'></section>";
 
 
-            return htmlStart + htmlBody + htmlEnd;
-        }
-
-        /**
-         * Detect type of template design and it's dimensions
-         * 
-         * @todo lepší algoritmus na h¾adanie oboch súradníc
-         */
-        private Layout DetectLayout(Point[][] contours, HierarchyIndex[] hierarchy, double width, double height)
-        {
-            var left = new List<double>();
-            var right = new List<double>();
-
-            var i = 0;
-            while (i != -1)
-            {
-                // find current item
-                var index = hierarchy[i];
-                var item = contours[i];
-
-                // find edges & boundix box
-                var edges = contours[i];
-                var rect = Cv2.BoundingRect(edges);
-                var area = Cv2.ContourArea(edges, false);
-
-                // add left corners from 25 % left-most of image
-                if (rect.Left < width * 0.25 && area > 200)
-                {
-                    left.Add(rect.Left);
-                }
-
-                // add right corners from 20% right-most of image
-                if (rect.Right > width * 0.7 && rect.Left != 0 && area > 200)
-                {
-                    Debug.WriteLine("area " + area + " right " + rect.Right + " width " + rect.Width);
-                    right.Add(rect.Right);
-                }
-
-                // Process only outer contours
-                i = index.Next;
-            }
-
-            // filter top 50 % and select most common
-            var filterLeft = left.OrderBy(j => j).Take(left.Count * 50 / 100);
-            var mostLeft = filterLeft.MostCommon();
-
-            // filter top 50 % and sselect most common
-            var filterRight = right.OrderByDescending(j => j).Take(right.Count * 50 / 100);
-            var mostRight = filterRight.MostCommon();
-
-            Debug.WriteLine("most left: " + mostLeft);
-            Debug.WriteLine("most right: " + mostRight);
-
-            var type = mostLeft < 10 ? Layout.LayoutType.Fluid : Layout.LayoutType.Centered;
-            return new Layout(type, mostRight - mostLeft, height);
+            return "";
         }
     }
 }

@@ -14,11 +14,13 @@ namespace RazorPagesMovie.Pages
     {
         public void OnGet()
         {
+            var img = Request.Query["image"];
             var canny1 = Double.Parse(Request.Query["canny1"]);
             var canny2 = Double.Parse(Request.Query["canny2"]);
             var blur = Double.Parse(Request.Query["blur"]);
 
-            Test(canny1, canny2, blur);
+            Test3(img, canny1, canny2, blur);
+            //Test(img, canny1, canny2, blur);
 
             /**
              * Postup:
@@ -38,13 +40,14 @@ namespace RazorPagesMovie.Pages
 
         private void Test2(double canny1, double canny2, double blur)
         {
-            byte[] imageData = System.IO.File.ReadAllBytes(@"./wwwroot/images/template2.png");
+            byte[] imageData = System.IO.File.ReadAllBytes(@"./wwwroot/images/section-4.png");
             Mat img1 = Mat.FromImageData(imageData, ImreadModes.Color);
             //Convert the img1 to grayscale and then filter out the noise
             Mat gray1 = Mat.FromImageData(imageData, ImreadModes.GrayScale).PyrDown().PyrUp();
             //gray1 = gray1.GaussianBlur(new OpenCvSharp.Size(blur, blur), 0);
             var edges = gray1.Canny(canny1, canny2);
-            var lines = edges.HoughLinesP(1, Math.PI / 180, 5);
+            //var lines = edges.HoughLines(1, Math.PI / 180, 250);
+            var lines = edges.HoughLinesP(1, Math.PI / 180, 50, 50, 10);
             var r = new Random();
 
             Mat copy = img1.Clone();
@@ -52,16 +55,84 @@ namespace RazorPagesMovie.Pages
             {
                 Scalar scalar = Scalar.FromRgb(r.Next(0, 255), r.Next(0, 255), r.Next(0, 255));
                 copy.Line(line.P1, line.P2, scalar);
+
+
+                /*float rho = line.Rho, theta = line.Theta;
+                Point pt1, pt2;
+                double a = Math.Cos(theta), b = Math.Sin(theta);
+                double x0 = a * rho, y0 = b * rho;
+                pt1.X = (int) Math.Round(x0 + 1000 * (-b));
+                pt1.Y = (int)Math.Round(y0 + 1000 * (a));
+                pt2.X = (int)Math.Round(x0 - 1000 * (-b));
+                pt2.Y = (int)Math.Round(y0 - 1000 * (a));
+                copy.Line(pt1, pt2, scalar);*/
             }
             copy.SaveImage("wwwroot/images/output.png");
 
         }
 
-        private string Test(double canny1, double canny2, double blur)
+        private void Test3(string img, double canny1, double canny2, double blur)
         {
             var tess = new TesseractEngine(@"./wwwroot/tessdata", "eng", EngineMode.LstmOnly);
 
-            byte[] imageData = System.IO.File.ReadAllBytes(@"./wwwroot/images/template.jpg");
+            byte[] imageData = System.IO.File.ReadAllBytes(@"./wwwroot/images/" + img);
+            Mat img1 = Mat.FromImageData(imageData, ImreadModes.Color);
+            //Convert the img1 to grayscale and then filter out the noise
+            Mat gray1 = Mat.FromImageData(imageData, ImreadModes.GrayScale)/*.PyrDown().PyrUp()*/;
+            gray1 = gray1.GaussianBlur(new OpenCvSharp.Size(blur, blur), 0);
+
+            //gray1 = gray1.AdaptiveThreshold(255, AdaptiveThresholdTypes.MeanC, ThresholdTypes.BinaryInv, (int)canny1, canny2); // 11,2 ; 75,10 ; 60,255
+
+            //gray1 = gray1.GaussianBlur(new Size(blur, blur), 0);
+
+            //gray1 = gray1.Threshold(128, 255, ThresholdTypes.Binary);
+
+            //Canny Edge Detector
+            //Image<Gray, Byte> cannyGray = gray1.Canny(20, 50);
+            //Image<Bgr, Byte> imageResult = img1.Copy();
+            Mat cannyGray = gray1.Canny(canny1, canny2);
+            //var cannyGray = gray1;
+
+            // treba aj GaussianBlur, adaptiveThreshold
+
+            Random r = new Random();
+            //int lastY = 0;
+
+            Point[][] contours; //vector<vector<Point>> contours;
+
+            HierarchyIndex[] hierarchy; //vector<Vec4i> hierarchy;
+            //int draw = 0;
+
+            Cv2.FindContours(cannyGray, out contours, out hierarchy, mode: RetrievalModes.External, method: ContourApproximationModes.ApproxSimple);
+
+            Mat copy = img1.Clone();
+            Cv2.DrawContours(copy, contours, -1, Scalar.Orange);
+            var j = 0;
+            while (j != -1)
+            {
+                var index = hierarchy[j];
+                if (index.Parent != -1)
+                {
+                    j = index.Next;
+                    continue;
+                }
+
+                Scalar scalar = Scalar.FromRgb(r.Next(0, 255), r.Next(0, 255), r.Next(0, 255));
+                Cv2.DrawContours(copy, contours, j, scalar);
+
+                j = index.Next;
+            }
+
+            copy.SaveImage("wwwroot/images/output.png");
+
+           
+        }
+
+        private string Test(string img, double canny1, double canny2, double blur)
+        {
+            var tess = new TesseractEngine(@"./wwwroot/tessdata", "eng", EngineMode.LstmOnly);
+
+            byte[] imageData = System.IO.File.ReadAllBytes(@"./wwwroot/images/" + img);
             Mat img1 = Mat.FromImageData(imageData, ImreadModes.Color);
             //Convert the img1 to grayscale and then filter out the noise
             Mat gray1 = Mat.FromImageData(imageData, ImreadModes.GrayScale)/*.PyrDown().PyrUp()*/;
@@ -79,9 +150,6 @@ namespace RazorPagesMovie.Pages
 
             // treba aj GaussianBlur, adaptiveThreshold
 
-            String htmlStart = "<!DOCTYPE html><html><head><meta charset='UTF-8'><title>Test</title><style>section { width: 100%; }</style></head><body>";
-            String htmlBody = "";
-            String htmlEnd = "</body></html>";
 
             Random r = new Random();
             int lastY = 0;
@@ -91,15 +159,32 @@ namespace RazorPagesMovie.Pages
             HierarchyIndex[] hierarchy; //vector<Vec4i> hierarchy;
             int draw = 0;
 
-            Cv2.FindContours(cannyGray, out contours, out hierarchy, mode: RetrievalModes.Tree, method: ContourApproximationModes.ApproxTC89L1);
+            Cv2.FindContours(cannyGray, out contours, out hierarchy, mode: RetrievalModes.Tree, method: ContourApproximationModes.ApproxSimple);
 
             Mat copy = img1.Clone();
-            //Cv2.DrawContours(copy, contours, -1, Scalar.Aqua);
+            Cv2.DrawContours(copy, contours, -1, Scalar.Orange);
 
-            for (int i = contours.Length - 1; i >= 0; i--)
+            /*for (int i = contours.Length - 1; i >= 0; i--)
             {
                 Scalar scalar = Scalar.FromRgb(r.Next(0, 255), r.Next(0, 255), r.Next(0, 255));
                 Cv2.DrawContours(copy, contours, i, scalar);
+            }*/
+
+
+            var j = 0;
+            while (j != -1)
+            {
+                var index = hierarchy[j];
+                if (index.Parent != -1)
+                {
+                    j = index.Next;
+                    continue;
+                }
+
+                Scalar scalar = Scalar.FromRgb(r.Next(0, 255), r.Next(0, 255), r.Next(0, 255));
+                Cv2.DrawContours(copy, contours, j, scalar);
+
+                j = index.Next;
             }
             copy.SaveImage("wwwroot/images/output.png");
 
@@ -236,10 +321,9 @@ namespace RazorPagesMovie.Pages
                        }
                    }
                    */
-            htmlBody += $"<section style=\'height:{cannyGray.Height - lastY}px;background:rgb(255, 0, 0);\'></section>";
 
 
-            return htmlStart + htmlBody + htmlEnd;
+            return "";
         }
     }
 }

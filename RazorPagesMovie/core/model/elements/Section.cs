@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using OpenCvSharp;
 
 namespace RazorPagesMovie.core.model.elements
 {
@@ -14,7 +15,7 @@ namespace RazorPagesMovie.core.model.elements
 
         public override string StartTag()
         {
-            return "<section>";
+            return $"<section style=\"height:{Height}px;background:rgb({BackgroundColor.Val0},{BackgroundColor.Val1},{BackgroundColor.Val2})\">";
         }
 
         public override string Body()

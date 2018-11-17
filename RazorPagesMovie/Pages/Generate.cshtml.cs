@@ -79,7 +79,7 @@ namespace RazorPagesMovie.Pages
             Mat img1 = Mat.FromImageData(imageData, ImreadModes.Color);
             //Convert the img1 to grayscale and then filter out the noise
             Mat gray1 = Mat.FromImageData(imageData, ImreadModes.GrayScale)/*.PyrDown().PyrUp()*/;
-            gray1 = gray1.GaussianBlur(new OpenCvSharp.Size(blur, blur), 0);
+            //gray1 = gray1.GaussianBlur(new OpenCvSharp.Size(blur, blur), 0);
 
             //gray1 = gray1.AdaptiveThreshold(255, AdaptiveThresholdTypes.MeanC, ThresholdTypes.BinaryInv, (int)canny1, canny2); // 11,2 ; 75,10 ; 60,255
 
@@ -103,7 +103,9 @@ namespace RazorPagesMovie.Pages
             HierarchyIndex[] hierarchy; //vector<Vec4i> hierarchy;
             //int draw = 0;
 
-            Cv2.FindContours(cannyGray, out contours, out hierarchy, mode: RetrievalModes.External, method: ContourApproximationModes.ApproxSimple);
+            Cv2.FindContours(cannyGray, out contours, out hierarchy, mode: RetrievalModes.Tree, method: ContourApproximationModes.ApproxSimple);
+
+            Debug.WriteLine("poèet - " + contours.Length);
 
             Mat copy = img1.Clone();
             Cv2.DrawContours(copy, contours, -1, Scalar.Orange);
@@ -113,6 +115,7 @@ namespace RazorPagesMovie.Pages
                 var index = hierarchy[j];
                 if (index.Parent != -1)
                 {
+
                     j = index.Next;
                     continue;
                 }
@@ -122,6 +125,16 @@ namespace RazorPagesMovie.Pages
 
                 j = index.Next;
             }
+
+            var m = 0;
+            foreach (var c in contours)
+            {
+                var rect = Cv2.BoundingRect(c);
+                var roi2 = img1.Clone(rect);
+                roi2.SaveImage("pozri-" + m + ".png");
+                m++;
+            }
+
 
             copy.SaveImage("wwwroot/images/output.png");
 
@@ -136,7 +149,7 @@ namespace RazorPagesMovie.Pages
             Mat img1 = Mat.FromImageData(imageData, ImreadModes.Color);
             //Convert the img1 to grayscale and then filter out the noise
             Mat gray1 = Mat.FromImageData(imageData, ImreadModes.GrayScale)/*.PyrDown().PyrUp()*/;
-            gray1 = gray1.GaussianBlur(new OpenCvSharp.Size(blur, blur), 0);
+            //gray1 = gray1.GaussianBlur(new OpenCvSharp.Size(blur, blur), 0);
             //gray1 = gray1.AdaptiveThreshold(255, AdaptiveThresholdTypes.GaussianC, ThresholdTypes.BinaryInv, 105, 2); // 11,2 ; 75,10 ; 60,255
             //gray1 = gray1.Threshold(60, 255, ThresholdTypes.BinaryInv);
 

@@ -18,7 +18,8 @@ namespace RazorPagesMovie.core.model
         {
             W800 = 800,
             W1200 = 1200,
-            W1600 = 1600
+            W1600 = 1600,
+            W2000 = 2000
         }
 
         private LayoutType _type;

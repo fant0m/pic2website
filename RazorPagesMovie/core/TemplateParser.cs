@@ -30,6 +30,7 @@ namespace RazorPagesMovie.core
         private Point[][] _contours;
         private HierarchyIndex[] _hierarchy;
         private TemplateStructure _templateStructure;
+        private TesseractEngine _tess;
 
         public const int MaxSeparatorHeight = 10;
         public const int MinSeparatorWidth = 400;
@@ -41,14 +42,14 @@ namespace RazorPagesMovie.core
 
         public string Analyse()
         {
-            var tess = new TesseractEngine(@"./wwwroot/tessdata", "eng", EngineMode.LstmOnly);
+            _tess = new TesseractEngine(@"./wwwroot/tessdata", "eng", EngineMode.LstmOnly);
 
-            byte[] imageData = File.ReadAllBytes(@"./wwwroot/images/test5.png");
+            byte[] imageData = File.ReadAllBytes(@"./wwwroot/images/test5_1.png");
             _image = Mat.FromImageData(imageData, ImreadModes.Color);
             //Convert the img1 to grayscale and then filter out the noise
             Mat gray1 = Mat.FromImageData(imageData, ImreadModes.GrayScale);
             // @todo naozaj to chceme blurovať? robí to len bordel a zbytočné contours
-            //gray1 = gray1.GaussianBlur(new OpenCvSharp.Size(3, 3), 0);
+            gray1 = gray1.GaussianBlur(new OpenCvSharp.Size(3, 3), 0);
 
             //Canny Edge Detector
             Mat cannyGray = gray1.Canny(15, 25); // 0, 12, blur 9; 2, 17,  blur 7; 0, 25 blur 13; 20 35 blur 0; 15, 25 blur 3
@@ -130,7 +131,7 @@ namespace RazorPagesMovie.core
             //    var area = Cv2.ContourArea(edges, false);
 
             //    // Polygon Approximations
-            var contoursAp = Cv2.ApproxPolyDP(edges, Cv2.ArcLength(edges, true) * 0.05, true);
+            //var contoursAp = Cv2.ApproxPolyDP(edges, Cv2.ArcLength(edges, true) * 0.05, true);
 
             //    if (draw == i)
             //    { 
@@ -169,7 +170,10 @@ namespace RazorPagesMovie.core
         private int AnalyzeSections()
         {
             var r = new Random();
+
             // Find index of the first top to bottom contour
+            // @todo start index by mal byť vždy 0..
+            //var startIndex = 0;
             var startIndex = -1;
             var i = 0;
             while (i != -1)
@@ -191,6 +195,8 @@ namespace RazorPagesMovie.core
 
                 i = item.Next;
             }
+
+            Debug.WriteLine("start index " + startIndex);
 
             // Section ids counter
             var sectionId = 0;
@@ -214,13 +220,6 @@ namespace RazorPagesMovie.core
                 // Find current item
                 var item = _hierarchy[i];
 
-                // Filter only outer contours
-                if (item.Parent != -1)
-                {
-                    i = item.Previous;
-                    continue;
-                }
-
                 // Edges
                 var edges = _contours[i];
 
@@ -239,10 +238,10 @@ namespace RazorPagesMovie.core
                     var section = new Section(sectionId);
                     section.Height = rect.Y - lastSectionY;
                     section.BackgroundColor = Scalar.FromRgb(r.Next(0, 255), r.Next(0, 255), r.Next(0, 255));
-                    container = new Container(sectionId);
-                    image = new Image("./images/section-" + sectionId + ".png");
-                    container.Elements.Add(image);
-                    section.Containers.Add(container);
+                    //container = new Container(sectionId);
+                    //image = new Image("./images/section-" + sectionId + ".png");
+                    //container.Elements.Add(image);
+                    //section.Containers.Add(container);
                     sections.Add(section);
 
                     // Save section image
@@ -270,10 +269,10 @@ namespace RazorPagesMovie.core
             var lastSection = new Section(sectionId);
             lastSection.Height = _image.Height - lastSectionY;
             lastSection.BackgroundColor = Scalar.FromRgb(r.Next(0, 255), r.Next(0, 255), r.Next(0, 255));
-            container = new Container(sectionId);
-            image = new Image("./images/section-" + sectionId + ".png");
-            container.Elements.Add(image);
-            lastSection.Containers.Add(container);
+            //container = new Container(sectionId);
+            //image = new Image("./images/section-" + sectionId + ".png");
+            //container.Elements.Add(image);
+            //lastSection.Containers.Add(container);
 
             // Save section image
             area = new Rect(0, lastSectionY, _image.Width, lastSection.Height);
@@ -293,109 +292,19 @@ namespace RazorPagesMovie.core
                 // @todo zoradiť sort left to right, prípadne predtým pospájať ktoré sú moc blízko (text)
                 // @todo najhoršie riešenie môže byť rozdeliť to ručne do riadkov - zoradiť podľa lavej súradnice a pri vytváraní riadku vždy definovať odkiaľ pokiaľ y je daný riadok, ak príde nový element a nezmestí sa tam s jeho Y + height tak ho dať do ďalšieho riadku
 
+                // @todo ísť reverzne od poslednej úrovne a postupne to nabalovať?
+
                 // save sections rects into list
                 var contours = sectionContours[section.Id];
-                var sectionRects = new Rect[contours.Count];
-                var k = 0;
-                foreach (var contour in sectionContours[section.Id])
-                {
-                    // Edges
-                    var edges = _contours[contour];
 
-                    // Bounding box
-                    var rect = Cv2.BoundingRect(edges);
-                    sectionRects[k] = rect;
-                    k++;
+                foreach (var contour in contours)
+                {
+                    testSubBlocks(contour, copy);
                 }
 
+                section.Containers = ProcessInnerBlocks(contours, copy);
 
-                // @todo skontrolovať najskôr/alebo potom či tam náhodou nie je column layout a až potom robiť toto/preorganizovať to potom
-                // @todo spojenie riadkov ak sú moc blízko
-                Debug.WriteLine("sekcia počet rectov " + sectionRects.Length);
-
-                // analyse section rows
-                var rows = new List<Triple<int, int, List<Rect>>>(); // y start y end
-                foreach (var rect in sectionRects)
-                {
-                    var rowIndex = findRowForRect(rows, rect);
-                    if (rowIndex == -1)
-                    {
-                        var triple = new Triple<int, int, List<Rect>>
-                        {
-                            Item1 = rect.Y,
-                            Item2 = rect.Y + rect.Height,
-                            Item3 = new List<Rect> {rect}
-                        };
-                        rows.Add(triple);
-                    }
-                    else
-                    {
-                        rows[rowIndex].Item3.Add(rect);
-                    }
-                }
-
-                // proceed rows
-                var limit = 0;
-                foreach (var row in rows)
-                {
-                    // align contours inside row from left to right
-                    var alignVertical = row.Item3.OrderBy(rect => rect.X).ToArray();
-                    var connectedVertical = new List<Rect>();
-
-                    foreach (var contour in alignVertical)
-                    {
-                        Cv2.Rectangle(copy, new Point(contour.X, contour.Y), new Point(contour.X + contour.Width, contour.Y + contour.Height), Scalar.FromRgb(r.Next(0, 255), r.Next(0, 255), r.Next(0, 255)));
-                    }
-
-                    // connect letters into words
-                    var maxTextGap = 10;
-                    for (var j = 0; j < alignVertical.Length - 1; j++)
-                    {
-                        var currentRect = alignVertical[j];
-                        var nextRect = alignVertical[j + 1];
-                        var firstGap = Math.Abs(nextRect.X - (currentRect.X + currentRect.Width));
-                        var distance = Distance_BtwnPoints(new Point(currentRect.X + currentRect.Width, currentRect.Y + currentRect.Height), new Point(nextRect.X, nextRect.Y + nextRect.Height));
-                        var merge = currentRect;
-
-                        //while ((distance <= maxTextGap || (currentRect & nextRect).area() > 0) && j + 1 < alignVertical.Length - 1)
-                        while ((firstGap <= maxTextGap || merge.IntersectsWith(nextRect)) && j + 1 < alignVertical.Length - 1)
-                        {
-                            merge = merge | nextRect;
- 
-                            j++;
-
-                            // @todo ak tam má intersect tak porovnávať distance aj s tým predtým nakoľko môže mať x pozíciu menšiu ako to predtým
-
-                            currentRect = alignVertical[j];
-                            nextRect = alignVertical[j + 1];
-                            firstGap = Math.Abs(nextRect.X - (currentRect.X + currentRect.Width));
-                            distance = Distance_BtwnPoints(new Point(currentRect.X + currentRect.Width, currentRect.Y + currentRect.Height), new Point(nextRect.X, nextRect.Y + nextRect.Height));
-                        }
-
-                        connectedVertical.Add(merge);
-
-                        Debug.WriteLine("p. " + j + " distance " + distance, " gap " + firstGap);
-                    }
-
-
-                    foreach (var rect in connectedVertical)
-                    {
-                        limit++;
-                        if (limit == 100) break;
-
-                        var roi2 = _image.Clone(rect);
-                        roi2.SaveImage("image-" + limit + ".png");
-                    }
-                }
-
-                Debug.WriteLine("sekcia počet row " + rows.Count);
-
-                //foreach (var row in rows)
-                //{
-                //    Cv2.Rectangle(copy, new Point(0, row.Item1), new Point(copy.Width, row.Item2), Scalar.Orange);
-                //}
-
-                Cv2.Rectangle(copy, new Point(0, lastY), new Point(copy.Width, lastY+section.Height), Scalar.Red);
+                Cv2.Rectangle(copy, new Point(0, lastY), new Point(copy.Width, lastY + section.Height), Scalar.Red);
                 lastY += section.Height;
 
                 //sectionRects = sectionRects.OrderBy(rect => rect.Left).ToArray();
@@ -416,6 +325,194 @@ namespace RazorPagesMovie.core
             copy.SaveImage("wwwroot/images/output.png");
 
             return startIndex;
+        }
+
+        private void testSubBlocks(int contour, Mat copy)
+        {
+            // Find current item
+            var item = _hierarchy[contour];
+
+            // Edges
+            var edges = _contours[contour];
+
+            // Bounding box
+            var rect = Cv2.BoundingRect(edges);
+
+            // Looking for next level inner elements
+            if (item.Child != -1/* && rect.Width >= 10 && rect.Height >= 10*/)
+            {
+                var inner = new List<int>();
+                var find = item.Child;
+                while (find != -1)
+                {
+                    var subitem = _hierarchy[find];
+                    if (subitem.Parent == contour)
+                    {
+                        inner.Add(find);
+                        if (subitem.Child != -1)
+                        {
+                            testSubBlocks(subitem.Child, copy);
+                        }
+                    }
+                    else
+                    {
+                        break;
+                    }
+
+                    find = subitem.Next;
+                }
+
+                Debug.WriteLine("počet sub " + inner.Count);
+
+                // We have found inner elements
+                if (inner.Count > 0)
+                {
+                    ProcessInnerBlocks(inner, copy);
+                }
+            }
+        }
+
+        private List<Container> ProcessInnerBlocks(List<int> contours, Mat copy)
+        {
+            var r = new Random();
+            var containers = new List<Container>();
+            var sectionRects = new Rect[contours.Count];
+            var k = 0;
+            foreach (var contour in contours)
+            {
+                Debug.WriteLine("filling " + contour);
+                // Edges
+                var edges = _contours[contour];
+
+                // Bounding box
+                var rect = Cv2.BoundingRect(edges);
+                sectionRects[k] = rect;
+                k++;
+            }
+
+
+            // @todo skontrolovať najskôr/alebo potom či tam náhodou nie je column layout a až potom robiť toto/preorganizovať to potom
+            // @todo spojenie riadkov ak sú moc blízko
+            // @todo spájanie do zvlášť containera ak majú rovnaký štýl - rovnaká výška, medzery, ..
+            Debug.WriteLine("sekcia počet rectov " + sectionRects.Length);
+
+            // analyse section rows
+            var rows = new List<Triple<int, int, List<Rect>>>(); // y start y end
+            foreach (var rect in sectionRects)
+            {
+                var rowIndex = findRowForRect(rows, rect);
+                if (rowIndex == -1)
+                {
+                    var triple = new Triple<int, int, List<Rect>>
+                    {
+                        Item1 = rect.Y,
+                        Item2 = rect.Y + rect.Height,
+                        Item3 = new List<Rect> { rect }
+                    };
+                    rows.Add(triple);
+                }
+                else
+                {
+                    rows[rowIndex].Item3.Add(rect);
+                }
+            }
+
+            // proceed rows
+            var limit = 0;
+            var c = 1;
+            foreach (var row in rows)
+            {
+                var container = new Container(c);
+
+                // align contours inside row from left to right
+                var alignVertical = row.Item3.Where(rect => rect.Width * rect.Height >= 13).OrderBy(rect => rect.X).ToArray();
+                var connectedVertical = new List<Rect>();
+
+                var l = 0;
+                //foreach (var contour in alignVertical)
+                //{
+                //    var roi2 = _image.Clone(contour);
+                //    roi2.SaveImage("image2-" + r.Next() + ".png");
+                //    l++;
+                    //Cv2.Rectangle(copy, new Point(contour.X, contour.Y), new Point(contour.X + contour.Width, contour.Y + contour.Height), Scalar.FromRgb(r.Next(0, 255), r.Next(0, 255), r.Next(0, 255)));
+                //}
+
+                // connect letters into words
+                var maxTextGap = 6;
+                for (var j = 0; j < alignVertical.Length; j++)
+                {
+                    // last element cant have a gap
+                    if (j + 1 == alignVertical.Length)
+                    {
+                        connectedVertical.Add(alignVertical[j]);
+                    }
+                    else
+                    {
+                        var currentRect = alignVertical[j];
+                        var nextRect = alignVertical[j + 1];
+                        var firstGap = Math.Abs(nextRect.X - (currentRect.X + currentRect.Width));
+                        var distance = Distance_BtwnPoints(new Point(currentRect.X + currentRect.Width, currentRect.Y + currentRect.Height), new Point(nextRect.X, nextRect.Y + nextRect.Height));
+                        var merge = currentRect;
+
+                        //while ((distance <= maxTextGap || (currentRect & nextRect).area() > 0) && j + 1 < alignVertical.Length - 1)
+                        while ((firstGap <= maxTextGap || merge.IntersectsWith(nextRect)) && j + 1 < alignVertical.Length - 1)
+                        {
+                            merge = merge | nextRect;
+
+                            j++;
+
+                            // @todo ak tam má intersect tak porovnávať distance aj s tým predtým nakoľko môže mať x pozíciu menšiu ako to predtým
+                            // @todo prípadne nájsť najbližšiu možnú vzdialenosť medzi 2 rect
+                            // @todo neviem ako sa budú riešiť všetky children elementy a ako budem vedieť či sa jedná o text alebo nie
+                            // @todo na font size bude musieť byť asi js skript ktorý vytvorí html a bude skúšať tak aby sa to tam vošlo a zistí teda koľko px bude mať font
+
+                            currentRect = alignVertical[j];
+                            nextRect = alignVertical[j + 1];
+                            firstGap = Math.Abs(nextRect.X - (currentRect.X + currentRect.Width));
+                            distance = Distance_BtwnPoints(new Point(currentRect.X + currentRect.Width, currentRect.Y + currentRect.Height), new Point(nextRect.X, nextRect.Y + nextRect.Height));
+                        }
+
+                        connectedVertical.Add(merge);
+
+                        Debug.WriteLine("p. " + j + " distance " + distance, " gap " + firstGap);
+                    }
+                }
+
+                foreach (var rect in connectedVertical)
+                {
+                    limit++;
+                    if (limit == 100) break;
+
+                    //Debug.WriteLine(limit + "=" + rect.Width + "," + rect.Height);
+
+                    var roi2 = _image.Clone(rect);
+                    roi2.SaveImage("wwwroot/images/image-" + limit + ".png");
+
+                    var image = new Image("./images/image-" + limit + ".png");
+                    container.Elements.Add(image);
+
+                    //using (var page = _tess.Process(Pix.LoadFromFile("image-" + limit + ".png"), PageSegMode.SingleBlock))
+                    //{
+                    //    var text = page.GetText();
+
+                    //    Debug.Write("image " + limit + "=" + text);
+                    //}
+
+                    Cv2.Rectangle(copy, new Point(rect.X, rect.Y), new Point(rect.X + rect.Width, rect.Y + rect.Height), Scalar.Yellow);
+                }
+
+                containers.Add(container);
+                c++;
+            }
+
+            Debug.WriteLine("sekcia počet row " + rows.Count);
+
+            foreach (var row in rows)
+            {
+                Cv2.Rectangle(copy, new Point(0, row.Item1), new Point(copy.Width, row.Item2), Scalar.Orange);
+            }
+
+            return containers;
         }
 
         private double Distance_BtwnPoints(Point p, Point q)
@@ -453,7 +550,8 @@ namespace RazorPagesMovie.core
         private bool IsRectSeparator(Rect rect)
         {
             // @todo prvá časť podmienky rect.X <= _mostLef || teoreticky na rect.X == 0
-            return rect.Left == 0 && rect.Height <= MaxSeparatorHeight && rect.Width > MinSeparatorWidth;
+            // @todo čo ak zoberie ten separator ako obdlznik s celym obsahom?
+            return rect.Left <= _mostLeft && rect.Height <= MaxSeparatorHeight && rect.Width > MinSeparatorWidth;
         }
 
         /**

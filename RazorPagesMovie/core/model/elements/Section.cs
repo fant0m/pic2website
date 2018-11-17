@@ -5,7 +5,7 @@ namespace RazorPagesMovie.core.model.elements
 {
     public class Section : Element
     {
-        public List<Container> Containers { get; }
+        public List<Container> Containers { get; set; }
 
         public Section(int id)
         {

@@ -127,15 +127,19 @@ namespace RazorPagesMovie.Pages
                 Point[] contoursAp = Cv2.ApproxPolyDP(edges, Cv2.ArcLength(edges, true) * 0.01, true);
                 Debug.WriteLine(j + "," + contoursAp.Length);
 
+                var rect = Cv2.BoundingRect(edges);
+                var roi2 = img1.Clone(rect);
+                roi2.SaveImage("pozri-" + j + ".png");
+
                 j = index.Next;
             }
 
             var m = 0;
             foreach (var c in contours)
             {
-                var rect = Cv2.BoundingRect(c);
-                var roi2 = img1.Clone(rect);
-                roi2.SaveImage("pozri-" + m + ".png");
+                //var rect = Cv2.BoundingRect(c);
+                //var roi2 = img1.Clone(rect);
+                //roi2.SaveImage("pozri-" + m + ".png");
                 m++;
             }
 

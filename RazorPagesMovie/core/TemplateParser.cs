@@ -35,6 +35,7 @@ namespace RazorPagesMovie.core
 
         public const int MaxSeparatorHeight = 10;
         public const int MinSeparatorWidth = 400;
+        public const int MaxTextGap = 6;
 
         public TemplateParser(string imagePath)
         {
@@ -45,7 +46,7 @@ namespace RazorPagesMovie.core
         {
             _tess = new TesseractEngine(@"./wwwroot/tessdata", "eng", EngineMode.LstmOnly);
 
-            byte[] imageData = File.ReadAllBytes(@"./wwwroot/images/template4.png");
+            byte[] imageData = File.ReadAllBytes(@"./wwwroot/images/skuska.png");
             _image = Mat.FromImageData(imageData, ImreadModes.Color);
             //Convert the img1 to grayscale and then filter out the noise
             Mat gray1 = Mat.FromImageData(imageData, ImreadModes.GrayScale);
@@ -370,7 +371,7 @@ namespace RazorPagesMovie.core
                 // We have found inner elements
                 if (inner.Count > 0)
                 {
-                    ProcessInnerBlocks(inner, copy);
+                    ProcessInnerBlocks(inner, copy, rect);
                 }
             }
         }
@@ -384,16 +385,16 @@ namespace RazorPagesMovie.core
             var rect = Cv2.BoundingRect(edges);
 
             // @todo možno bude treba inú podmienku ako length = 4, niečo viac sotisfikované čo sa pozrie či to má body len ako obdĺžnik
-            if (contoursAp.Length == 4 && rect.Width >= 10 && rect.Height >= 10)
-            {
-                var roi2 = _image.Clone(rect);
-                roi2.SaveImage("sub-" + DateTime.Now.Ticks + ".png");
-            }
+            //if (contoursAp.Length == 4 && rect.Width >= 10 && rect.Height >= 10)
+            //{
+            //    var roi2 = _image.Clone(rect);
+            //    roi2.SaveImage("sub-" + DateTime.Now.Ticks + ".png");
+            //}
 
             return contoursAp.Length == 4 && rect.Width >= 10 && rect.Height >= 10;
         }
 
-        private List<Container> ProcessInnerBlocks(List<int> contours, Mat copy)
+        private List<Container> ProcessInnerBlocks(List<int> contours, Mat copy, Rect parent = new Rect())
         {
             var r = new Random();
             var containers = new List<Container>();
@@ -449,41 +450,67 @@ namespace RazorPagesMovie.core
                 var container = new Container(c);
 
                 // align contours inside row from left to right
-                var alignVertical = row.Item3.Where(rect => rect.Width * rect.Height >= 13).OrderBy(rect => rect.X).ToArray();
-                var connectedVertical = new List<Rect>();
+                // @todo neviem či filtrovať aj tie rozmery nakoľko môžeme prísť o znaky v text ako bodka
+                //var alignHorizontal = row.Item3.Where(rect => rect.Width * rect.Height >= 13).OrderBy(rect => rect.X).ToArray();
+                var alignHorizontal = row.Item3.Where(rect => rect.Width * rect.Height >= 5).OrderBy(rect => rect.X).ToArray();
+                var connectedHorizontal = new List<Rect>();
 
                 var l = 0;
-                //foreach (var contour in alignVertical)
-                //{
-                //    var roi2 = _image.Clone(contour);
-                //    roi2.SaveImage("image2-" + DateTime.Now.Ticks + ".png");
-                //    l++;
-                //    Cv2.Rectangle(copy, new Point(contour.X, contour.Y), new Point(contour.X + contour.Width, contour.Y + contour.Height), Scalar.FromRgb(r.Next(0, 255), r.Next(0, 255), r.Next(0, 255)));
-                //}
+                foreach (var contour in alignHorizontal)
+                {
+                    //var roi2 = _image.Clone(contour);
+                    //roi2.SaveImage("image2-" + l + ".png");
+                    //l++;
+                    //Cv2.Rectangle(copy, new Point(contour.X, contour.Y), new Point(contour.X + contour.Width, contour.Y + contour.Height), Scalar.FromRgb(r.Next(0, 255), r.Next(0, 255), r.Next(0, 255)));
+                }
 
                 // connect letters into words
-                var maxTextGap = 6;
-                for (var j = 0; j < alignVertical.Length; j++)
+                // @todo tú medzeru medzi textom asi bude treba riešiť tak že sa zistí typ fontu, veľkosť a zistí sa koľko by mala mať px medzera
+                // @todo asi bude aj tak problém zisťovať napr. či nie je vedľa textu ikona, bude sa musieť kontrolovať gap medzi ikonou a samotnými písmenami
+                var maxTextGap = TemplateParser.MaxTextGap;
+                var mergedWidths = new List<double>();
+                var maxGap = 0;
+                for (var j = 0; j < alignHorizontal.Length; j++)
                 {
                     // last element cant have a gap
-                    if (j + 1 == alignVertical.Length)
+                    if (j + 1 == alignHorizontal.Length)
                     {
-                        connectedVertical.Add(alignVertical[j]);
+                        connectedHorizontal.Add(alignHorizontal[j]);
                     }
                     else
                     {
-                        var currentRect = alignVertical[j];
-                        var nextRect = alignVertical[j + 1];
+                        var currentRect = alignHorizontal[j];
+                        var nextRect = alignHorizontal[j + 1];
                         var firstGap = Math.Abs(nextRect.X - (currentRect.X + currentRect.Width));
                         var distance = Distance_BtwnPoints(new Point(currentRect.X + currentRect.Width, currentRect.Y + currentRect.Height), new Point(nextRect.X, nextRect.Y + nextRect.Height));
                         var merge = currentRect;
 
+                        // Add current item's width
+                        mergedWidths.Add(merge.Width);
+
                         //while ((distance <= maxTextGap || (currentRect & nextRect).area() > 0) && j + 1 < alignVertical.Length - 1)
                         while (firstGap <= maxTextGap || merge.IntersectsWith(nextRect))
                         {
+                            // Add merging item's width
+                            if (!merge.IntersectsWith(nextRect))
+                            {
+                                mergedWidths.Add(nextRect.Width);
+                                if (firstGap > maxGap) maxGap = firstGap;
+                                //Debug.WriteLine("adding gap " + firstGap);
+                                // calculate new max text gap
+                                var ratio = mergedWidths.Average() > 15 ? 3 : 2.5;
+                                maxTextGap = (int) (maxGap * ratio);
+                                if (maxTextGap < MaxTextGap)
+                                {
+                                    maxTextGap = MaxTextGap;
+                                }
+                                //Debug.WriteLine("new max text gap " + maxTextGap);
+                            }
+
+                            // Merge items
                             merge = merge | nextRect;
 
-                            Debug.WriteLine("merging " + j + " with " + (j+1));
+                            Debug.WriteLine("merging " + j + " with " + (j+1) + ", distance = " + distance);
 
                             j++;
 
@@ -493,10 +520,15 @@ namespace RazorPagesMovie.core
                             // @todo na font size bude musieť byť asi js skript ktorý vytvorí html a bude skúšať tak aby sa to tam vošlo a zistí teda koľko px bude mať font
 
                             // Check if we are not on the last element in the row
-                            if (j + 1 <= alignVertical.Length - 1)
+                            if (j + 1 <= alignHorizontal.Length - 1)
                             {
-                                currentRect = alignVertical[j];
-                                nextRect = alignVertical[j + 1];
+                                // Next rect's right position might be lower than current rect's (next rect is inside current rect)
+                                if (nextRect.X + nextRect.Width >= currentRect.X + currentRect.Width)
+                                {
+                                    currentRect = alignHorizontal[j];
+                                }
+
+                                nextRect = alignHorizontal[j + 1];
                                 firstGap = Math.Abs(nextRect.X - (currentRect.X + currentRect.Width));
                                 distance = Distance_BtwnPoints(new Point(currentRect.X + currentRect.Width, currentRect.Y + currentRect.Height), new Point(nextRect.X, nextRect.Y + nextRect.Height));
                             }
@@ -506,13 +538,19 @@ namespace RazorPagesMovie.core
                             }
                         }
 
-                        connectedVertical.Add(merge);
+                        connectedHorizontal.Add(merge);
+
+                        // Reset gaps
+                        mergedWidths = new List<double>();
+                        maxTextGap = MaxTextGap;
+                        maxGap = 0;
+                        //Debug.WriteLine("resetting text gap");
 
                         Debug.WriteLine("p. " + j + " distance " + distance, " gap " + firstGap);
                     }
                 }
 
-                foreach (var rect in connectedVertical)
+                foreach (var rect in connectedHorizontal)
                 {
                     limit++;
                     if (limit == 100) break;
@@ -543,7 +581,14 @@ namespace RazorPagesMovie.core
 
             foreach (var row in rows)
             {
-                Cv2.Rectangle(copy, new Point(0, row.Item1), new Point(copy.Width, row.Item2), Scalar.Orange);
+                if (parent.Width == 0)
+                {
+                    Cv2.Rectangle(copy, new Point(0, row.Item1), new Point(copy.Width, row.Item2), Scalar.Orange);
+                }
+                else
+                {
+                    Cv2.Rectangle(copy, new Point(parent.X, row.Item1), new Point(parent.X + parent.Width, row.Item2), Scalar.Orange);
+                }
             }
 
             return containers;

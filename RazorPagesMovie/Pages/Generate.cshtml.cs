@@ -123,6 +123,10 @@ namespace RazorPagesMovie.Pages
                 Scalar scalar = Scalar.FromRgb(r.Next(0, 255), r.Next(0, 255), r.Next(0, 255));
                 Cv2.DrawContours(copy, contours, j, scalar);
 
+                var edges = contours[j];
+                Point[] contoursAp = Cv2.ApproxPolyDP(edges, Cv2.ArcLength(edges, true) * 0.01, true);
+                Debug.WriteLine(j + "," + contoursAp.Length);
+
                 j = index.Next;
             }
 

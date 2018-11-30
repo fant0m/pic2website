@@ -1,0 +1,18 @@
+﻿- najskôr asi spraviť štruktúru kde budú hierarchicky všetky contours spolu s rectami, vždy spolu s childami, teoreticky možno aj parent by nebol od veci (nejaká štruktúra strom?)
+
+- buď ísť od zadu a skúšať len spájať veci
+- alebo ísť zhora dole a pozerať či tie children už neobsahuje parent, vždy sa v podstate dá pozrieť na rozmer parent - children, children by nikdy nemal byť mimo parenta čiže buď bude children odsadený od parent a treba to parsovať alebo bude obsahovať iba kúsok z neho a netreba pokračovať dole
+
+- skúsiť najskôr pospájať všetky texty a vymazať z toho hlúposti?
+
+- ísť iba po 2./3. úroveň?
+
+- alebo proste pozerať sa do vnútra iba ak to má rozumné rozmery, keď je to krpaté tak ma netrápi čo je vo vnútri
+
+- prípadne skúsiť nie ten výstup TREE ale len ten menej úrovňový
+
+
+
+
+
+- či treba parsovať child by sa dalo zistiť podľa analýzy bodov v contour, ak sú body len na krajoch tak chceme vedieť čo je v strede, ak sú body aj v strede tak máme už daný objekt napr. tlačidlo bude ohraničené boxom kde body budú len na krajoch, tak isto nejaký oddelovač farebný

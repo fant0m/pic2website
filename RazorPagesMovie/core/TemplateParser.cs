@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore.Metadata.Conventions.Internal;
 using OpenCvSharp;
 using RazorPagesMovie.core.model;
 using RazorPagesMovie.core.model.elements;
@@ -44,7 +45,7 @@ namespace RazorPagesMovie.core
         {
             _tess = new TesseractEngine(@"./wwwroot/tessdata", "eng", EngineMode.LstmOnly);
 
-            byte[] imageData = File.ReadAllBytes(@"./wwwroot/images/test5_1.png");
+            byte[] imageData = File.ReadAllBytes(@"./wwwroot/images/template4.png");
             _image = Mat.FromImageData(imageData, ImreadModes.Color);
             //Convert the img1 to grayscale and then filter out the noise
             Mat gray1 = Mat.FromImageData(imageData, ImreadModes.GrayScale);
@@ -172,8 +173,6 @@ namespace RazorPagesMovie.core
             var r = new Random();
 
             // Find index of the first top to bottom contour
-            // @todo start index by mal byť vždy 0..
-            //var startIndex = 0;
             var startIndex = -1;
             var i = 0;
             while (i != -1)
@@ -299,7 +298,7 @@ namespace RazorPagesMovie.core
 
                 foreach (var contour in contours)
                 {
-                    testSubBlocks(contour, copy);
+                    TestSubBlocks(contour, copy);
                 }
 
                 section.Containers = ProcessInnerBlocks(contours, copy);
@@ -322,12 +321,14 @@ namespace RazorPagesMovie.core
                 _templateStructure.Sections.Add(section);
             }
 
+
+
             copy.SaveImage("wwwroot/images/output.png");
 
             return startIndex;
         }
 
-        private void testSubBlocks(int contour, Mat copy)
+        private void TestSubBlocks(int contour, Mat copy)
         {
             // Find current item
             var item = _hierarchy[contour];
@@ -339,7 +340,8 @@ namespace RazorPagesMovie.core
             var rect = Cv2.BoundingRect(edges);
 
             // Looking for next level inner elements
-            if (item.Child != -1/* && rect.Width >= 10 && rect.Height >= 10*/)
+            // @todo test podmienka na tvar childu - či je to obdlžnik alebo aj niečo vo vnútri
+            if (item.Child != -1 && HasContourSubElements(edges))
             {
                 var inner = new List<int>();
                 var find = item.Child;
@@ -351,7 +353,8 @@ namespace RazorPagesMovie.core
                         inner.Add(find);
                         if (subitem.Child != -1)
                         {
-                            testSubBlocks(subitem.Child, copy);
+                            TestSubBlocks(find, copy);
+                            //testSubBlocks(subitem.Child, copy);
                         }
                     }
                     else
@@ -370,6 +373,24 @@ namespace RazorPagesMovie.core
                     ProcessInnerBlocks(inner, copy);
                 }
             }
+        }
+
+        /**
+         * Check if contour has rectangle shape and required dimensions
+         */
+        private bool HasContourSubElements(Point[] edges)
+        {
+            var contoursAp = Cv2.ApproxPolyDP(edges, Cv2.ArcLength(edges, true) * 0.02, true);
+            var rect = Cv2.BoundingRect(edges);
+
+            // @todo možno bude treba inú podmienku ako length = 4, niečo viac sotisfikované čo sa pozrie či to má body len ako obdĺžnik
+            if (contoursAp.Length == 4 && rect.Width >= 10 && rect.Height >= 10)
+            {
+                var roi2 = _image.Clone(rect);
+                roi2.SaveImage("sub-" + DateTime.Now.Ticks + ".png");
+            }
+
+            return contoursAp.Length == 4 && rect.Width >= 10 && rect.Height >= 10;
         }
 
         private List<Container> ProcessInnerBlocks(List<int> contours, Mat copy)
@@ -395,6 +416,9 @@ namespace RazorPagesMovie.core
             // @todo spojenie riadkov ak sú moc blízko
             // @todo spájanie do zvlášť containera ak majú rovnaký štýl - rovnaká výška, medzery, ..
             Debug.WriteLine("sekcia počet rectov " + sectionRects.Length);
+
+            // align rects from the top to the bottom
+            sectionRects = sectionRects.OrderBy(rec => rec.Top).ToArray();
 
             // analyse section rows
             var rows = new List<Triple<int, int, List<Rect>>>(); // y start y end
@@ -432,9 +456,9 @@ namespace RazorPagesMovie.core
                 //foreach (var contour in alignVertical)
                 //{
                 //    var roi2 = _image.Clone(contour);
-                //    roi2.SaveImage("image2-" + r.Next() + ".png");
+                //    roi2.SaveImage("image2-" + DateTime.Now.Ticks + ".png");
                 //    l++;
-                    //Cv2.Rectangle(copy, new Point(contour.X, contour.Y), new Point(contour.X + contour.Width, contour.Y + contour.Height), Scalar.FromRgb(r.Next(0, 255), r.Next(0, 255), r.Next(0, 255)));
+                //    Cv2.Rectangle(copy, new Point(contour.X, contour.Y), new Point(contour.X + contour.Width, contour.Y + contour.Height), Scalar.FromRgb(r.Next(0, 255), r.Next(0, 255), r.Next(0, 255)));
                 //}
 
                 // connect letters into words
@@ -455,9 +479,11 @@ namespace RazorPagesMovie.core
                         var merge = currentRect;
 
                         //while ((distance <= maxTextGap || (currentRect & nextRect).area() > 0) && j + 1 < alignVertical.Length - 1)
-                        while ((firstGap <= maxTextGap || merge.IntersectsWith(nextRect)) && j + 1 < alignVertical.Length - 1)
+                        while (firstGap <= maxTextGap || merge.IntersectsWith(nextRect))
                         {
                             merge = merge | nextRect;
+
+                            Debug.WriteLine("merging " + j + " with " + (j+1));
 
                             j++;
 
@@ -466,10 +492,18 @@ namespace RazorPagesMovie.core
                             // @todo neviem ako sa budú riešiť všetky children elementy a ako budem vedieť či sa jedná o text alebo nie
                             // @todo na font size bude musieť byť asi js skript ktorý vytvorí html a bude skúšať tak aby sa to tam vošlo a zistí teda koľko px bude mať font
 
-                            currentRect = alignVertical[j];
-                            nextRect = alignVertical[j + 1];
-                            firstGap = Math.Abs(nextRect.X - (currentRect.X + currentRect.Width));
-                            distance = Distance_BtwnPoints(new Point(currentRect.X + currentRect.Width, currentRect.Y + currentRect.Height), new Point(nextRect.X, nextRect.Y + nextRect.Height));
+                            // Check if we are not on the last element in the row
+                            if (j + 1 <= alignVertical.Length - 1)
+                            {
+                                currentRect = alignVertical[j];
+                                nextRect = alignVertical[j + 1];
+                                firstGap = Math.Abs(nextRect.X - (currentRect.X + currentRect.Width));
+                                distance = Distance_BtwnPoints(new Point(currentRect.X + currentRect.Width, currentRect.Y + currentRect.Height), new Point(nextRect.X, nextRect.Y + nextRect.Height));
+                            }
+                            else
+                            {
+                                break;
+                            }
                         }
 
                         connectedVertical.Add(merge);
@@ -485,8 +519,8 @@ namespace RazorPagesMovie.core
 
                     //Debug.WriteLine(limit + "=" + rect.Width + "," + rect.Height);
 
-                    var roi2 = _image.Clone(rect);
-                    roi2.SaveImage("wwwroot/images/image-" + limit + ".png");
+                    //var roi2 = _image.Clone(rect);
+                    //roi2.SaveImage("wwwroot/images/image-" + limit + ".png");
 
                     var image = new Image("./images/image-" + limit + ".png");
                     container.Elements.Add(image);
@@ -498,7 +532,7 @@ namespace RazorPagesMovie.core
                     //    Debug.Write("image " + limit + "=" + text);
                     //}
 
-                    Cv2.Rectangle(copy, new Point(rect.X, rect.Y), new Point(rect.X + rect.Width, rect.Y + rect.Height), Scalar.Yellow);
+                    Cv2.Rectangle(copy, new Point(rect.X, rect.Y), new Point(rect.X + rect.Width, rect.Y + rect.Height), Scalar.LightBlue);
                 }
 
                 containers.Add(container);

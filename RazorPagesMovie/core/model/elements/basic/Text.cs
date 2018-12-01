@@ -2,7 +2,7 @@
 {
     public class Text : Element
     {
-        private string _text;
+        private readonly string _text;
 
         public Text(string text)
         {
@@ -14,7 +14,7 @@
             return "";
         }
 
-        public override string Body()
+        public override string Content()
         {
             return _text;
         }

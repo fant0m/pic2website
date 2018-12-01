@@ -2,12 +2,13 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using RazorPagesMovie.core.model;
 
-namespace RazorPagesMovie.core.model
+namespace RazorPagesMovie.core.convertor
 {
-    public static class Convertor
+    public class WebConvertor : IConvertor
     {
-        public static String Convert(TemplateStructure templateStructure)
+        public String Convert(TemplateStructure templateStructure)
         {
             String htmlStart = "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>Test</title><style>section { width: 100%; }</style></head><body>";
             String htmlBody = "";
@@ -24,7 +25,7 @@ namespace RazorPagesMovie.core.model
                     foreach (var element in container.Elements)
                     {
                         htmlBody += element.StartTag();
-                        htmlBody += element.Body();
+                        htmlBody += element.Content();
                         htmlBody += element.EndTag();
                     }
 

@@ -20,13 +20,13 @@ namespace RazorPagesMovie.core.model.elements
             return "<div>";
         }
 
-        public override string Body()
+        public override string Content()
         {
             var output = "";
             foreach (var element in Elements)
             {
                 output += element.StartTag();
-                output += element.Body();
+                output += element.Content();
                 // @todo otázka či má element sub elementy?
                 output += element.EndTag();
             }

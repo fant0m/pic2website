@@ -18,7 +18,7 @@ namespace RazorPagesMovie.core.model.elements
             return $"<section style=\"height:{Height}px;background:rgb({BackgroundColor.Val0},{BackgroundColor.Val1},{BackgroundColor.Val2})\">";
         }
 
-        public override string Body()
+        public override string Content()
         {
             return "";
         }

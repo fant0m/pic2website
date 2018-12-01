@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore.Metadata.Conventions.Internal;
 using OpenCvSharp;
+using RazorPagesMovie.core.convertor;
 using RazorPagesMovie.core.model;
 using RazorPagesMovie.core.model.elements;
 using RazorPagesMovie.core.model.elements.basic;
@@ -47,7 +48,7 @@ namespace RazorPagesMovie.core
         {
             _tess = new TesseractEngine(@"./wwwroot/tessdata", "eng", EngineMode.LstmOnly);
 
-            byte[] imageData = File.ReadAllBytes(@"./wwwroot/images/template4.png");
+            byte[] imageData = File.ReadAllBytes(@"./wwwroot/images/works12.png");
             _image = Mat.FromImageData(imageData, ImreadModes.Color);
             //Convert the img1 to grayscale and then filter out the noise
             Mat gray1 = Mat.FromImageData(imageData, ImreadModes.GrayScale);
@@ -157,8 +158,8 @@ namespace RazorPagesMovie.core
             //    }
             //}
 
-
-            var output = Convertor.Convert(_templateStructure);
+            var convertor = new WebConvertor();
+            var output = convertor.Convert(_templateStructure);
             var fileOutpout = output.Replace("src=\".", "src=\"C:/Users/tomsh/source/repos/RazorPagesMovie/RazorPagesMovie/wwwroot");
 
             using (var tw = new StreamWriter("test.html"))
@@ -288,13 +289,6 @@ namespace RazorPagesMovie.core
             var lastY = 0;
             foreach (var section in sections)
             {
-                // @todo process sectionContours
-                // @todo nebudem tam asi ukladať ID ale Rect
-                // @todo zoradiť sort left to right, prípadne predtým pospájať ktoré sú moc blízko (text)
-                // @todo najhoršie riešenie môže byť rozdeliť to ručne do riadkov - zoradiť podľa lavej súradnice a pri vytváraní riadku vždy definovať odkiaľ pokiaľ y je daný riadok, ak príde nový element a nezmestí sa tam s jeho Y + height tak ho dať do ďalšieho riadku
-
-                // @todo ísť reverzne od poslednej úrovne a postupne to nabalovať?
-
                 // save sections rects into list
                 var contours = sectionContours[section.Id];
 
@@ -342,7 +336,6 @@ namespace RazorPagesMovie.core
             var rect = Cv2.BoundingRect(edges);
 
             // Looking for next level inner elements
-            // @todo test podmienka na tvar childu - či je to obdlžnik alebo aj niečo vo vnútri
             if (item.Child != -1 && HasContourSubElements(edges))
             {
                 var inner = new List<int>();
@@ -385,7 +378,7 @@ namespace RazorPagesMovie.core
             var contoursAp = Cv2.ApproxPolyDP(edges, Cv2.ArcLength(edges, true) * 0.02, true);
             var rect = Cv2.BoundingRect(edges);
 
-            // @todo možno bude treba inú podmienku ako length = 4, niečo viac sotisfikované čo sa pozrie či to má body len ako obdĺžnik
+            // @todo možno bude treba inú podmienku ako length = 4, niečo viac sotisfikované čo sa pozrie či to má body len ako obdĺžnik alebo aj niečo vo vnútri
             //if (contoursAp.Length == 4 && rect.Width >= 10 && rect.Height >= 10)
             //{
             //    var roi2 = _image.Clone(rect);
@@ -414,7 +407,6 @@ namespace RazorPagesMovie.core
             }
 
 
-            // @todo skontrolovať najskôr/alebo potom či tam náhodou nie je column layout a až potom robiť toto/preorganizovať to potom
             // @todo spojenie riadkov ak sú moc blízko
             // @todo spájanie do zvlášť containera ak majú rovnaký štýl - rovnaká výška, medzery, ..
             Debug.WriteLine("sekcia počet rectov " + sectionRects.Length);
@@ -450,9 +442,6 @@ namespace RazorPagesMovie.core
             {
                 var container = new Container(c);
 
-                // @todo 2018-11.30
-                // @todo nespájať písmená do slov či nie? predtým či potom?
-                // @todo najskôr asi spojím aj riadky ktoré sú jasné že sú vedľa seba, t.j. je tam malá medzera pár px (texty)
                 // @todo treba spracovať každý riadok do stĺpcov, t.j. taký istý princíp ako riadky - zoradia sa zľava doprava (čo už vlastne je vyššie):
                 // @todo zoberiem prvý element, zistím aká je medzera medzi ďalším a poďalším (za podmienky že existuje poďalší), ak sú medzery cca rovnaká (rátam s nejakou odchýlkou) tak ich pridám to 1 stĺpca a prejdem na ďalší
                 // @todo potom v sekcii ešte pozriem riadky a zistím či nemajú rovnaké stĺpce (prípadne s odchylkou) a ak hej tak spojím tie riadky
@@ -601,9 +590,6 @@ namespace RazorPagesMovie.core
 
                                     j++;
 
-                                    // @todo ak tam má intersect tak porovnávať distance aj s tým predtým nakoľko môže mať x pozíciu menšiu ako to predtým
-                                    // @todo prípadne nájsť najbližšiu možnú vzdialenosť medzi 2 rect
-                                    // @todo neviem ako sa budú riešiť všetky children elementy a ako budem vedieť či sa jedná o text alebo nie
                                     // @todo na font size bude musieť byť asi js skript ktorý vytvorí html a bude skúšať tak aby sa to tam vošlo a zistí teda koľko px bude mať font
 
                                     // Check if we are not on the last element in the row

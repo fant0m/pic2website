@@ -14,7 +14,7 @@
             return "<img ";
         }
 
-        public override string Body()
+        public override string Content()
         {
             return string.Format("src=\"{0}\"", _path);
         }

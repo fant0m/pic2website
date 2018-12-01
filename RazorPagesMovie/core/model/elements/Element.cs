@@ -3,7 +3,7 @@ using OpenCvSharp;
 
 namespace RazorPagesMovie.core.model.elements
 {
-    public abstract class Element
+    public abstract class Element : IWebElement
     {
         public int Id;
         public double Padding;
@@ -27,8 +27,9 @@ namespace RazorPagesMovie.core.model.elements
             return (GetType().Name + "-" + Id).ToLower();
         }
 
-        public abstract String StartTag();
-        public abstract String Body();
-        public abstract String EndTag();
+        public abstract string StartTag();
+
+        public abstract string Content();
+        public abstract string EndTag();
     }
 }

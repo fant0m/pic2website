@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using OpenCvSharp;
 using OpenCvSharp.Text;
 using RazorPagesMovie.core;
+using RazorPagesMovie.core.convertor;
 using RazorPagesMovie.core.model;
 using RazorPagesMovie.core.model.elements;
 using RazorPagesMovie.core.model.elements.basic;
@@ -103,7 +104,8 @@ namespace RazorPagesMovie.Pages
             section.Containers.Add(container);
             structure.Sections.Add(section);
 
-            return Convertor.Convert(structure);
+            var convertor = new WebConvertor();
+            return convertor.Convert(structure);
         }
 
         private string Test()

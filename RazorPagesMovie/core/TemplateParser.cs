@@ -36,6 +36,7 @@ namespace RazorPagesMovie.core
         public const int MaxSeparatorHeight = 10;
         public const int MinSeparatorWidth = 400;
         public const int MaxTextGap = 6;
+        public const int MínColumnGap = 20;
 
         public TemplateParser(string imagePath)
         {
@@ -46,7 +47,7 @@ namespace RazorPagesMovie.core
         {
             _tess = new TesseractEngine(@"./wwwroot/tessdata", "eng", EngineMode.LstmOnly);
 
-            byte[] imageData = File.ReadAllBytes(@"./wwwroot/images/skuska.png");
+            byte[] imageData = File.ReadAllBytes(@"./wwwroot/images/template4.png");
             _image = Mat.FromImageData(imageData, ImreadModes.Color);
             //Convert the img1 to grayscale and then filter out the noise
             Mat gray1 = Mat.FromImageData(imageData, ImreadModes.GrayScale);
@@ -449,129 +450,220 @@ namespace RazorPagesMovie.core
             {
                 var container = new Container(c);
 
-                // align contours inside row from left to right
-                // @todo neviem či filtrovať aj tie rozmery nakoľko môžeme prísť o znaky v text ako bodka
-                //var alignHorizontal = row.Item3.Where(rect => rect.Width * rect.Height >= 13).OrderBy(rect => rect.X).ToArray();
-                var alignHorizontal = row.Item3.Where(rect => rect.Width * rect.Height >= 5).OrderBy(rect => rect.X).ToArray();
-                var connectedHorizontal = new List<Rect>();
+                // @todo 2018-11.30
+                // @todo nespájať písmená do slov či nie? predtým či potom?
+                // @todo najskôr asi spojím aj riadky ktoré sú jasné že sú vedľa seba, t.j. je tam malá medzera pár px (texty)
+                // @todo treba spracovať každý riadok do stĺpcov, t.j. taký istý princíp ako riadky - zoradia sa zľava doprava (čo už vlastne je vyššie):
+                // @todo zoberiem prvý element, zistím aká je medzera medzi ďalším a poďalším (za podmienky že existuje poďalší), ak sú medzery cca rovnaká (rátam s nejakou odchýlkou) tak ich pridám to 1 stĺpca a prejdem na ďalší
+                // @todo potom v sekcii ešte pozriem riadky a zistím či nemajú rovnaké stĺpce (prípadne s odchylkou) a ak hej tak spojím tie riadky
+                // @todo riadok teda bude obsahovať zoznam stĺpcov a každý stĺpec bude obsahovať zoznam riadkov, t.j. na každý stĺpec potom znova aplikujem algoritmus delenia na riadky už ale bez stĺpcovania (asi či?)
 
-                var l = 0;
-                foreach (var contour in alignHorizontal)
-                {
-                    //var roi2 = _image.Clone(contour);
-                    //roi2.SaveImage("image2-" + l + ".png");
-                    //l++;
-                    //Cv2.Rectangle(copy, new Point(contour.X, contour.Y), new Point(contour.X + contour.Width, contour.Y + contour.Height), Scalar.FromRgb(r.Next(0, 255), r.Next(0, 255), r.Next(0, 255)));
-                }
+                /* Columns start */
 
-                // connect letters into words
-                // @todo tú medzeru medzi textom asi bude treba riešiť tak že sa zistí typ fontu, veľkosť a zistí sa koľko by mala mať px medzera
-                // @todo asi bude aj tak problém zisťovať napr. či nie je vedľa textu ikona, bude sa musieť kontrolovať gap medzi ikonou a samotnými písmenami
-                var maxTextGap = TemplateParser.MaxTextGap;
-                var mergedWidths = new List<double>();
-                var maxGap = 0;
-                for (var j = 0; j < alignHorizontal.Length; j++)
+                // align rects from the left to the right
+                var alignedRects = row.Item3.OrderBy(rec => rec.Left).ToArray();
+
+                // analyse section columns
+                var columns = new List<Triple<int, int, List<Rect>>>(); // x start, x end, list of items
+                foreach (var rect in alignedRects)
                 {
-                    // last element cant have a gap
-                    if (j + 1 == alignHorizontal.Length)
+                    var columnIndex = findColumnForRect(columns, rect);
+                    if (columnIndex == -1)
                     {
-                        connectedHorizontal.Add(alignHorizontal[j]);
+                        var triple = new Triple<int, int, List<Rect>>
+                        {
+                            Item1 = rect.X,
+                            Item2 = rect.X + rect.Width,
+                            Item3 = new List<Rect> { rect }
+                        };
+                        columns.Add(triple);
                     }
                     else
                     {
-                        var currentRect = alignHorizontal[j];
-                        var nextRect = alignHorizontal[j + 1];
-                        var firstGap = Math.Abs(nextRect.X - (currentRect.X + currentRect.Width));
-                        var distance = Distance_BtwnPoints(new Point(currentRect.X + currentRect.Width, currentRect.Y + currentRect.Height), new Point(nextRect.X, nextRect.Y + nextRect.Height));
-                        var merge = currentRect;
-
-                        // Add current item's width
-                        mergedWidths.Add(merge.Width);
-
-                        //while ((distance <= maxTextGap || (currentRect & nextRect).area() > 0) && j + 1 < alignVertical.Length - 1)
-                        while (firstGap <= maxTextGap || merge.IntersectsWith(nextRect))
-                        {
-                            // Add merging item's width
-                            if (!merge.IntersectsWith(nextRect))
-                            {
-                                mergedWidths.Add(nextRect.Width);
-                                if (firstGap > maxGap) maxGap = firstGap;
-                                //Debug.WriteLine("adding gap " + firstGap);
-                                // calculate new max text gap
-                                var ratio = mergedWidths.Average() > 15 ? 3 : 2.5;
-                                maxTextGap = (int) (maxGap * ratio);
-                                if (maxTextGap < MaxTextGap)
-                                {
-                                    maxTextGap = MaxTextGap;
-                                }
-                                //Debug.WriteLine("new max text gap " + maxTextGap);
-                            }
-
-                            // Merge items
-                            merge = merge | nextRect;
-
-                            Debug.WriteLine("merging " + j + " with " + (j+1) + ", distance = " + distance);
-
-                            j++;
-
-                            // @todo ak tam má intersect tak porovnávať distance aj s tým predtým nakoľko môže mať x pozíciu menšiu ako to predtým
-                            // @todo prípadne nájsť najbližšiu možnú vzdialenosť medzi 2 rect
-                            // @todo neviem ako sa budú riešiť všetky children elementy a ako budem vedieť či sa jedná o text alebo nie
-                            // @todo na font size bude musieť byť asi js skript ktorý vytvorí html a bude skúšať tak aby sa to tam vošlo a zistí teda koľko px bude mať font
-
-                            // Check if we are not on the last element in the row
-                            if (j + 1 <= alignHorizontal.Length - 1)
-                            {
-                                // Next rect's right position might be lower than current rect's (next rect is inside current rect)
-                                if (nextRect.X + nextRect.Width >= currentRect.X + currentRect.Width)
-                                {
-                                    currentRect = alignHorizontal[j];
-                                }
-
-                                nextRect = alignHorizontal[j + 1];
-                                firstGap = Math.Abs(nextRect.X - (currentRect.X + currentRect.Width));
-                                distance = Distance_BtwnPoints(new Point(currentRect.X + currentRect.Width, currentRect.Y + currentRect.Height), new Point(nextRect.X, nextRect.Y + nextRect.Height));
-                            }
-                            else
-                            {
-                                break;
-                            }
-                        }
-
-                        connectedHorizontal.Add(merge);
-
-                        // Reset gaps
-                        mergedWidths = new List<double>();
-                        maxTextGap = MaxTextGap;
-                        maxGap = 0;
-                        //Debug.WriteLine("resetting text gap");
-
-                        Debug.WriteLine("p. " + j + " distance " + distance, " gap " + firstGap);
+                        columns[columnIndex].Item3.Add(rect);
                     }
                 }
 
-                foreach (var rect in connectedHorizontal)
+                // draw columns
+                foreach (var column in columns)
                 {
-                    limit++;
-                    if (limit == 100) break;
-
-                    //Debug.WriteLine(limit + "=" + rect.Width + "," + rect.Height);
-
-                    //var roi2 = _image.Clone(rect);
-                    //roi2.SaveImage("wwwroot/images/image-" + limit + ".png");
-
-                    var image = new Image("./images/image-" + limit + ".png");
-                    container.Elements.Add(image);
-
-                    //using (var page = _tess.Process(Pix.LoadFromFile("image-" + limit + ".png"), PageSegMode.SingleBlock))
-                    //{
-                    //    var text = page.GetText();
-
-                    //    Debug.Write("image " + limit + "=" + text);
-                    //}
-
-                    Cv2.Rectangle(copy, new Point(rect.X, rect.Y), new Point(rect.X + rect.Width, rect.Y + rect.Height), Scalar.LightBlue);
+                    Cv2.Rectangle(copy, new Point(column.Item1, row.Item1), new Point(column.Item2, row.Item2), Scalar.GreenYellow);
                 }
+
+                /* Columns end */
+                
+                // process columns into rows
+                foreach (var column in columns)
+                {
+                    // @todo refactor rows, columns do metód
+
+                    /* Column rows start */
+
+                    // align rects from the top to the bottom
+                    var alignedColumnRects = column.Item3.OrderBy(rec => rec.Top).ToArray();
+
+                    // detect column rows
+                    var columnRows = new List<Triple<int, int, List<Rect>>>(); // y start y end
+                    foreach (var rect in alignedColumnRects)
+                    {
+                        var rowIndex = findRowForRect(columnRows, rect);
+                        if (rowIndex == -1)
+                        {
+                            var triple = new Triple<int, int, List<Rect>>
+                            {
+                                Item1 = rect.Y,
+                                Item2 = rect.Y + rect.Height,
+                                Item3 = new List<Rect> { rect }
+                            };
+                            columnRows.Add(triple);
+                        }
+                        else
+                        {
+                            columnRows[rowIndex].Item3.Add(rect);
+                        }
+                    }
+
+                    // draw column rows
+                    foreach (var columnRow in columnRows)
+                    {
+                        Cv2.Rectangle(copy, new Point(column.Item1, columnRow.Item1), new Point(column.Item2, columnRow.Item2), Scalar.DarkOrange);
+                    }
+
+                    /* Column rows end */
+
+
+                    /* Column row letters merging start */
+                    // process column rows
+                    foreach (var columnRow in columnRows)
+                    {
+                        // align contours inside row from left to right
+                        // @todo neviem či filtrovať aj tie rozmery nakoľko môžeme prísť o znaky v text ako bodka
+                        //var alignHorizontal = row.Item3.Where(rect => rect.Width * rect.Height >= 13).OrderBy(rect => rect.X).ToArray();
+                        var alignHorizontal = columnRow.Item3.Where(rect => rect.Width * rect.Height >= 5).OrderBy(rect => rect.X).ToArray();
+                        var connectedHorizontal = new List<Rect>();
+
+                        var l = 0;
+                        foreach (var contour in alignHorizontal)
+                        {
+                            //var roi2 = _image.Clone(contour);
+                            //roi2.SaveImage("image2-" + l + ".png");
+                            //l++;
+                            //Cv2.Rectangle(copy, new Point(contour.X, contour.Y), new Point(contour.X + contour.Width, contour.Y + contour.Height), Scalar.FromRgb(r.Next(0, 255), r.Next(0, 255), r.Next(0, 255)));
+                        }
+
+                        // connect letters into words
+                        // @todo tú medzeru medzi textom asi bude treba riešiť tak že sa zistí typ fontu, veľkosť a zistí sa koľko by mala mať px medzera
+                        // @todo asi bude aj tak problém zisťovať napr. či nie je vedľa textu ikona, bude sa musieť kontrolovať gap medzi ikonou a samotnými písmenami
+                        var maxTextGap = TemplateParser.MaxTextGap;
+                        var mergedWidths = new List<double>();
+                        var maxGap = 0;
+                        for (var j = 0; j < alignHorizontal.Length; j++)
+                        {
+                            // last element cant have a gap
+                            if (j + 1 == alignHorizontal.Length)
+                            {
+                                connectedHorizontal.Add(alignHorizontal[j]);
+                            }
+                            else
+                            {
+                                var currentRect = alignHorizontal[j];
+                                var nextRect = alignHorizontal[j + 1];
+                                var firstGap = Math.Abs(nextRect.X - (currentRect.X + currentRect.Width));
+                                var distance = Distance_BtwnPoints(new Point(currentRect.X + currentRect.Width, currentRect.Y + currentRect.Height), new Point(nextRect.X, nextRect.Y + nextRect.Height));
+                                var merge = currentRect;
+
+                                // Add current item's width
+                                mergedWidths.Add(merge.Width);
+
+                                //while ((distance <= maxTextGap || (currentRect & nextRect).area() > 0) && j + 1 < alignVertical.Length - 1)
+                                while (firstGap <= maxTextGap || merge.IntersectsWith(nextRect))
+                                {
+                                    // Add merging item's width
+                                    if (!merge.IntersectsWith(nextRect))
+                                    {
+                                        mergedWidths.Add(nextRect.Width);
+                                        if (firstGap > maxGap) maxGap = firstGap;
+                                        //Debug.WriteLine("adding gap " + firstGap);
+                                        // calculate new max text gap
+                                        var ratio = mergedWidths.Average() > 15 ? 3 : 2.5;
+                                        maxTextGap = (int) (maxGap * ratio);
+                                        if (maxTextGap < MaxTextGap)
+                                        {
+                                            maxTextGap = MaxTextGap;
+                                        }
+                                        //Debug.WriteLine("new max text gap " + maxTextGap);
+                                    }
+
+                                    // Merge items
+                                    merge = merge | nextRect;
+
+                                    Debug.WriteLine("merging " + j + " with " + (j+1) + ", distance = " + distance);
+
+                                    j++;
+
+                                    // @todo ak tam má intersect tak porovnávať distance aj s tým predtým nakoľko môže mať x pozíciu menšiu ako to predtým
+                                    // @todo prípadne nájsť najbližšiu možnú vzdialenosť medzi 2 rect
+                                    // @todo neviem ako sa budú riešiť všetky children elementy a ako budem vedieť či sa jedná o text alebo nie
+                                    // @todo na font size bude musieť byť asi js skript ktorý vytvorí html a bude skúšať tak aby sa to tam vošlo a zistí teda koľko px bude mať font
+
+                                    // Check if we are not on the last element in the row
+                                    if (j + 1 <= alignHorizontal.Length - 1)
+                                    {
+                                        // Next rect's right position might be lower than current rect's (next rect is inside current rect)
+                                        if (nextRect.X + nextRect.Width >= currentRect.X + currentRect.Width)
+                                        {
+                                            currentRect = alignHorizontal[j];
+                                        }
+
+                                        nextRect = alignHorizontal[j + 1];
+                                        firstGap = Math.Abs(nextRect.X - (currentRect.X + currentRect.Width));
+                                        distance = Distance_BtwnPoints(new Point(currentRect.X + currentRect.Width, currentRect.Y + currentRect.Height), new Point(nextRect.X, nextRect.Y + nextRect.Height));
+                                    }
+                                    else
+                                    {
+                                        break;
+                                    }
+                                }
+
+                                connectedHorizontal.Add(merge);
+
+                                // Reset gaps
+                                mergedWidths = new List<double>();
+                                maxTextGap = MaxTextGap;
+                                maxGap = 0;
+                                //Debug.WriteLine("resetting text gap");
+
+                                Debug.WriteLine("p. " + j + " distance " + distance, " gap " + firstGap);
+                            }
+                        }
+
+                        foreach (var rect in connectedHorizontal)
+                        {
+                            //limit++;
+                            //if (limit == 100) break;
+
+                            //Debug.WriteLine(limit + "=" + rect.Width + "," + rect.Height);
+
+                            //var roi2 = _image.Clone(rect);
+                            //roi2.SaveImage("wwwroot/images/image-" + limit + ".png");
+
+                            //var image = new Image("./images/image-" + limit + ".png");
+                            //container.Elements.Add(image);
+
+                            //using (var page = _tess.Process(Pix.LoadFromFile("image-" + limit + ".png"), PageSegMode.SingleBlock))
+                            //{
+                            //    var text = page.GetText();
+
+                            //    Debug.Write("image " + limit + "=" + text);
+                            //}
+
+                            Cv2.Rectangle(copy, new Point(rect.X, rect.Y), new Point(rect.X + rect.Width, rect.Y + rect.Height), Scalar.Purple);
+                        }
+                    }
+                    
+                    /* Column row letters merging end */
+                }
+
 
                 containers.Add(container);
                 c++;
@@ -617,6 +709,37 @@ namespace RazorPagesMovie.core
                 if (rect.Y <= row.Item2 && rect.Y + rect.Height > row.Item2)
                 {
                     row.Item2 += rect.Y + rect.Height - row.Item2;
+                    return i;
+                }
+
+                i++;
+            }
+
+            return index;
+        }
+
+        private int findColumnForRect(List<Triple<int, int, List<Rect>>> columns, Rect rect)
+        {
+            int index = -1;
+
+            int i = 0;
+            foreach (var column in columns)
+            {
+                // rect fits exactly into column
+                if (rect.X >= column.Item1 && rect.X + rect.Width <= column.Item2)
+                {
+                    return i;
+                }
+                // end of the rect doesnt fit
+                if (rect.X <= column.Item2 && rect.X + rect.Width > column.Item2)
+                {
+                    column.Item2 += rect.X + rect.Width - column.Item2;
+                    return i;
+                }
+                // rect doesn't fit just by a few pixels so we will merge them anyway
+                if (rect.X > column.Item2 && rect.X - column.Item2  <= MínColumnGap)
+                {
+                    column.Item2 += rect.Width + rect.X - column.Item2;
                     return i;
                 }
 

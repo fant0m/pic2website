@@ -11,6 +11,7 @@ using RazorPagesMovie.core.convertor;
 using RazorPagesMovie.core.model;
 using RazorPagesMovie.core.model.elements;
 using RazorPagesMovie.core.model.elements.basic;
+using RazorPagesMovie.core.model.elements.grid;
 using Tesseract;
 using Rect = OpenCvSharp.Rect;
 
@@ -21,6 +22,13 @@ namespace RazorPagesMovie.core
         public T Item1 { get; set; }
         public X Item2 { get; set; }
         public Y Item3 { get; set; }
+    }
+    public class TripleExt<T, X, Y, Z>
+    {
+        public T Item1 { get; set; }
+        public X Item2 { get; set; }
+        public Y Item3 { get; set; }
+        public Z Element { get; set; }
     }
 
     public class TemplateParser
@@ -48,7 +56,7 @@ namespace RazorPagesMovie.core
         {
             _tess = new TesseractEngine(@"./wwwroot/tessdata", "eng", EngineMode.LstmOnly);
 
-            byte[] imageData = File.ReadAllBytes(@"./wwwroot/images/works12.png");
+            byte[] imageData = File.ReadAllBytes(@"./wwwroot/images/works13.png");
             _image = Mat.FromImageData(imageData, ImreadModes.Color);
             //Convert the img1 to grayscale and then filter out the noise
             Mat gray1 = Mat.FromImageData(imageData, ImreadModes.GrayScale);
@@ -294,10 +302,12 @@ namespace RazorPagesMovie.core
 
                 foreach (var contour in contours)
                 {
-                    TestSubBlocks(contour, copy);
+                    //CheckSubBlocks(contour, copy);
                 }
 
-                section.Containers = ProcessInnerBlocks(contours, copy);
+                var cont = new Container(1);
+                cont.Rows = ProcessInnerBlocks(contours, copy);
+                section.Containers.Add(cont);
 
                 Cv2.Rectangle(copy, new Point(0, lastY), new Point(copy.Width, lastY + section.Height), Scalar.Red);
                 lastY += section.Height;
@@ -324,7 +334,10 @@ namespace RazorPagesMovie.core
             return startIndex;
         }
 
-        private void TestSubBlocks(int contour, Mat copy)
+        /**
+         * Check if contour doesn't have more blocks inside it
+         */
+        private List<Row> CheckSubBlocks(int contour, Mat copy)
         {
             // Find current item
             var item = _hierarchy[contour];
@@ -348,8 +361,8 @@ namespace RazorPagesMovie.core
                         inner.Add(find);
                         if (subitem.Child != -1)
                         {
-                            TestSubBlocks(find, copy);
-                            //testSubBlocks(subitem.Child, copy);
+                            // Recursive call with child element
+                            CheckSubBlocks(find, copy);
                         }
                     }
                     else
@@ -365,9 +378,13 @@ namespace RazorPagesMovie.core
                 // We have found inner elements
                 if (inner.Count > 0)
                 {
-                    ProcessInnerBlocks(inner, copy, rect);
+                    List<Row> rows = ProcessInnerBlocks(inner, copy, rect, false);
+
+                    return rows;
                 }
             }
+
+            return null;
         }
 
         /**
@@ -388,21 +405,29 @@ namespace RazorPagesMovie.core
             return contoursAp.Length == 4 && rect.Width >= 10 && rect.Height >= 10;
         }
 
-        private List<Container> ProcessInnerBlocks(List<int> contours, Mat copy, Rect parent = new Rect())
+        private List<Row> ProcessInnerBlocks(List<int> contours, Mat copy, Rect parent = new Rect(), bool recursive = true)
         {
             var r = new Random();
-            var containers = new List<Container>();
+            var sectionRows = new List<Row>();
             var sectionRects = new Rect[contours.Count];
+            var sectionRectRows = new List<Row>[contours.Count];
             var k = 0;
             foreach (var contour in contours)
             {
-                Debug.WriteLine("filling " + contour);
+                //Debug.WriteLine("filling " + contour);
                 // Edges
                 var edges = _contours[contour];
 
                 // Bounding box
                 var rect = Cv2.BoundingRect(edges);
                 sectionRects[k] = rect;
+
+                if (recursive)
+                {
+                    sectionRectRows[k] = CheckSubBlocks(contour, copy);
+                    // @todo ak tu mám dáta tak to nižšie nemusím riešiť asi keďže element je len obdĺžnik a v ňom je niečo
+                }
+
                 k++;
             }
 
@@ -415,13 +440,13 @@ namespace RazorPagesMovie.core
             sectionRects = sectionRects.OrderBy(rec => rec.Top).ToArray();
 
             // analyse section rows
-            var rows = new List<Triple<int, int, List<Rect>>>(); // y start y end
+            var rows = new List<TripleExt<int, int, List<Rect>, Element>>(); // y start y end
             foreach (var rect in sectionRects)
             {
-                var rowIndex = findRowForRect(rows, rect);
+                var rowIndex = FindRowForRect(rows, rect);
                 if (rowIndex == -1)
                 {
-                    var triple = new Triple<int, int, List<Rect>>
+                    var triple = new TripleExt<int, int, List<Rect>, Element>
                     {
                         Item1 = rect.Y,
                         Item2 = rect.Y + rect.Height,
@@ -440,7 +465,8 @@ namespace RazorPagesMovie.core
             var c = 1;
             foreach (var row in rows)
             {
-                var container = new Container(c);
+                //var container = new Container(c);
+                var sectionRow = new Row(c);
 
                 // @todo treba spracovať každý riadok do stĺpcov, t.j. taký istý princíp ako riadky - zoradia sa zľava doprava (čo už vlastne je vyššie):
                 // @todo zoberiem prvý element, zistím aká je medzera medzi ďalším a poďalším (za podmienky že existuje poďalší), ak sú medzery cca rovnaká (rátam s nejakou odchýlkou) tak ich pridám to 1 stĺpca a prejdem na ďalší
@@ -453,19 +479,23 @@ namespace RazorPagesMovie.core
                 var alignedRects = row.Item3.OrderBy(rec => rec.Left).ToArray();
 
                 // analyse section columns
-                var columns = new List<Triple<int, int, List<Rect>>>(); // x start, x end, list of items
+                var columns = new List<TripleExt<int, int, List<Rect>, Element>>(); // x start, x end, list of items
                 foreach (var rect in alignedRects)
                 {
-                    var columnIndex = findColumnForRect(columns, rect);
+                    var columnIndex = FindColumnForRect(columns, rect);
                     if (columnIndex == -1)
                     {
-                        var triple = new Triple<int, int, List<Rect>>
+                        var column = new Column(1);
+
+                        var triple = new TripleExt<int, int, List<Rect>, Element>
                         {
                             Item1 = rect.X,
                             Item2 = rect.X + rect.Width,
-                            Item3 = new List<Rect> { rect }
+                            Item3 = new List<Rect> { rect },
+                            Element = column
                         };
                         columns.Add(triple);
+                        sectionRow.Columns.Add(column);
                     }
                     else
                     {
@@ -492,18 +522,21 @@ namespace RazorPagesMovie.core
                     var alignedColumnRects = column.Item3.OrderBy(rec => rec.Top).ToArray();
 
                     // detect column rows
-                    var columnRows = new List<Triple<int, int, List<Rect>>>(); // y start y end
+                    var columnRows = new List<TripleExt<int, int, List<Rect>, Element>>(); // y start y end
                     foreach (var rect in alignedColumnRects)
                     {
-                        var rowIndex = findRowForRect(columnRows, rect);
+                        var rowIndex = FindRowForRect(columnRows, rect);
                         if (rowIndex == -1)
                         {
-                            var triple = new Triple<int, int, List<Rect>>
+                            var columnRow = new Row(1);
+                            var triple = new TripleExt<int, int, List<Rect>, Element>
                             {
                                 Item1 = rect.Y,
                                 Item2 = rect.Y + rect.Height,
-                                Item3 = new List<Rect> { rect }
+                                Item3 = new List<Rect> { rect },
+                                Element = columnRow
                             };
+                            ((Column)column.Element).Elements.Add(columnRow);
                             columnRows.Add(triple);
                         }
                         else
@@ -515,6 +548,7 @@ namespace RazorPagesMovie.core
                     // draw column rows
                     foreach (var columnRow in columnRows)
                     {
+
                         Cv2.Rectangle(copy, new Point(column.Item1, columnRow.Item1), new Point(column.Item2, columnRow.Item2), Scalar.DarkOrange);
                     }
 
@@ -557,21 +591,20 @@ namespace RazorPagesMovie.core
                             {
                                 var currentRect = alignHorizontal[j];
                                 var nextRect = alignHorizontal[j + 1];
-                                var firstGap = Math.Abs(nextRect.X - (currentRect.X + currentRect.Width));
-                                var distance = Distance_BtwnPoints(new Point(currentRect.X + currentRect.Width, currentRect.Y + currentRect.Height), new Point(nextRect.X, nextRect.Y + nextRect.Height));
+                                var gap = Math.Abs(nextRect.X - (currentRect.X + currentRect.Width));
                                 var merge = currentRect;
 
                                 // Add current item's width
                                 mergedWidths.Add(merge.Width);
 
                                 //while ((distance <= maxTextGap || (currentRect & nextRect).area() > 0) && j + 1 < alignVertical.Length - 1)
-                                while (firstGap <= maxTextGap || merge.IntersectsWith(nextRect))
+                                while (gap <= maxTextGap || merge.IntersectsWith(nextRect))
                                 {
                                     // Add merging item's width
                                     if (!merge.IntersectsWith(nextRect))
                                     {
                                         mergedWidths.Add(nextRect.Width);
-                                        if (firstGap > maxGap) maxGap = firstGap;
+                                        if (gap > maxGap) maxGap = gap;
                                         //Debug.WriteLine("adding gap " + firstGap);
                                         // calculate new max text gap
                                         var ratio = mergedWidths.Average() > 15 ? 3 : 2.5;
@@ -586,7 +619,7 @@ namespace RazorPagesMovie.core
                                     // Merge items
                                     merge = merge | nextRect;
 
-                                    Debug.WriteLine("merging " + j + " with " + (j+1) + ", distance = " + distance);
+                                    //Debug.WriteLine("merging " + j + " with " + (j+1) + ", distance = " + distance);
 
                                     j++;
 
@@ -602,8 +635,7 @@ namespace RazorPagesMovie.core
                                         }
 
                                         nextRect = alignHorizontal[j + 1];
-                                        firstGap = Math.Abs(nextRect.X - (currentRect.X + currentRect.Width));
-                                        distance = Distance_BtwnPoints(new Point(currentRect.X + currentRect.Width, currentRect.Y + currentRect.Height), new Point(nextRect.X, nextRect.Y + nextRect.Height));
+                                        gap = Math.Abs(nextRect.X - (currentRect.X + currentRect.Width));
                                     }
                                     else
                                     {
@@ -619,22 +651,26 @@ namespace RazorPagesMovie.core
                                 maxGap = 0;
                                 //Debug.WriteLine("resetting text gap");
 
-                                Debug.WriteLine("p. " + j + " distance " + distance, " gap " + firstGap);
+                                //Debug.WriteLine("p. " + j + " distance " + distance, " gap " + firstGap);
                             }
                         }
 
+                        // Create single column inside row
+                        var singleColumn = new Column(1);
+
+                        // Add items to col
                         foreach (var rect in connectedHorizontal)
                         {
-                            //limit++;
+                            limit++;
                             //if (limit == 100) break;
 
                             //Debug.WriteLine(limit + "=" + rect.Width + "," + rect.Height);
 
-                            //var roi2 = _image.Clone(rect);
-                            //roi2.SaveImage("wwwroot/images/image-" + limit + ".png");
+                            var roi2 = _image.Clone(rect);
+                            roi2.SaveImage("wwwroot/images/image-" + limit + ".png");
 
-                            //var image = new Image("./images/image-" + limit + ".png");
-                            //container.Elements.Add(image);
+                            var image = new Image("./images/image-" + limit + ".png");
+                            singleColumn.Elements.Add(image);
 
                             //using (var page = _tess.Process(Pix.LoadFromFile("image-" + limit + ".png"), PageSegMode.SingleBlock))
                             //{
@@ -645,17 +681,83 @@ namespace RazorPagesMovie.core
 
                             Cv2.Rectangle(copy, new Point(rect.X, rect.Y), new Point(rect.X + rect.Width, rect.Y + rect.Height), Scalar.Purple);
                         }
+
+                        // Add single column into row
+                        ((Row)columnRow.Element).Columns.Add(singleColumn);
                     }
                     
                     /* Column row letters merging end */
                 }
 
 
-                containers.Add(container);
+                /* Merge columns into logical parts start */
+                // @todo keď bude normálna štruktúra v inštanciách
+                /*
+                Debug.WriteLine("row has " + columns.Count + " columns");
+                if (columns.Count > 2)
+                {
+                    var index = 0;
+                    while (index + 2 < columns.Count)
+                    {
+                        var currentColumn = columns[index];
+                        var firstColumn = columns[index + 1];
+                        var secondColumn = columns[index + 2];
+
+                        var firstGap = firstColumn.Item1 - currentColumn.Item2;
+                        var secondGap = secondColumn.Item1 - firstColumn.Item2;
+
+                        // Compare first and second gap between columns
+                        //Debug.WriteLine("gap 1. - 2. " + firstGap + "," + secondGap);
+                        if (AreSame(firstGap, secondGap))
+                        {
+                            // @todo merge 1 2 into one logical parent
+                            // @todo bude ten merge ako nejaký atribút id merge a pri generovaní sa len hodia vedľa seba pod 1 element?
+
+                            index++;
+                            continue;
+                        }
+
+                        // Compare first and third gap between columns
+                        if (index + 3 < columns.Count)
+                        {
+                            var thirdColumn = columns[index + 3];
+                            var thirdGap = thirdColumn.Item1 - secondColumn.Item2;
+
+                            //Debug.WriteLine("gap 1. - 3. " + firstGap + "," + secondGap);
+                            if (AreSame(firstGap, thirdGap))
+                            {
+                                // @todo merge 1 2 into one logical parent
+
+                                index++;
+                            }
+                            // Might be not connected but other columns are further
+                            else if (thirdGap > firstGap * 2)
+                            {
+                                // @todo merge 1 2  into one logical parent
+
+                                index++;
+                            }
+                        }
+
+                        index++;
+                    }
+                }*/
+
+                /* Merge columns into logical parts end */
+
+
+                /* Adjust column widths start */
+
+                // @todo asi width ostanú a len marginy sa nastavia, alebo všetky riadky budú musieť vedieť že majú fixnú width
+
+                /* Adjust column widths end */
+
+
+                sectionRows.Add(sectionRow);
                 c++;
             }
 
-            Debug.WriteLine("sekcia počet row " + rows.Count);
+            //Debug.WriteLine("sekcia počet row " + rows.Count);
 
             foreach (var row in rows)
             {
@@ -669,17 +771,15 @@ namespace RazorPagesMovie.core
                 }
             }
 
-            return containers;
+            return sectionRows;
         }
 
-        private double Distance_BtwnPoints(Point p, Point q)
+        private bool AreSame(double value1, double value2)
         {
-            int X_Diff = p.X - q.X;
-            int Y_Diff = p.Y - q.Y;
-            return Math.Sqrt((X_Diff * X_Diff) + (Y_Diff * Y_Diff));
+            return Math.Abs(value2 - value1) <= 2;
         }
 
-        private int findRowForRect(List<Triple<int, int, List<Rect>>> rows, Rect rect)
+        private int FindRowForRect(List<TripleExt<int, int, List<Rect>, Element>> rows, Rect rect)
         {
             int index = -1;
 
@@ -704,7 +804,7 @@ namespace RazorPagesMovie.core
             return index;
         }
 
-        private int findColumnForRect(List<Triple<int, int, List<Rect>>> columns, Rect rect)
+        private int FindColumnForRect(List<TripleExt<int, int, List<Rect>, Element>> columns, Rect rect)
         {
             int index = -1;
 

@@ -15,6 +15,7 @@ using RazorPagesMovie.core.convertor;
 using RazorPagesMovie.core.model;
 using RazorPagesMovie.core.model.elements;
 using RazorPagesMovie.core.model.elements.basic;
+using RazorPagesMovie.core.model.elements.grid;
 using Tesseract;
 using Image = RazorPagesMovie.core.model.elements.basic.Image;
 using Point = OpenCvSharp.Point;
@@ -99,8 +100,12 @@ namespace RazorPagesMovie.Pages
             var container = new Container(1);
             var text = new Text("test");
             var image = new Image("https://www.freeiconspng.com/uploads/format-png-image-resolution-3580x3402-size-1759-kb-star-png-image-star--6.png");
-            container.Elements.Add(text);
-            container.Elements.Add(image);
+            var row = new Row(1);
+            var col = new Column(1);
+            row.Columns.Add(col);
+            col.Elements.Add(text);
+            col.Elements.Add(image);
+            container.Rows.Add(row);
             section.Containers.Add(container);
             structure.Sections.Add(section);
 

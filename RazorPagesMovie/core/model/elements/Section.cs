@@ -20,7 +20,14 @@ namespace RazorPagesMovie.core.model.elements
 
         public override string Content()
         {
-            return "";
+            var output = "";
+            foreach (var element in Containers)
+            {
+                output += element.StartTag();
+                output += element.Content();
+                output += element.EndTag();
+            }
+            return output;
         }
 
         public override string EndTag()

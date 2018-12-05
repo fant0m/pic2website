@@ -2,33 +2,33 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using RazorPagesMovie.core.model.elements.grid;
 
 namespace RazorPagesMovie.core.model.elements
 {
     public class Container : Element
     {
-        public List<Element> Elements { get; }
-        // @todo možno ešte type - div/span
+        public List<Row> Rows { get; set; }
+        // @todo možno ešte type - div/span resp. blok/nie blok element
         public Container(int id)
         {
             Id = id;
-            Elements = new List<Element>();
+            Rows = new List<Row>();
         }
 
         public override string StartTag()
         {
-            return "<div>";
+            return "<div class=\"container\">";
         }
 
         public override string Content()
         {
             var output = "";
-            foreach (var element in Elements)
+            foreach (var row in Rows)
             {
-                output += element.StartTag();
-                output += element.Content();
-                // @todo otázka či má element sub elementy?
-                output += element.EndTag();
+                output += row.StartTag();
+                output += row.Content();
+                output += row.EndTag();
             }
             return output;
         }

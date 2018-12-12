@@ -6,13 +6,14 @@ namespace RazorPagesMovie.core.model.elements
     public abstract class Element : IWebElement
     {
         public int Id;
-        public double Padding;
-        public double Margin;
+        public int[] Padding;
+        public int[] Margin;
         public double Width;
         public int Height;
         public int[] Color;
         public string Class;
         public Border Border;
+        // @todo toto určite nie Scalar, len normálne pole 4 double, alebo vlastná trieda
         public Scalar BackgroundColor;
 
         // @todo tu asi bude musieť byť list sub elementov
@@ -20,6 +21,8 @@ namespace RazorPagesMovie.core.model.elements
         protected Element()
         {
             Color = new int[3];
+            Margin = new[] { 0, 0, 0, 0 };
+            Padding = new[] { 0, 0, 0, 0 };
         }
 
         public string GetId()

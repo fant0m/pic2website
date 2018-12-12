@@ -17,4 +17,9 @@
     <Folder Include="core\model\elements\table\" />
     <Folder Include="wwwroot\tessdata\" />
   </ItemGroup>
+
+
+  <ItemGroup>
+    <None Include="wwwroot\style.css" />
+  </ItemGroup>
 </Project>

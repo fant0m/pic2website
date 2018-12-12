@@ -16,3 +16,8 @@
 
 
 - či treba parsovať child by sa dalo zistiť podľa analýzy bodov v contour, ak sú body len na krajoch tak chceme vedieť čo je v strede, ak sú body aj v strede tak máme už daný objekt napr. tlačidlo bude ohraničené boxom kde body budú len na krajoch, tak isto nejaký oddelovač farebný
+
+
+
+12-12-2018
+po analyzovaní elementov bude nejaká trieda cleaner, ktorá spraví poriadok s elementami napr. v prípade že v riadku je stĺpec v ňom ďalší riadok a stĺpec tak to spojí dokopy

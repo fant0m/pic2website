@@ -41,6 +41,7 @@ namespace RazorPagesMovie.core
         private HierarchyIndex[] _hierarchy;
         private TemplateStructure _templateStructure;
         private TesseractEngine _tess;
+        private int limit = 0;
 
         public const int MaxSeparatorHeight = 10;
         public const int MinSeparatorWidth = 400;
@@ -56,7 +57,7 @@ namespace RazorPagesMovie.core
         {
             _tess = new TesseractEngine(@"./wwwroot/tessdata", "eng", EngineMode.LstmOnly);
 
-            byte[] imageData = File.ReadAllBytes(@"./wwwroot/images/works13.png");
+            byte[] imageData = File.ReadAllBytes(@"./wwwroot/images/test5_2.png");
             _image = Mat.FromImageData(imageData, ImreadModes.Color);
             //Convert the img1 to grayscale and then filter out the noise
             Mat gray1 = Mat.FromImageData(imageData, ImreadModes.GrayScale);
@@ -169,6 +170,7 @@ namespace RazorPagesMovie.core
             var convertor = new WebConvertor();
             var output = convertor.Convert(_templateStructure);
             var fileOutpout = output.Replace("src=\".", "src=\"C:/Users/tomsh/source/repos/RazorPagesMovie/RazorPagesMovie/wwwroot");
+            fileOutpout = fileOutpout.Replace("href=\".", "href=\"C:/Users/tomsh/source/repos/RazorPagesMovie/RazorPagesMovie/wwwroot");
 
             using (var tw = new StreamWriter("test.html"))
             {
@@ -247,6 +249,7 @@ namespace RazorPagesMovie.core
                     sectionId++;
                     var section = new Section(sectionId);
                     section.Height = rect.Y - lastSectionY;
+                    section.Top = lastSectionY;
                     section.BackgroundColor = Scalar.FromRgb(r.Next(0, 255), r.Next(0, 255), r.Next(0, 255));
                     //container = new Container(sectionId);
                     //image = new Image("./images/section-" + sectionId + ".png");
@@ -300,13 +303,9 @@ namespace RazorPagesMovie.core
                 // save sections rects into list
                 var contours = sectionContours[section.Id];
 
-                foreach (var contour in contours)
-                {
-                    //CheckSubBlocks(contour, copy);
-                }
-
                 var cont = new Container(1);
-                cont.Rows = ProcessInnerBlocks(contours, copy);
+                var contRect = new Rect(0, section.Top, copy.Width, section.Height);
+                cont.Rows = ProcessInnerBlocks(contours, copy, contRect);
                 section.Containers.Add(cont);
 
                 Cv2.Rectangle(copy, new Point(0, lastY), new Point(copy.Width, lastY + section.Height), Scalar.Red);
@@ -362,7 +361,8 @@ namespace RazorPagesMovie.core
                         if (subitem.Child != -1)
                         {
                             // Recursive call with child element
-                            CheckSubBlocks(find, copy);
+                            // @todo uložiť child
+                           // CheckSubBlocks(find, copy);
                         }
                     }
                     else
@@ -378,7 +378,7 @@ namespace RazorPagesMovie.core
                 // We have found inner elements
                 if (inner.Count > 0)
                 {
-                    List<Row> rows = ProcessInnerBlocks(inner, copy, rect, false);
+                    List<Row> rows = ProcessInnerBlocks(inner, copy, rect, true);
 
                     return rows;
                 }
@@ -409,6 +409,7 @@ namespace RazorPagesMovie.core
         {
             var r = new Random();
             var sectionRows = new List<Row>();
+            Rect[] sectionRectsUnsorted;
             var sectionRects = new Rect[contours.Count];
             var sectionRectRows = new List<Row>[contours.Count];
             var k = 0;
@@ -424,17 +425,21 @@ namespace RazorPagesMovie.core
 
                 if (recursive)
                 {
+                    Debug.WriteLine("processing recursive " + k);
                     sectionRectRows[k] = CheckSubBlocks(contour, copy);
                     // @todo ak tu mám dáta tak to nižšie nemusím riešiť asi keďže element je len obdĺžnik a v ňom je niečo
+                    // @todo asi len vytvoriť riadok do neho poskladať contours a každý contour už len buď analyzovať alebo zobrať hodnotu z premennej sectionRectRows[k]
                 }
 
                 k++;
             }
 
-
             // @todo spojenie riadkov ak sú moc blízko
             // @todo spájanie do zvlášť containera ak majú rovnaký štýl - rovnaká výška, medzery, ..
             Debug.WriteLine("sekcia počet rectov " + sectionRects.Length);
+
+            // make copy of rects
+            sectionRectsUnsorted = sectionRects;
 
             // align rects from the top to the bottom
             sectionRects = sectionRects.OrderBy(rec => rec.Top).ToArray();
@@ -446,11 +451,30 @@ namespace RazorPagesMovie.core
                 var rowIndex = FindRowForRect(rows, rect);
                 if (rowIndex == -1)
                 {
+                    // create section row
+                    var sectionRow = new Row(1);
+
+                    // set section row styles
+                    var latestTop = rows.Count == 0 ? parent.Y : rows.Last().Item2;
+                    var latestBottom = rows.Count == 0 ? parent.Y + parent.Height : parent.Y + parent.Height;
+                    var latestLeft = parent.X;
+                    sectionRow.Padding[0] = rect.Y - latestTop;
+
+                    if (sectionRects.Length == 1) {
+                        sectionRow.Padding[3] = rect.X - latestLeft;
+                        sectionRow.Padding[2] = latestBottom - (rect.Y + rect.Height);
+
+                        Debug.WriteLineIf(sectionRow.Padding[3] > 400, "divné rect.X=" + rect.X + ",latestLeft=" + latestLeft);
+                    }
+                    sectionRow.BackgroundColor = Scalar.FromRgb(r.Next(0, 255), r.Next(0, 255), r.Next(0, 255));
+
                     var triple = new TripleExt<int, int, List<Rect>, Element>
                     {
+                        
                         Item1 = rect.Y,
                         Item2 = rect.Y + rect.Height,
-                        Item3 = new List<Rect> { rect }
+                        Item3 = new List<Rect> { rect },
+                        Element = sectionRow
                     };
                     rows.Add(triple);
                 }
@@ -461,12 +485,11 @@ namespace RazorPagesMovie.core
             }
 
             // proceed rows
-            var limit = 0;
             var c = 1;
             foreach (var row in rows)
             {
                 //var container = new Container(c);
-                var sectionRow = new Row(c);
+                var sectionRow = (Row) row.Element;
 
                 // @todo treba spracovať každý riadok do stĺpcov, t.j. taký istý princíp ako riadky - zoradia sa zľava doprava (čo už vlastne je vyššie):
                 // @todo zoberiem prvý element, zistím aká je medzera medzi ďalším a poďalším (za podmienky že existuje poďalší), ak sú medzery cca rovnaká (rátam s nejakou odchýlkou) tak ich pridám to 1 stĺpca a prejdem na ďalší
@@ -485,6 +508,16 @@ namespace RazorPagesMovie.core
                     var columnIndex = FindColumnForRect(columns, rect);
                     if (columnIndex == -1)
                     {
+                        // set last column dimensions
+                        if (columns.Count > 0)
+                        {
+                            var latest = columns.Last();
+                            var latestElem = latest.Element;
+                            latestElem.Width = latest.Item2 - latest.Item1;
+                            latestElem.Margin[1] = rect.X - latest.Item2;
+                        }
+
+                        // create new column
                         var column = new Column(1);
 
                         var triple = new TripleExt<int, int, List<Rect>, Element>
@@ -510,10 +543,44 @@ namespace RazorPagesMovie.core
                 }
 
                 /* Columns end */
-                
+
+
                 // process columns into rows
                 foreach (var column in columns)
                 {
+                    var recursiveRows = false;
+                    // when we have nested elements we don't need to analyse single contour
+                    if (recursive)
+                    {
+
+                        // @todo bude to mať vždy iba 1 element či sa môže stať že aj viac?
+                        var recursiveAdded = 0;
+                        foreach (var e in column.Item3)
+                        {
+                            var index = Array.IndexOf(sectionRectsUnsorted, column.Item3.First());
+                            Debug.WriteLine("našiel som index " + index + " počet v zozname " + column.Item3.Count);
+
+                            if (sectionRectRows[index] != null)
+                            {
+                                recursiveRows = true;
+                                recursiveAdded++;
+                                Debug.WriteLine("zoznam nie je prázdny :O " + sectionRectRows[index].Count);
+                                foreach (var columnRow in sectionRectRows[index])
+                                {
+                                    ((Column)column.Element).Elements.Add(columnRow);
+                                }
+                                //break;
+                            }
+                        }
+
+                        if (recursiveAdded > 1)
+                        {
+                            throw new Exception("nemalo by byť viac ako 1");
+                        }
+                    }
+
+                    if (recursiveRows) break;
+
                     // @todo refactor rows, columns do metód
 
                     /* Column rows start */
@@ -659,6 +726,7 @@ namespace RazorPagesMovie.core
                         var singleColumn = new Column(1);
 
                         // Add items to col
+                        var lastX = -1;
                         foreach (var rect in connectedHorizontal)
                         {
                             limit++;
@@ -669,7 +737,15 @@ namespace RazorPagesMovie.core
                             var roi2 = _image.Clone(rect);
                             roi2.SaveImage("wwwroot/images/image-" + limit + ".png");
 
+                            // @todo replace with object recognizer
                             var image = new Image("./images/image-" + limit + ".png");
+
+                            if (lastX != -1)
+                            {
+                                image.Margin[3] = rect.X - lastX;
+                            }
+                            lastX = rect.X + rect.Width;
+
                             singleColumn.Elements.Add(image);
 
                             //using (var page = _tess.Process(Pix.LoadFromFile("image-" + limit + ".png"), PageSegMode.SingleBlock))
@@ -761,14 +837,7 @@ namespace RazorPagesMovie.core
 
             foreach (var row in rows)
             {
-                if (parent.Width == 0)
-                {
-                    Cv2.Rectangle(copy, new Point(0, row.Item1), new Point(copy.Width, row.Item2), Scalar.Orange);
-                }
-                else
-                {
-                    Cv2.Rectangle(copy, new Point(parent.X, row.Item1), new Point(parent.X + parent.Width, row.Item2), Scalar.Orange);
-                }
+                Cv2.Rectangle(copy, new Point(parent.X, row.Item1), new Point(parent.X + parent.Width, row.Item2), Scalar.Orange);
             }
 
             return sectionRows;

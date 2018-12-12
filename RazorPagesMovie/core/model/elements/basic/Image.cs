@@ -16,7 +16,7 @@
 
         public override string Content()
         {
-            return string.Format("src=\"{0}\"", _path);
+            return $"src=\"{_path}\" style=\"margin-left:" + Margin[3] + "px\"";
         }
 
         public override string EndTag()

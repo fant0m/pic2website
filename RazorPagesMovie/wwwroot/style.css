@@ -1,0 +1,21 @@
+﻿body {
+    margin: 0;
+    padding: 0;
+}
+.container {
+    width: 1200px;
+    position: relative;
+    margin: 0 auto;
+    background: blue;
+}
+.row {
+    width: 100%;
+}
+.row:after {
+    clear: both;
+    display: table;
+    content: " ";
+}
+.col {
+    float: left;
+}

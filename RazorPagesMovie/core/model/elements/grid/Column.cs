@@ -14,7 +14,15 @@ namespace RazorPagesMovie.core.model.elements.grid
 
         public override string StartTag()
         {
-            return "<div class=\"col\">";
+            // @todo inteligentnejšie pripraviť css vlastnosti, globlálne pre všetky elementy
+            if (Width > 0)
+            {
+                return "<div class=\"col\" style=\"width:" + Width + "px;margin-right:" + Margin[1] + "px\">";
+            }
+            else
+            {
+                return "<div class=\"col\" style=\"margin-right:" + Margin[1] + "px\">";
+            }
         }
 
         public override string Content()

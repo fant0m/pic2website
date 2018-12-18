@@ -19,3 +19,6 @@
 .col {
     float: left;
 }
+img {
+    display: block;
+}

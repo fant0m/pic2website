@@ -86,7 +86,7 @@ namespace RazorPagesMovie.Pages
 
         private string TestParser()
         {
-            var templateParser = new TemplateParser("menu.png");
+            var templateParser = new TemplateParser("test5_1.png");
 
             return templateParser.Analyse();
         }

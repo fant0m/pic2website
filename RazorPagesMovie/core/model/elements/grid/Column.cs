@@ -17,11 +17,11 @@ namespace RazorPagesMovie.core.model.elements.grid
             // @todo inteligentnejšie pripraviť css vlastnosti, globlálne pre všetky elementy
             if (Width > 0)
             {
-                return "<div class=\"col\" style=\"width:" + Width + "px;margin-right:" + Margin[1] + "px\">";
+                return $"<div class=\"col\" style=\"width:{Width}px;margin:{Margin[0]}px {Margin[1]}px {Margin[2]}px {Margin[3]}px\">";
             }
             else
             {
-                return "<div class=\"col\" style=\"margin-right:" + Margin[1] + "px\">";
+                return $"<div class=\"col\" style=\"margin:{Margin[0]}px {Margin[1]}px {Margin[2]}px {Margin[3]}px\">";
             }
         }
 

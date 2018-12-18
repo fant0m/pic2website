@@ -57,7 +57,7 @@ namespace RazorPagesMovie.core
         {
             _tess = new TesseractEngine(@"./wwwroot/tessdata", "eng", EngineMode.LstmOnly);
 
-            byte[] imageData = File.ReadAllBytes(@"./wwwroot/images/test5_2.png");
+            byte[] imageData = File.ReadAllBytes(@"./wwwroot/images/test5_1.png");
             _image = Mat.FromImageData(imageData, ImreadModes.Color);
             //Convert the img1 to grayscale and then filter out the noise
             Mat gray1 = Mat.FromImageData(imageData, ImreadModes.GrayScale);
@@ -456,6 +456,7 @@ namespace RazorPagesMovie.core
 
                     // set section row styles
                     var latestTop = rows.Count == 0 ? parent.Y : rows.Last().Item2;
+                    // @todo bez tej podmienky vždy to tak asi bude
                     var latestBottom = rows.Count == 0 ? parent.Y + parent.Height : parent.Y + parent.Height;
                     var latestLeft = parent.X;
                     sectionRow.Padding[0] = rect.Y - latestTop;
@@ -482,6 +483,13 @@ namespace RazorPagesMovie.core
                 {
                     rows[rowIndex].Item3.Add(rect);
                 }
+            }
+
+            // apply bottom padding for last section row
+            var last = rows.Last();
+            if (last != null)
+            {
+                last.Element.Padding[2] = parent.Y + parent.Height - last.Item2;
             }
 
             // proceed rows
@@ -511,10 +519,17 @@ namespace RazorPagesMovie.core
                         // set last column dimensions
                         if (columns.Count > 0)
                         {
+                            // apply right margin for column
                             var latest = columns.Last();
                             var latestElem = latest.Element;
                             latestElem.Width = latest.Item2 - latest.Item1;
                             latestElem.Margin[1] = rect.X - latest.Item2;
+
+                            // apply left margin for the first column
+                            if (latest == columns.First())
+                            {
+                                latestElem.Margin[3] = latest.Item1 - parent.X;
+                            }
                         }
 
                         // create new column
@@ -534,6 +549,13 @@ namespace RazorPagesMovie.core
                     {
                         columns[columnIndex].Item3.Add(rect);
                     }
+                }
+
+                // apply styles for last column
+                var lastColumn = columns.Last();
+                if (lastColumn != null)
+                {
+                    lastColumn.Element.Margin[1] = parent.X + parent.Width - lastColumn.Item2;
                 }
 
                 // draw columns
@@ -603,6 +625,11 @@ namespace RazorPagesMovie.core
                                 Item3 = new List<Rect> { rect },
                                 Element = columnRow
                             };
+
+                            // apply styles
+                            var latestTop = columnRows.Count == 0 ? row.Item1 : columnRows.Last().Item2;
+                            columnRow.Padding[0] = rect.Y - latestTop;
+
                             ((Column)column.Element).Elements.Add(columnRow);
                             columnRows.Add(triple);
                         }
@@ -610,6 +637,13 @@ namespace RazorPagesMovie.core
                         {
                             columnRows[rowIndex].Item3.Add(rect);
                         }
+                    }
+
+                    // apply bottom padding for last section row
+                    var lastColumnRow = columnRows.Last();
+                    if (lastColumnRow != null)
+                    {
+                        lastColumnRow.Element.Padding[2] = row.Item2 - lastColumnRow.Item2;
                     }
 
                     // draw column rows
@@ -740,9 +774,11 @@ namespace RazorPagesMovie.core
                             // @todo replace with object recognizer
                             var image = new Image("./images/image-" + limit + ".png");
 
+                            Debug.WriteLine("margin " + (rect.Y - columnRow.Item1) + "," + (columnRow.Item2 - (rect.Y + rect.Height)));
                             if (lastX != -1)
                             {
                                 image.Margin[3] = rect.X - lastX;
+                                
                             }
                             lastX = rect.X + rect.Width;
 

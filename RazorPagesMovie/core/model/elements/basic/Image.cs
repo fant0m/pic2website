@@ -16,7 +16,7 @@
 
         public override string Content()
         {
-            return $"src=\"{_path}\" style=\"margin-left:" + Margin[3] + "px\"";
+            return $"src=\"{_path}\" style=\"margin:{Margin[0]}px {Margin[1]}px {Margin[2]}px {Margin[3]}px\"";
         }
 
         public override string EndTag()

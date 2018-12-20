@@ -93,7 +93,7 @@ namespace RazorPagesMovie.Pages
 
         private string TestConvertor()
         {
-            var layout = new Layout(Layout.LayoutType.Centered, 750, 500);
+            /*var layout = new Layout(Layout.LayoutType.Centered, 750, 500);
             var structure = new TemplateStructure(layout);
 
             var section = new Section(1);
@@ -110,7 +110,8 @@ namespace RazorPagesMovie.Pages
             structure.Sections.Add(section);
 
             var convertor = new WebConvertor();
-            return convertor.Convert(structure);
+            return convertor.Convert(structure);*/
+            return "";
         }
 
         private string Test()

@@ -14,8 +14,7 @@ namespace RazorPagesMovie.core.model.elements.grid
 
         public override string StartTag()
         {
-            return
-                $"<div class=\"row\" style=\"padding:{Padding[0]}px {Padding[1]}px {Padding[2]}px {Padding[3]}px;background:rgb({BackgroundColor.Val0},{BackgroundColor.Val1},{BackgroundColor.Val2})\">";
+            return $"<div class=\"row\" style=\"{GetStyles()}\">";
         }
 
         public override string Content()

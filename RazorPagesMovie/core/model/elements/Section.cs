@@ -5,6 +5,10 @@ namespace RazorPagesMovie.core.model.elements
 {
     public class Section : Element
     {
+        // @todo special section type - header, footer
+        // @todo background image sa bude riešiť asi tu, ak bude mať sekcia bg img tak len pridám ďalšie elementy do section
+        // @todo môže mať section viac containerov vôbec? teoreticky asi nie
+        public Layout Layout { get; set; }
         public List<Container> Containers { get; set; }
         public int Top { get; set; }
 
@@ -16,7 +20,7 @@ namespace RazorPagesMovie.core.model.elements
 
         public override string StartTag()
         {
-            return $"<section style=\"height:{Height}px;background:rgb({BackgroundColor.Val0},{BackgroundColor.Val1},{BackgroundColor.Val2})\">";
+            return $"<section style=\"{GetStyles()}\">";
         }
 
         public override string Content()

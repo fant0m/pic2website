@@ -20,5 +20,6 @@
     float: left;
 }
 img {
-    display: block;
+    display: inline-block;
+    vertical-align: middle;
 }

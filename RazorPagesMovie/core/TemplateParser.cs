@@ -57,7 +57,7 @@ namespace RazorPagesMovie.core
         {
             _tess = new TesseractEngine(@"./wwwroot/tessdata", "eng", EngineMode.LstmOnly);
 
-            byte[] imageData = File.ReadAllBytes(@"./wwwroot/images/test5_1.png");
+            byte[] imageData = File.ReadAllBytes(@"./wwwroot/images/github.png");
             _image = Mat.FromImageData(imageData, ImreadModes.Color);
             //Convert the img1 to grayscale and then filter out the noise
             Mat gray1 = Mat.FromImageData(imageData, ImreadModes.GrayScale);
@@ -65,15 +65,14 @@ namespace RazorPagesMovie.core
             gray1 = gray1.GaussianBlur(new OpenCvSharp.Size(3, 3), 0);
 
             //Canny Edge Detector
-            Mat cannyGray = gray1.Canny(15, 25); // 0, 12, blur 9; 2, 17,  blur 7; 0, 25 blur 13; 20 35 blur 0; 15, 25 blur 3
+            Mat cannyGray = gray1.Canny(15, 20); // 0, 12, blur 9; 2, 17,  blur 7; 0, 25 blur 13; 20 35 blur 0; 15, 25 blur 3
 
             Random r = new Random();
             int lastY = 0;
 
             Cv2.FindContours(cannyGray, out _contours, out _hierarchy, mode: RetrievalModes.Tree, method: ContourApproximationModes.ApproxSimple);
 
-            var layout = DetectLayout(cannyGray.Width, cannyGray.Height);
-            _templateStructure = new TemplateStructure(layout);
+            _templateStructure = new TemplateStructure();
 
             //var gray2 = Mat.FromImageData(imageData, ImreadModes.GrayScale);
             //gray2 = gray2.AdaptiveThreshold(255, AdaptiveThresholdTypes.GaussianC, ThresholdTypes.BinaryInv, 105, 2);
@@ -208,8 +207,6 @@ namespace RazorPagesMovie.core
                 i = item.Next;
             }
 
-            Debug.WriteLine("start index " + startIndex);
-
             // Section ids counter
             var sectionId = 0;
             var lastSectionY = 0;
@@ -223,8 +220,6 @@ namespace RazorPagesMovie.core
 
             // Find sections
             i = startIndex;
-            Container container;
-            Image image;
             Rect area;
             Mat roi;
             while (i != -1)
@@ -250,7 +245,8 @@ namespace RazorPagesMovie.core
                     var section = new Section(sectionId);
                     section.Height = rect.Y - lastSectionY;
                     section.Top = lastSectionY;
-                    section.BackgroundColor = Scalar.FromRgb(r.Next(0, 255), r.Next(0, 255), r.Next(0, 255));
+                    section.BackgroundColor = new[] {r.Next(0, 255), r.Next(0, 255), r.Next(0, 255)};
+                    ;
                     //container = new Container(sectionId);
                     //image = new Image("./images/section-" + sectionId + ".png");
                     //container.Elements.Add(image);
@@ -281,7 +277,7 @@ namespace RazorPagesMovie.core
             sectionId++;
             var lastSection = new Section(sectionId);
             lastSection.Height = _image.Height - lastSectionY;
-            lastSection.BackgroundColor = Scalar.FromRgb(r.Next(0, 255), r.Next(0, 255), r.Next(0, 255));
+            lastSection.BackgroundColor = new[] { r.Next(0, 255), r.Next(0, 255), r.Next(0, 255) };
             //container = new Container(sectionId);
             //image = new Image("./images/section-" + sectionId + ".png");
             //container.Elements.Add(image);
@@ -296,36 +292,49 @@ namespace RazorPagesMovie.core
 
             var copy = _image.Clone();
 
-            // Process sections
+            // Analyse section layouts
             var lastY = 0;
+            var maxLayout = Layout.LayoutWidth.W800;
             foreach (var section in sections)
             {
-                // save sections rects into list
+                // Access sections rects
                 var contours = sectionContours[section.Id];
 
-                var cont = new Container(1);
-                var contRect = new Rect(0, section.Top, copy.Width, section.Height);
-                cont.Rows = ProcessInnerBlocks(contours, copy, contRect);
-                section.Containers.Add(cont);
+                // Analyse section layout
+                section.Layout = DetectLayout(contours, copy.Width, section.Height);
 
+                // Save longest layout width
+                if (section.Layout.Type == Layout.LayoutType.Centered && section.Layout.Width > maxLayout)
+                {
+                    maxLayout = section.Layout.Width;
+                }
+            }
+
+            // Process sections
+            foreach (var section in sections)
+            {
+                // Make sure each centered section has same container width
+                if (section.Layout.Type == Layout.LayoutType.Centered && section.Layout.Width != maxLayout)
+                {
+                    section.Layout.RecalculateWidth(maxLayout);
+                }
+
+                // Access sections rects
+                var contours = sectionContours[section.Id];
+
+                // Create a container
+                var container = new Container(1, section.Layout.Type);
+                var containerRect = new Rect(0, section.Top, copy.Width, section.Height);
+                //container.Rows = ProcessInnerBlocks(contours, copy, containerRect);
+                section.Containers.Add(container);
+
+                // Draw section
                 Cv2.Rectangle(copy, new Point(0, lastY), new Point(copy.Width, lastY + section.Height), Scalar.Red);
                 lastY += section.Height;
 
-                //sectionRects = sectionRects.OrderBy(rect => rect.Left).ToArray();
-                //var limit = 0;
-                //foreach (var rect in sectionRects)
-                //{
-                //    limit++;
-                //    if (limit == 10) break;
-
-                //    var roi2 = _image.Clone(rect);
-                //    roi2.SaveImage("image-" + limit + ".png");
-                //}
-
-
+                // Append section into template structure
                 _templateStructure.Sections.Add(section);
             }
-
 
 
             copy.SaveImage("wwwroot/images/output.png");
@@ -467,7 +476,7 @@ namespace RazorPagesMovie.core
 
                         Debug.WriteLineIf(sectionRow.Padding[3] > 400, "divné rect.X=" + rect.X + ",latestLeft=" + latestLeft);
                     }
-                    sectionRow.BackgroundColor = Scalar.FromRgb(r.Next(0, 255), r.Next(0, 255), r.Next(0, 255));
+                    sectionRow.BackgroundColor = new[] { r.Next(0, 255), r.Next(0, 255), r.Next(0, 255) };
 
                     var triple = new TripleExt<int, int, List<Rect>, Element>
                     {
@@ -879,11 +888,6 @@ namespace RazorPagesMovie.core
             return sectionRows;
         }
 
-        private bool AreSame(double value1, double value2)
-        {
-            return Math.Abs(value2 - value1) <= 2;
-        }
-
         private int FindRowForRect(List<TripleExt<int, int, List<Rect>, Element>> rows, Rect rect)
         {
             int index = -1;
@@ -948,18 +952,18 @@ namespace RazorPagesMovie.core
         }
 
         /**
-        * Detect type of template design and it's dimensions
+        * Detect type of template layout and it's dimensions
         * 
         * @todo lepší algoritmus na hľadanie oboch súradníc
         * @todo teoreticky skúsiť brať úplne prvý element, alebo skôr hodnota ktorá predstavuje min./max. ohraničenie (ľavý/pravý) pre 90% všetkých hodnôt
         */
-        private Layout DetectLayout(double width, double height)
+        private Layout DetectLayout(List<int> contours, double width, double height)
         {
             var left = new List<double>();
             var right = new List<double>();
 
-            var i = 0;
-            while (i != -1)
+            // Process outer contours
+            foreach (var i in contours)
             {
                 // find current item
                 var index = _hierarchy[i];
@@ -970,21 +974,19 @@ namespace RazorPagesMovie.core
                 var rect = Cv2.BoundingRect(edges);
                 var area = Cv2.ContourArea(edges, false);
 
+                //Debug.WriteLine("area " + area + " left " + rect.Left + " right " + rect.Right + " width " + rect.Width);
+
                 // add left corners from 25 % left-most of image
-                if (rect.Left < width * 0.25 && area > 100)
+                if (rect.Left < width * 0.25 && (area > 100 || rect.Width * rect.Height > 100))
                 {
                     left.Add(rect.Left);
                 }
 
                 // add right corners from 20% right-most of image
-                if (rect.Right > width * 0.7 && rect.Left != 0 && area > 100)
+                if (rect.Right > width * 0.7 && rect.Left != 0 && (area > 100 || rect.Width * rect.Height > 100))
                 {
-                    Debug.WriteLine("area " + area + " right " + rect.Right + " width " + rect.Width);
                     right.Add(rect.Right);
                 }
-
-                // Process only outer contours
-                i = index.Next;
             }
 
             // filter top 50 % and select most common
@@ -998,7 +1000,9 @@ namespace RazorPagesMovie.core
             Debug.WriteLine("most left: " + _mostLeft);
             Debug.WriteLine("most right: " + _mostRight);
 
-            var type = _mostLeft < 10 ? Layout.LayoutType.Fluid : Layout.LayoutType.Centered;
+            // most left position must be placed approx. within 10% of layout width
+            var type = _mostLeft < width * 0.1 ? Layout.LayoutType.Fluid : Layout.LayoutType.Centered;
+            Debug.WriteLine("type " + type);
             return new Layout(type, _mostRight - _mostLeft, height);
         }
     }

@@ -22,19 +22,19 @@ namespace RazorPagesMovie.core.model
             W2000 = 2000
         }
 
-        private LayoutType _type;
-        private LayoutWidth _layoutWidth;
-        private double _width;
-        private double _height;
-        private double _padding;
+        public LayoutType Type { get; set; }
+        public LayoutWidth Width { get; set; }
+        public double RealWidth { get; set; }
+        public double RealHeight { get; set; }
+        public double Padding { get; set; }
 
-        public Layout(LayoutType type, double width, double height)
+        public Layout(LayoutType type, double realWidth, double realheight)
         {
-            _type = type;
-            _width = width;
-            _height = height;
+            Type = type;
+            RealWidth = realWidth;
+            RealHeight = realheight;
 
-            DetectContainerWidth(width);
+            DetectContainerWidth(RealWidth);
         }
 
         /**
@@ -42,11 +42,15 @@ namespace RazorPagesMovie.core.model
          */
         private void DetectContainerWidth(double width)
         {
-            var values = Enum.GetValues(typeof(Layout.LayoutWidth)).Cast<Layout.LayoutWidth>().ToList();
-            _layoutWidth = values.OrderByDescending(x => (int)x >= width).First();
-            _padding = (int) _layoutWidth - _width;
+            var values = Enum.GetValues(typeof(LayoutWidth)).Cast<LayoutWidth>().ToList();
+            Width = values.OrderByDescending(x => (int)x >= width).First();
+            Padding = (int) Width - RealWidth;
+        }
 
-            Debug.WriteLine(width + "=" +_layoutWidth + "=" + _padding);
+        public void RecalculateWidth(LayoutWidth layoutWidth)
+        {
+            Width = layoutWidth;
+            Padding = (int) Width - RealWidth;
         }
     }
 }

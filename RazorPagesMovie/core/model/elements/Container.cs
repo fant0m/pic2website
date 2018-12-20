@@ -8,17 +8,20 @@ namespace RazorPagesMovie.core.model.elements
 {
     public class Container : Element
     {
+        public Layout.LayoutType LayoutType { get; set; }
         public List<Row> Rows { get; set; }
-        // @todo možno ešte type - div/span resp. blok/nie blok element
-        public Container(int id)
+        public Container(int id, Layout.LayoutType layoutType)
         {
             Id = id;
             Rows = new List<Row>();
+            LayoutType = layoutType;
         }
 
         public override string StartTag()
         {
-            return "<div class=\"container\">";
+            var type = LayoutType == Layout.LayoutType.Centered ? "container" : "container-fluid";
+
+            return $"<div class=\"{type}\">";
         }
 
         public override string Content()

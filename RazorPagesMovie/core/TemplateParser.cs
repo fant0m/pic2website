@@ -246,11 +246,8 @@ namespace RazorPagesMovie.core
                     section.Height = rect.Y - lastSectionY;
                     section.Top = lastSectionY;
                     section.BackgroundColor = new[] {r.Next(0, 255), r.Next(0, 255), r.Next(0, 255)};
-                    ;
-                    //container = new Container(sectionId);
-                    //image = new Image("./images/section-" + sectionId + ".png");
-                    //container.Elements.Add(image);
-                    //section.Containers.Add(container);
+
+                    // Add section to sections list
                     sections.Add(section);
 
                     // Save section image
@@ -278,10 +275,6 @@ namespace RazorPagesMovie.core
             var lastSection = new Section(sectionId);
             lastSection.Height = _image.Height - lastSectionY;
             lastSection.BackgroundColor = new[] { r.Next(0, 255), r.Next(0, 255), r.Next(0, 255) };
-            //container = new Container(sectionId);
-            //image = new Image("./images/section-" + sectionId + ".png");
-            //container.Elements.Add(image);
-            //lastSection.Containers.Add(container);
 
             // Save section image
             area = new Rect(0, lastSectionY, _image.Width, lastSection.Height);
@@ -301,6 +294,7 @@ namespace RazorPagesMovie.core
                 var contours = sectionContours[section.Id];
 
                 // Analyse section layout
+                //section.Layout = DetectLayout(contours, copy.Width, section.Height);
                 section.Layout = DetectLayout(contours, copy.Width, section.Height);
 
                 // Save longest layout width
@@ -323,9 +317,13 @@ namespace RazorPagesMovie.core
                 var contours = sectionContours[section.Id];
 
                 // Create a container
-                var container = new Container(1, section.Layout.Type);
+                var container = new Container(1, section.Layout);
                 var containerRect = new Rect(0, section.Top, copy.Width, section.Height);
-                //container.Rows = ProcessInnerBlocks(contours, copy, containerRect);
+
+                // Process inner blocks
+                container.Rows = ProcessInnerBlocks(contours, copy, containerRect, section.Layout.Type == Layout.LayoutType.Centered ? section.Layout.Padding / 2 : 0);
+
+                // Append container to section
                 section.Containers.Add(container);
 
                 // Draw section
@@ -335,7 +333,6 @@ namespace RazorPagesMovie.core
                 // Append section into template structure
                 _templateStructure.Sections.Add(section);
             }
-
 
             copy.SaveImage("wwwroot/images/output.png");
 
@@ -370,7 +367,7 @@ namespace RazorPagesMovie.core
                         if (subitem.Child != -1)
                         {
                             // Recursive call with child element
-                            // @todo uložiť child
+                            // @todo zmazať - tuto rekurzívne do n-tej úrovne už nejdeme
                            // CheckSubBlocks(find, copy);
                         }
                     }
@@ -387,7 +384,7 @@ namespace RazorPagesMovie.core
                 // We have found inner elements
                 if (inner.Count > 0)
                 {
-                    List<Row> rows = ProcessInnerBlocks(inner, copy, rect, true);
+                    List<Row> rows = ProcessInnerBlocks(inner, copy, rect);
 
                     return rows;
                 }
@@ -414,7 +411,7 @@ namespace RazorPagesMovie.core
             return contoursAp.Length == 4 && rect.Width >= 10 && rect.Height >= 10;
         }
 
-        private List<Row> ProcessInnerBlocks(List<int> contours, Mat copy, Rect parent = new Rect(), bool recursive = true)
+        private List<Row> ProcessInnerBlocks(List<int> contours, Mat copy, Rect parent = new Rect(), double paddingOffset = 0)
         {
             var r = new Random();
             var sectionRows = new List<Row>();
@@ -424,7 +421,6 @@ namespace RazorPagesMovie.core
             var k = 0;
             foreach (var contour in contours)
             {
-                //Debug.WriteLine("filling " + contour);
                 // Edges
                 var edges = _contours[contour];
 
@@ -432,13 +428,8 @@ namespace RazorPagesMovie.core
                 var rect = Cv2.BoundingRect(edges);
                 sectionRects[k] = rect;
 
-                if (recursive)
-                {
-                    Debug.WriteLine("processing recursive " + k);
-                    sectionRectRows[k] = CheckSubBlocks(contour, copy);
-                    // @todo ak tu mám dáta tak to nižšie nemusím riešiť asi keďže element je len obdĺžnik a v ňom je niečo
-                    // @todo asi len vytvoriť riadok do neho poskladať contours a každý contour už len buď analyzovať alebo zobrať hodnotu z premennej sectionRectRows[k]
-                }
+                Debug.WriteLine("processing sub blocks " + k);
+                sectionRectRows[k] = CheckSubBlocks(contour, copy);
 
                 k++;
             }
@@ -460,6 +451,20 @@ namespace RazorPagesMovie.core
                 var rowIndex = FindRowForRect(rows, rect);
                 if (rowIndex == -1)
                 {
+                    // set last row dimensions
+                    if (rows.Count > 0)
+                    {
+                        var latest = rows.Last();
+                        var sorted = latest.Item3.OrderBy(rec => rec.Left).ToList();
+
+                        // @todo neviem či budeme riešiť aj double alebo sa to zaokrúhli
+                        // apply right padding for row
+                        latest.Element.Padding[1] = (int) (parent.X + parent.Width - (sorted.Last().X + sorted.Last().Width) - paddingOffset);
+
+                        // apply left padding for row
+                        latest.Element.Padding[3] = (int) (sorted.First().X - parent.X - paddingOffset);
+                    }
+
                     // create section row
                     var sectionRow = new Row(1);
 
@@ -499,6 +504,14 @@ namespace RazorPagesMovie.core
             if (last != null)
             {
                 last.Element.Padding[2] = parent.Y + parent.Height - last.Item2;
+
+                var sorted = last.Item3.OrderBy(rec => rec.Left).ToList();
+
+                // apply right padding for row
+                last.Element.Padding[1] = (int) (parent.X + parent.Width - (sorted.Last().X + sorted.Last().Width) - paddingOffset);
+
+                // apply left padding for row
+                last.Element.Padding[3] = (int) (sorted.First().X - parent.X - paddingOffset);
             }
 
             // proceed rows
@@ -533,12 +546,6 @@ namespace RazorPagesMovie.core
                             var latestElem = latest.Element;
                             latestElem.Width = latest.Item2 - latest.Item1;
                             latestElem.Margin[1] = rect.X - latest.Item2;
-
-                            // apply left margin for the first column
-                            if (latest == columns.First())
-                            {
-                                latestElem.Margin[3] = latest.Item1 - parent.X;
-                            }
                         }
 
                         // create new column
@@ -560,13 +567,6 @@ namespace RazorPagesMovie.core
                     }
                 }
 
-                // apply styles for last column
-                var lastColumn = columns.Last();
-                if (lastColumn != null)
-                {
-                    lastColumn.Element.Margin[1] = parent.X + parent.Width - lastColumn.Item2;
-                }
-
                 // draw columns
                 foreach (var column in columns)
                 {
@@ -579,36 +579,34 @@ namespace RazorPagesMovie.core
                 // process columns into rows
                 foreach (var column in columns)
                 {
-                    var recursiveRows = false;
                     // when we have nested elements we don't need to analyse single contour
-                    if (recursive)
+                    var recursiveRows = false;
+
+                    // @todo bude to mať vždy iba 1 element či sa môže stať že aj viac?
+                    var recursiveAdded = 0;
+                    foreach (var e in column.Item3)
                     {
+                        var index = Array.IndexOf(sectionRectsUnsorted, column.Item3.First());
+                        Debug.WriteLine("našiel som index " + index + " počet v zozname " + column.Item3.Count);
 
-                        // @todo bude to mať vždy iba 1 element či sa môže stať že aj viac?
-                        var recursiveAdded = 0;
-                        foreach (var e in column.Item3)
+                        if (sectionRectRows[index] != null)
                         {
-                            var index = Array.IndexOf(sectionRectsUnsorted, column.Item3.First());
-                            Debug.WriteLine("našiel som index " + index + " počet v zozname " + column.Item3.Count);
-
-                            if (sectionRectRows[index] != null)
+                            recursiveRows = true;
+                            recursiveAdded++;
+                            Debug.WriteLine("zoznam nie je prázdny :O " + sectionRectRows[index].Count);
+                            foreach (var columnRow in sectionRectRows[index])
                             {
-                                recursiveRows = true;
-                                recursiveAdded++;
-                                Debug.WriteLine("zoznam nie je prázdny :O " + sectionRectRows[index].Count);
-                                foreach (var columnRow in sectionRectRows[index])
-                                {
-                                    ((Column)column.Element).Elements.Add(columnRow);
-                                }
-                                //break;
+                                ((Column)column.Element).Elements.Add(columnRow);
                             }
-                        }
-
-                        if (recursiveAdded > 1)
-                        {
-                            throw new Exception("nemalo by byť viac ako 1");
+                            //break;
                         }
                     }
+
+                    //if (recursiveAdded > 1)
+                    //{
+                    //    throw new Exception("nemalo by byť viac ako 1");
+                    //}
+                    
 
                     if (recursiveRows) break;
 

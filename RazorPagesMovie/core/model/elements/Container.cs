@@ -8,20 +8,22 @@ namespace RazorPagesMovie.core.model.elements
 {
     public class Container : Element
     {
-        public Layout.LayoutType LayoutType { get; set; }
+        //public Layout.LayoutType LayoutType { get; set; }
+        // @todo určite to nebude duplicitne aj tu aj v section
+        public Layout Layout { get; set; }
         public List<Row> Rows { get; set; }
-        public Container(int id, Layout.LayoutType layoutType)
+        public Container(int id, Layout layout)
         {
             Id = id;
             Rows = new List<Row>();
-            LayoutType = layoutType;
+            Layout = layout;
         }
 
         public override string StartTag()
         {
-            var type = LayoutType == Layout.LayoutType.Centered ? "container" : "container-fluid";
+            var type = Layout.Type == Layout.LayoutType.Centered ? "container" : "container-fluid";
 
-            return $"<div class=\"{type}\">";
+            return $"<div class=\"{type}\" style=\"width:{(int) Layout.Width}px;\">";
         }
 
         public override string Content()

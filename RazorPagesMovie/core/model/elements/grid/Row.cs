@@ -5,6 +5,7 @@ namespace RazorPagesMovie.core.model.elements.grid
     public class Row : Element
     {
         public List<Column> Columns { get; }
+        public bool ActAsColumn { get; set; }
 
         public Row(int id)
         {
@@ -14,7 +15,15 @@ namespace RazorPagesMovie.core.model.elements.grid
 
         public override string StartTag()
         {
-            return $"<div class=\"row\" style=\"{GetStyles()}\">";
+            // @todo actascolumn
+            if (ActAsColumn)
+            {
+                return $"<div class=\"row\" style=\"{GetStyles()}display:inline-block!important;width:auto!important;\">";
+            }
+            else
+            {
+                return $"<div class=\"row\" style=\"{GetStyles()}\">";
+            }
         }
 
         public override string Content()

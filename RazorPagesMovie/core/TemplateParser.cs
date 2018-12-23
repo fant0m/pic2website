@@ -85,86 +85,11 @@ namespace RazorPagesMovie.core
             Mat copy = _image.Clone();
             Cv2.DrawContours(copy, _contours, -1, Scalar.Orange);
 
-            //var j = 0;
-            //var count = 0;
-            //while (j != -1)
-            //{
-            //    var index = _hierarchy[j];
-            //    if (index.Parent != -1)
-            //    {
-            //        j = index.Next;
-            //        continue;
-            //    }
-
-            //    Scalar scalar = Scalar.FromRgb(r.Next(0, 255), r.Next(0, 255), r.Next(0, 255));
-            //    Cv2.DrawContours(copy, _contours, j, scalar);
-            //    count++;
-
-            //    j = index.Next;
-            //}
-            //Debug.WriteLine("Počet" + count);
-
-            /*for (var j = contours.Length - 1; j >= 0; j--)
-            {
-                Scalar scalar = Scalar.FromRgb(r.Next(0, 255), r.Next(0, 255), r.Next(0, 255));
-                Cv2.DrawContours(copy, contours, j, scalar);
-            }*/
-
-            //copy.SaveImage("wwwroot/images/output.png");
-
 
             Debug.WriteLine("počet " + _contours.Length);
 
-            Debug.WriteLine(_hierarchy.Length);
-
-            //var limit = 0;
-            //var i = 0;
-            //while (i != -1)
-            //{
-            //    // Find current item
-            //    var item = _hierarchy[i];
-
-            //    // Filter only outer contours
-            //    if (item.Parent != -1)
-            //    {
-            //        i = item.Next;
-            //        continue;
-            //    }
-
-            //    limit++;
-
-            //    // Edges
-            //    var edges = _contours[i];
-
-            //    // Bounding box
-            //    var rect = Cv2.BoundingRect(edges);
-
-            //    // Area
-            //    var area = Cv2.ContourArea(edges, false);
-
-            //    // Polygon Approximations
-            //var contoursAp = Cv2.ApproxPolyDP(edges, Cv2.ArcLength(edges, true) * 0.05, true);
-
-            //    if (draw == i)
-            //    { 
-            //        var roi = _image.Clone(rect);
-            //        roi.SaveImage("image-" + i + ".png");
-            //    }
 
 
-            //    Debug.WriteLine(contoursAp.Length);
-            //    Debug.WriteLine("left: " + rect.Left + ", top: " + rect.Top);
-
-            //    // Process only outer structure
-            //    if (limit == 9999999)
-            //    {
-            //        i = -1;
-            //    }
-            //    else
-            //    {
-            //        i = item.Next;
-            //    }
-            //}
 
             var convertor = new WebConvertor();
             var output = convertor.Convert(_templateStructure);
@@ -274,6 +199,7 @@ namespace RazorPagesMovie.core
             sectionId++;
             var lastSection = new Section(sectionId);
             lastSection.Height = _image.Height - lastSectionY;
+            lastSection.Top = lastSectionY;
             lastSection.BackgroundColor = new[] { r.Next(0, 255), r.Next(0, 255), r.Next(0, 255) };
 
             // Save section image
@@ -321,7 +247,7 @@ namespace RazorPagesMovie.core
                 var containerRect = new Rect(0, section.Top, copy.Width, section.Height);
 
                 // Process inner blocks
-                container.Rows = ProcessInnerBlocks(contours, copy, containerRect, section.Layout.Type == Layout.LayoutType.Centered ? section.Layout.Padding / 2 : 0);
+                container.Rows = ProcessInnerBlocks(contours, copy, containerRect, section.Layout.Type == Layout.LayoutType.Centered ? (section.Layout.Padding / 2) : 0);
 
                 // Append container to section
                 section.Containers.Add(container);
@@ -411,11 +337,10 @@ namespace RazorPagesMovie.core
             return contoursAp.Length == 4 && rect.Width >= 10 && rect.Height >= 10;
         }
 
-        private List<Row> ProcessInnerBlocks(List<int> contours, Mat copy, Rect parent = new Rect(), double paddingOffset = 0)
+        private List<Row> ProcessInnerBlocks(List<int> contours, Mat copy, Rect parent = new Rect(), double paddingFix = 0)
         {
             var r = new Random();
             var sectionRows = new List<Row>();
-            Rect[] sectionRectsUnsorted;
             var sectionRects = new Rect[contours.Count];
             var sectionRectRows = new List<Row>[contours.Count];
             var k = 0;
@@ -439,7 +364,7 @@ namespace RazorPagesMovie.core
             Debug.WriteLine("sekcia počet rectov " + sectionRects.Length);
 
             // make copy of rects
-            sectionRectsUnsorted = sectionRects;
+            var sectionRectsUnsorted = sectionRects;
 
             // align rects from the top to the bottom
             sectionRects = sectionRects.OrderBy(rec => rec.Top).ToArray();
@@ -455,14 +380,15 @@ namespace RazorPagesMovie.core
                     if (rows.Count > 0)
                     {
                         var latest = rows.Last();
-                        var sorted = latest.Item3.OrderBy(rec => rec.Left).ToList();
+                        var sortedLeft = latest.Item3.OrderBy(rec => rec.Left).ToList().First();
+                        var sortedRight = latest.Item3.OrderBy(rec => rec.Right).ToList().Last();
 
                         // @todo neviem či budeme riešiť aj double alebo sa to zaokrúhli
                         // apply right padding for row
-                        latest.Element.Padding[1] = (int) (parent.X + parent.Width - (sorted.Last().X + sorted.Last().Width) - paddingOffset);
+                        latest.Element.Padding[1] = paddingFix > 0 ? (int) paddingFix : parent.X + parent.Width - (sortedRight.X + sortedRight.Width);
 
                         // apply left padding for row
-                        latest.Element.Padding[3] = (int) (sorted.First().X - parent.X - paddingOffset);
+                        latest.Element.Padding[3] = paddingFix > 0 ? (int) paddingFix : sortedLeft.X - parent.X;
                     }
 
                     // create section row
@@ -478,8 +404,6 @@ namespace RazorPagesMovie.core
                     if (sectionRects.Length == 1) {
                         sectionRow.Padding[3] = rect.X - latestLeft;
                         sectionRow.Padding[2] = latestBottom - (rect.Y + rect.Height);
-
-                        Debug.WriteLineIf(sectionRow.Padding[3] > 400, "divné rect.X=" + rect.X + ",latestLeft=" + latestLeft);
                     }
                     sectionRow.BackgroundColor = new[] { r.Next(0, 255), r.Next(0, 255), r.Next(0, 255) };
 
@@ -500,18 +424,21 @@ namespace RazorPagesMovie.core
             }
 
             // apply bottom padding for last section row
-            var last = rows.Last();
-            if (last != null)
+            if (rows.Count > 0)
             {
+                var last = rows.Last();
+
+                // apply bottom padding for row
                 last.Element.Padding[2] = parent.Y + parent.Height - last.Item2;
 
-                var sorted = last.Item3.OrderBy(rec => rec.Left).ToList();
+                var sortedLeft = last.Item3.OrderBy(rec => rec.Left).ToList().First();
+                var sortedRight = last.Item3.OrderBy(rec => rec.Right).ToList().Last();
 
                 // apply right padding for row
-                last.Element.Padding[1] = (int) (parent.X + parent.Width - (sorted.Last().X + sorted.Last().Width) - paddingOffset);
+                last.Element.Padding[1] = paddingFix > 0 ? (int) paddingFix : parent.X + parent.Width - (sortedRight.X + sortedRight.Width);
 
                 // apply left padding for row
-                last.Element.Padding[3] = (int) (sorted.First().X - parent.X - paddingOffset);
+                last.Element.Padding[3] = paddingFix > 0 ? (int) paddingFix : sortedLeft.X - parent.X;
             }
 
             // proceed rows
@@ -567,6 +494,14 @@ namespace RazorPagesMovie.core
                     }
                 }
 
+                // Set width for the last column
+                if (columns.Count > 0)
+                {
+                    var latest = columns.Last();
+                    var latestElem = latest.Element;
+                    latestElem.Width = latest.Item2 - latest.Item1;
+                }
+
                 // draw columns
                 foreach (var column in columns)
                 {
@@ -582,40 +517,46 @@ namespace RazorPagesMovie.core
                     // when we have nested elements we don't need to analyse single contour
                     var recursiveRows = false;
 
-                    // @todo bude to mať vždy iba 1 element či sa môže stať že aj viac?
                     var recursiveAdded = 0;
+                    var nonRecursiveItems = new List<Rect>();
                     foreach (var e in column.Item3)
                     {
-                        var index = Array.IndexOf(sectionRectsUnsorted, column.Item3.First());
-                        Debug.WriteLine("našiel som index " + index + " počet v zozname " + column.Item3.Count);
+                        var index = Array.IndexOf(sectionRectsUnsorted, e);
+                        //Debug.WriteLine("našiel som index " + index + " počet v zozname " + column.Item3.Count);
 
                         if (sectionRectRows[index] != null)
                         {
                             recursiveRows = true;
                             recursiveAdded++;
-                            Debug.WriteLine("zoznam nie je prázdny :O " + sectionRectRows[index].Count);
+                            //Debug.WriteLine("zoznam nie je prázdny " + sectionRectRows[index].Count);
                             foreach (var columnRow in sectionRectRows[index])
                             {
-                                ((Column)column.Element).Elements.Add(columnRow);
+                                //((Column)column.Element).Elements.Add(columnRow);
                             }
-                            //break;
                         }
+                        else
+                        {
+                            //nonRecursiveItems.Add(e);
+                        }
+
+                        nonRecursiveItems.Add(e);
                     }
 
                     //if (recursiveAdded > 1)
                     //{
-                    //    throw new Exception("nemalo by byť viac ako 1");
+                    //    Debug.WriteLine("presne tak");
                     //}
-                    
 
-                    if (recursiveRows) break;
+                    //if (recursiveRows) break;
+                    if (nonRecursiveItems.Count == 0) break;
 
                     // @todo refactor rows, columns do metód
 
                     /* Column rows start */
 
                     // align rects from the top to the bottom
-                    var alignedColumnRects = column.Item3.OrderBy(rec => rec.Top).ToArray();
+                    //var alignedColumnRects = column.Item3.OrderBy(rec => rec.Top).ToArray();
+                    var alignedColumnRects = nonRecursiveItems.OrderBy(rec => rec.Top).ToArray();
 
                     // detect column rows
                     var columnRows = new List<TripleExt<int, int, List<Rect>, Element>>(); // y start y end
@@ -770,35 +711,72 @@ namespace RazorPagesMovie.core
                         var lastX = -1;
                         foreach (var rect in connectedHorizontal)
                         {
-                            limit++;
-                            //if (limit == 100) break;
 
-                            //Debug.WriteLine(limit + "=" + rect.Width + "," + rect.Height);
-
-                            var roi2 = _image.Clone(rect);
-                            roi2.SaveImage("wwwroot/images/image-" + limit + ".png");
-
-                            // @todo replace with object recognizer
-                            var image = new Image("./images/image-" + limit + ".png");
-
-                            Debug.WriteLine("margin " + (rect.Y - columnRow.Item1) + "," + (columnRow.Item2 - (rect.Y + rect.Height)));
-                            if (lastX != -1)
+                            // Element has recursive content so we need to replace it with the right content
+                            if (sectionRectsUnsorted.Contains(rect) && sectionRectRows[Array.IndexOf(sectionRectsUnsorted, rect)] != null)
                             {
-                                image.Margin[3] = rect.X - lastX;
-                                
+                                var index = Array.IndexOf(sectionRectsUnsorted, rect);
+                                //if (sectionRectRows[index] != null)
+                                //{
+                                    recursiveRows = true;
+                                    recursiveAdded++;
+                                    //Debug.WriteLine("zoznam nie je prázdny " + sectionRectRows[index].Count);
+                                    foreach (var recursiveRow in sectionRectRows[index])
+                                    {
+                                        // @todo neviem či sa to vždy bude mať tváriť ako column
+                                        recursiveRow.ActAsColumn = true;
+                                        if (lastX != -1)
+                                        {
+                                            recursiveRow.Margin[3] = rect.X - lastX;
+                                        }
+                                        singleColumn.Elements.Add(recursiveRow);
+                                        //((Column)column.Element).Elements.Add(columnRow);
+                                    }
+                                //}
+
+                                lastX = rect.X + rect.Width;
                             }
-                            lastX = rect.X + rect.Width;
+                            else
+                            {
+                                
+                            
 
-                            singleColumn.Elements.Add(image);
 
-                            //using (var page = _tess.Process(Pix.LoadFromFile("image-" + limit + ".png"), PageSegMode.SingleBlock))
-                            //{
-                            //    var text = page.GetText();
 
-                            //    Debug.Write("image " + limit + "=" + text);
-                            //}
 
-                            Cv2.Rectangle(copy, new Point(rect.X, rect.Y), new Point(rect.X + rect.Width, rect.Y + rect.Height), Scalar.Purple);
+                                limit++;
+                                //if (limit == 100) break;
+
+                                //Debug.WriteLine(limit + "=" + rect.Width + "," + rect.Height);
+
+                                var roi2 = _image.Clone(rect);
+                                roi2.SaveImage("wwwroot/images/image-" + limit + ".png");
+
+                                // @todo replace with object recognizer
+                                var image = new Image("./images/image-" + limit + ".png");
+
+                                Debug.WriteLine("margin " + (rect.Y - columnRow.Item1) + "," + (columnRow.Item2 - (rect.Y + rect.Height)));
+                                if (lastX != -1)
+                                {
+                                    image.Margin[3] = rect.X - lastX;
+                                
+                                }
+                                lastX = rect.X + rect.Width;
+
+                                singleColumn.Elements.Add(image);
+
+                            
+
+                                //using (var page = _tess.Process(Pix.LoadFromFile("image-" + limit + ".png"), PageSegMode.SingleBlock))
+                                //{
+                                //    var text = page.GetText();
+
+                                //    Debug.Write("image " + limit + "=" + text);
+                                //}
+
+                                Cv2.Rectangle(copy, new Point(rect.X, rect.Y), new Point(rect.X + rect.Width, rect.Y + rect.Height), Scalar.Purple);
+
+                            }
                         }
 
                         // Add single column into row

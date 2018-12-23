@@ -21,9 +21,21 @@ namespace RazorPagesMovie.core.model.elements
 
         public override string StartTag()
         {
-            var type = Layout.Type == Layout.LayoutType.Centered ? "container" : "container-fluid";
+            string type;
+            string width;
 
-            return $"<div class=\"{type}\" style=\"width:{(int) Layout.Width}px;\">";
+            if (Layout.Type == Layout.LayoutType.Centered)
+            {
+                type = "container";
+                width = (int) Layout.Width + "px";
+            }
+            else
+            {
+                type = "container-fluid";
+                width = "100%";
+            }
+
+            return $"<div class=\"{type}\" style=\"width:{width};\">";
         }
 
         public override string Content()

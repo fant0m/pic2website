@@ -26,13 +26,18 @@ namespace RazorPagesMovie.core.model
         public LayoutWidth Width { get; set; }
         public double RealWidth { get; set; }
         public double RealHeight { get; set; }
-        public double Padding { get; set; }
+        public double PaddingLeft { get; set; }
+        public double PaddingRight { get; set; }
+        public double MostLeft { get; set; }
+        public double MostRight { get; set; }
 
-        public Layout(LayoutType type, double realWidth, double realheight)
+        public Layout(LayoutType type, double realWidth, double realheight, double mostLeft, double mostRight)
         {
             Type = type;
             RealWidth = realWidth;
             RealHeight = realheight;
+            MostLeft = mostLeft;
+            MostRight = mostRight;
 
             DetectContainerWidth(RealWidth);
         }
@@ -44,13 +49,18 @@ namespace RazorPagesMovie.core.model
         {
             var values = Enum.GetValues(typeof(LayoutWidth)).Cast<LayoutWidth>().ToList();
             Width = values.OrderByDescending(x => (int)x >= width).First();
-            Padding = (int) Width - RealWidth;
         }
 
-        public void RecalculateWidth(LayoutWidth layoutWidth)
+        public void CalculatePadding(double globalMostLeft)
         {
-            Width = layoutWidth;
-            Padding = (int) Width - RealWidth;
+            var space = (double)Width - RealWidth;
+            PaddingLeft = MostLeft - globalMostLeft;
+            PaddingRight = globalMostLeft + (int) Width - MostRight;
+
+            if (Math.Abs(PaddingLeft + PaddingRight - space) > 0.01)
+            {
+                throw new Exception("layout padding error");
+            }
         }
     }
 }

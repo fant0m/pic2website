@@ -21,9 +21,14 @@
 .col {
     float: left;
     position: relative;
+    /* @todo len dočasne, riešiť cez flex alebo obrázky budú mať float: left */
+    line-height: 0;
 }
 * {
     -webkit-box-sizing: border-box;
     -moz-box-sizing: border-box;
     box-sizing: border-box;
+}
+img {
+    vertical-align: top;
 }

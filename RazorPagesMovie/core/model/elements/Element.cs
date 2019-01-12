@@ -14,7 +14,9 @@ namespace RazorPagesMovie.core.model.elements
         public string Class;
         public Border Border;
         public int[] BackgroundColor;
+        public string BackgroundImage;
         public Rect Rect;
+        public bool Fluid;
 
         // @todo tu asi bude musieť byť list sub elementov
 
@@ -37,7 +39,9 @@ namespace RazorPagesMovie.core.model.elements
             var styles = "";
             if (Width > 0)
             {
-                styles += $"width:{Width}px;";
+                styles += $"width:{Width}";
+                styles += Fluid ? "%" : "px";
+                styles += ";";
             }
 
             if (Height > 0)
@@ -45,12 +49,23 @@ namespace RazorPagesMovie.core.model.elements
                 styles += $"height:{Height}px;";
             }
 
-            if (BackgroundColor[0] != 0)
+            if (BackgroundImage != null)
+            {
+                styles += $"background: url({BackgroundImage});";
+            }
+            else if (BackgroundColor[0] != 0)
             {
                 styles += $"background: rgb({BackgroundColor[0]},{BackgroundColor[1]},{BackgroundColor[2]});";
             }
 
-            styles += $"margin:{Margin[0]}px {Margin[1]}px {Margin[2]}px {Margin[3]}px;";
+            if (Fluid)
+            {
+                styles += $"margin:{Margin[0]}px {Margin[1]}% {Margin[2]}px {Margin[3]}%;";
+            }
+            else
+            {
+                styles += $"margin:{Margin[0]}px {Margin[1]}px {Margin[2]}px {Margin[3]}px;";
+            }
             styles += $"padding:{Padding[0]}px {Padding[1]}px {Padding[2]}px {Padding[3]}px;";
 
             return styles;

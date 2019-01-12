@@ -23,6 +23,7 @@ namespace RazorPagesMovie.core.model.elements
         {
             string type;
             string width;
+            var styles = "";
 
             if (Layout.Type == Layout.LayoutType.Centered)
             {
@@ -35,7 +36,10 @@ namespace RazorPagesMovie.core.model.elements
                 width = "100%";
             }
 
-            return $"<div class=\"{type}\" style=\"width:{width};\">";
+            styles += $"width:{width};";
+            styles += $"padding:{Padding[0]}px {Padding[1]}px {Padding[2]}px {Padding[3]}px;";
+
+            return $"<div class=\"{type}\" style=\"{styles}\">";
         }
 
         public override string Content()

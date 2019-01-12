@@ -9,12 +9,14 @@ namespace RazorPagesMovie.core.model.elements
         public int[] Padding;
         public int[] Margin;
         public double Width;
+        public int MinWidth;
         public int Height;
         public int[] Color;
         public string Class;
         public Border Border;
         public int[] BackgroundColor;
         public string BackgroundImage;
+        public string TextAlign;
         public Rect Rect;
         public bool Fluid;
 
@@ -44,6 +46,11 @@ namespace RazorPagesMovie.core.model.elements
                 styles += ";";
             }
 
+            if (MinWidth > 0 && !Fluid)
+            {
+                styles += $"min-width:{MinWidth}px;";
+            }
+
             if (Height > 0)
             {
                 styles += $"height:{Height}px;";
@@ -67,6 +74,11 @@ namespace RazorPagesMovie.core.model.elements
                 styles += $"margin:{Margin[0]}px {Margin[1]}px {Margin[2]}px {Margin[3]}px;";
             }
             styles += $"padding:{Padding[0]}px {Padding[1]}px {Padding[2]}px {Padding[3]}px;";
+
+            if (TextAlign != null)
+            {
+                styles += $"text-align:{TextAlign};";
+            }
 
             return styles;
         }

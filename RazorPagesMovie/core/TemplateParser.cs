@@ -55,7 +55,7 @@ namespace RazorPagesMovie.core
         {
             _tess = new TesseractEngine(@"./wwwroot/tessdata", "eng", EngineMode.LstmOnly);
 
-            byte[] imageData = File.ReadAllBytes(@"./wwwroot/images/template2_fluid.png");
+            byte[] imageData = File.ReadAllBytes(@"./wwwroot/images/template2.png");
             _image = Mat.FromImageData(imageData, ImreadModes.Color);
             //Convert the img1 to grayscale and then filter out the noise
             Mat gray1 = Mat.FromImageData(imageData, ImreadModes.GrayScale);
@@ -210,6 +210,7 @@ namespace RazorPagesMovie.core
             var lastY = 0;
             var maxLayout = Layout.LayoutWidth.W800;
             var mostLeftSections = new List<double>();
+            var mostRightSections = new List<double>();
             foreach (var section in sections)
             {
                 // Access sections rects
@@ -222,6 +223,7 @@ namespace RazorPagesMovie.core
                 if (section.Layout.Type == Layout.LayoutType.Centered)
                 {
                     mostLeftSections.Add(section.Layout.MostLeft);
+                    mostRightSections.Add(section.Layout.MostRight);
                 }
 
                 // Save longest layout width
@@ -231,8 +233,10 @@ namespace RazorPagesMovie.core
                 }
             }
 
-            // Sort mostLeftSection values
+            // Sort values
             mostLeftSections.Sort();
+            mostRightSections.Sort();
+            mostRightSections.Reverse();
 
             // Process sections
             foreach (var section in sections)
@@ -243,6 +247,9 @@ namespace RazorPagesMovie.core
                     section.Layout.Width = maxLayout;
                 }
 
+                // Set section min. width
+                section.MinWidth = (int) section.Layout.Width;
+
                 // Access sections rects
                 var contours = sectionContours[section.Id];
 
@@ -251,23 +258,43 @@ namespace RazorPagesMovie.core
                 AnalyseSectionBackground(section, contours);
 
                 // Calculate section left and right padding
-                section.Layout.CalculatePadding(mostLeftSections.FirstOrDefault());
-                Debug.WriteLine("padding " + section.Layout.PaddingLeft + "," + section.Layout.PaddingRight);
+                // @todo toto čo tu bolo je imho bullshit, je to padding priamo voči obrázku (max. containeru obrázku) nie globálnemu containeru
+                // @todo všetko to dať preč aj z layoutu
+                //section.Layout.CalculatePadding(mostLeftSections.FirstOrDefault());
 
                 // Create a container
+                // @todo globálny counter na containery a ostatné veci ale asi až potom ako budú normalizované elementy takže teraz je to fuk čo tam je
                 var container = new Container(1, section.Layout);
-                var containerRect = new Rect(0, section.Top, copy.Width, section.Height);
+                Rect containerRect;
+
+                // Center content in container and create container rect
+                if (section.Layout.Type == Layout.LayoutType.Centered)
+                {
+                    // left padding
+                    container.Padding[3] = (int) Math.Ceiling(((int) section.Layout.Width - (mostRightSections.FirstOrDefault() - mostLeftSections.FirstOrDefault())) / 2);
+
+                    // right padding is not neccessary but for completeness; it's substracted by 1 for rounding error (to not break the layout)
+                    container.Padding[1] = container.Padding[3] - 1;
+
+                    // @todo zmazať
+                    //containerRect = new Rect((_image.Width - (int) section.Layout.Width) / 2 + container.Padding[1], section.Top, (int) section.Layout.Width, section.Height);
+
+                    // create container rect
+                    containerRect = new Rect((int) mostLeftSections.FirstOrDefault(), section.Top, (int)section.Layout.Width, section.Height);
+                }
+                else
+                {
+                    // fluid layout has full width
+                    containerRect = new Rect(0, section.Top, copy.Width, section.Height);
+                }
 
                 // Process inner blocks
-                // @todo tak nakoniec bude mať ten lavy a pravy padding container, v process inner blocks si to už budú riešiť rowy samé o koľko sa majú odsadiť ešte zľava, takže nebude treba ani paddingFix, akurát ten containerRect bude lepšie posunúť o ten padding
-                // @todo 2019-01-11 ten lavy a pravy sa asi ešte nerieši? takisto ten parameter asi vyhodiť, treba doriešiť aby to bolo pekne odsadené a centrované
-                // @todo fluid layout je rozdrbaný, možno tam namiesto marginov dať len tie width
+                // @todo vykresliť do obrázku container inou farbou
                 // @todo vnorené boxy sú rozdrbané to acsascolumn treba inak vyriešiť, tak isto na fluid režime sa neozbrazujú ako fluid
+                // @todo spájanie riadkov / delenie na columny viz. čo robí na template2.png
                 // @todo samotné obrázky keď sú iba vedľa seba už nemajú padding/margin
-                Debug.WriteLine("padding fix " + (section.Layout.Type == Layout.LayoutType.Centered ? new double[] { section.Layout.PaddingLeft, section.Layout.PaddingRight } : null));
                 //container.Rows = ProcessInnerBlocks(contours, copy, containerRect, section.Layout.Type == Layout.LayoutType.Centered ? new[] { section.Layout.PaddingLeft, section.Layout.PaddingRight } : null);
-                // @todo uncomment below
-                container.Rows = ProcessInnerBlocks(contours, copy, containerRect, section.Layout.Type == Layout.LayoutType.Fluid, new[] { 0.0, 0.0 });
+                container.Rows = ProcessInnerBlocks(contours, copy, containerRect, section.Layout.Type == Layout.LayoutType.Fluid);
 
                 // Append container to section
                 section.Containers.Add(container);
@@ -330,7 +357,7 @@ namespace RazorPagesMovie.core
 
                     // check pixels
                     colors[i] = _image.At<Vec3b>(y, x1);
-                    colors[i + 10] = _image.At<Vec3b>(y, x2);
+                    colors[i + 5] = _image.At<Vec3b>(y, x2);
                 }
             }
             else
@@ -460,7 +487,7 @@ namespace RazorPagesMovie.core
             return contoursAp.Length == 4 && rect.Width >= 10 && rect.Height >= 10;
         }
 
-        private List<Row> ProcessInnerBlocks(List<int> contours, Mat copy, Rect parent, bool fluid = false, double[] paddingFix = null)
+        private List<Row> ProcessInnerBlocks(List<int> contours, Mat copy, Rect parent, bool fluid = false)
         {
             var r = new Random();
             var sectionRows = new List<Row>();
@@ -506,12 +533,12 @@ namespace RazorPagesMovie.core
                         var sortedLeft = latest.Item3.OrderBy(rec => rec.Left).ToList().First();
                         var sortedRight = latest.Item3.OrderBy(rec => rec.Right).ToList().Last();
 
-                        // @todo neviem či budeme riešiť aj double alebo sa to zaokrúhli
+                        // @todo zmazať pravý padding nebudeme asi riešiť
                         // apply right padding for row
-                        latest.Element.Padding[1] = paddingFix != null ? (int) paddingFix[1] : parent.X + parent.Width - (sortedRight.X + sortedRight.Width);
+                        //latest.Element.Padding[1] = parent.X + parent.Width - (sortedRight.X + sortedRight.Width);
 
                         // apply left padding for row
-                        latest.Element.Padding[3] = paddingFix != null ? (int) paddingFix[0] : sortedLeft.X - parent.X;
+                        latest.Element.Padding[3] = sortedLeft.X - parent.X;
                     }
 
                     // create section row
@@ -522,9 +549,12 @@ namespace RazorPagesMovie.core
                     // @todo bez tej podmienky vždy to tak asi bude
                     var latestBottom = rows.Count == 0 ? parent.Y + parent.Height : parent.Y + parent.Height;
                     var latestLeft = parent.X;
+
+                    // apply top padding
                     sectionRow.Padding[0] = rect.Y - latestTop;
 
-                    if (sectionRects.Length == 1) {
+                    if (sectionRects.Length == 1)
+                    {
                         sectionRow.Padding[3] = rect.X - latestLeft;
                         sectionRow.Padding[2] = latestBottom - (rect.Y + rect.Height);
                     }
@@ -558,10 +588,10 @@ namespace RazorPagesMovie.core
                 var sortedRight = last.Item3.OrderBy(rec => rec.Right).ToList().Last();
 
                 // apply right padding for row
-                last.Element.Padding[1] = paddingFix != null ? (int)paddingFix[1] : parent.X + parent.Width - (sortedRight.X + sortedRight.Width);
+                //last.Element.Padding[1] = parent.X + parent.Width - (sortedRight.X + sortedRight.Width);
 
                 // apply left padding for row
-                last.Element.Padding[3] = paddingFix != null ? (int)paddingFix[0] : sortedLeft.X - parent.X;
+                last.Element.Padding[3] = sortedLeft.X - parent.X;
             }
 
             // proceed rows
@@ -599,11 +629,13 @@ namespace RazorPagesMovie.core
                             latestElem.Margin[1] = rect.X - latest.Item2;
                             if (fluid)
                             {
+                                // replace width with percentage value
                                 latestElem.Width = Math.Round(latestElem.Width / _image.Width * 100);
-                                latestElem.Margin[1] = (int)Math.Round((100.0 * latestElem.Margin[1] / _image.Width));
+                                // in fluid layout it's not necessary to have right margin so we will extend the width
+                                latestElem.Width += (int)Math.Round((100.0 * latestElem.Margin[1] / _image.Width));
+                                latestElem.Margin[1] = 0;
                                 latestElem.Fluid = true;
                                 fluidPercents += latestElem.Width;
-                                fluidPercents += latestElem.Margin[1];
                             }
                         }
 
@@ -636,6 +668,12 @@ namespace RazorPagesMovie.core
                     {
                         latestElem.Width = 100 - fluidPercents;
                         latestElem.Fluid = true;
+                        // @todo poriadne pozrieť či to nezarovnáva zle
+                        // if there are multiple column in fluid layout and last column is located at the end we want to keep it there at any resolution
+                        if (columns.Count >= 2 && latest.Item2 >= _image.Width * 0.95)
+                        {
+                            latestElem.TextAlign = "right";
+                        }
                     }
                 }
 
@@ -1091,8 +1129,8 @@ namespace RazorPagesMovie.core
 
                 //Debug.WriteLine("area " + area + " left " + rect.Left + " right " + rect.Right + " width " + rect.Width);
 
-                // add left corners from 25 % left-most of image
-                if (rect.Left < width * 0.25 && (area > 100 || rect.Width * rect.Height > 100))
+                // add left corners from 50 % left-most of image
+                if (rect.Left < width * 0.50 && (area > 100 || rect.Width * rect.Height > 100))
                 {
                     left.Add(rect.Left);
                 }
@@ -1105,18 +1143,31 @@ namespace RazorPagesMovie.core
                 }
             }
 
-            // filter top 50 % and select most common
-            var filterLeft = left.Count > 1 ? left.OrderBy(j => j).Take(left.Count * 50 / 100) : left;
-            var mostLeft = left.Count > 0 ? filterLeft.MostCommon() : 0;
+            // filter top 50 %
+            var filterLeft = left.Count > 1 ? left.OrderBy(j => j).Take(left.Count * 50 / 100).ToList() : left;
+       
+            // filter top 50 %
+            var filterRight = right.Count > 1 ? right.OrderByDescending(j => j).Take(right.Count * 50 / 100).ToList() : right;
 
-            // filter top 50 % and sselect most common
-            var filterRight = right.Count > 1 ? right.OrderByDescending(j => j).Take(right.Count * 50 / 100) : right;
-            var mostRight = right.Count > 0 ? filterRight.MostCommon() : width;
+            double mostLeft, mostRight;
+
+            // if detected width is below 1200 we can take first and last values
+            if (filterRight.FirstOrDefault() - filterLeft.FirstOrDefault() <= (int) Layout.LayoutWidth.W1200)
+            {
+                mostLeft = filterLeft.FirstOrDefault();
+                mostRight = filterRight.FirstOrDefault();
+            }
+            // otherwise we will take most common values
+            else
+            {
+                mostLeft = left.Count > 0 ? filterLeft.MostCommon() : 0;
+                mostRight = right.Count > 0 ? filterRight.MostCommon() : width;
+            }
 
             Debug.WriteLine("most left: " + mostLeft);
             Debug.WriteLine("most right: " + mostRight);
 
-            // most left position must be placed approx. within 10% of layout width
+            // most left position must be placed approx. within 5% of layout width
             var type = mostLeft < width * 0.05 ? Layout.LayoutType.Fluid : Layout.LayoutType.Centered;
             Debug.WriteLine("type " + type);
             return new Layout(type, mostRight - mostLeft, height, mostLeft, mostRight);

@@ -2,6 +2,9 @@
     margin: 0;
     padding: 0;
 }
+section {
+    width: 100%;
+}
 .container {
     position: relative;
     margin: 0 auto;
@@ -23,6 +26,9 @@
     position: relative;
     /* @todo len dočasne, riešiť cez flex alebo obrázky budú mať float: left */
     line-height: 0;
+    /* @todo neviem či je dobrý nápad colu dávať 100% width */
+    /* @todo column width sa možno budú potom nejak normalizovať, že sa to replacne ako col-3 col-3 col-6 a pod.*/
+    width: 100%;
 }
 * {
     -webkit-box-sizing: border-box;

@@ -254,6 +254,7 @@ namespace RazorPagesMovie.core
                 section.Layout.CalculatePadding(mostLeftSections.FirstOrDefault());
                 Debug.WriteLine("padding " + section.Layout.PaddingLeft + "," + section.Layout.PaddingRight);
 
+
                 // Create a container
                 var container = new Container(1, section.Layout);
                 var containerRect = new Rect(0, section.Top, copy.Width, section.Height);

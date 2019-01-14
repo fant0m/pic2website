@@ -4,7 +4,7 @@ namespace RazorPagesMovie.core.model.elements.grid
 {
     public class Column : Element
     {
-        public List<Element> Elements { get; }
+        public List<Element> Elements { get; set; }
 
         public Column(int id)
         {

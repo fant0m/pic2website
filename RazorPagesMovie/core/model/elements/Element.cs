@@ -46,7 +46,7 @@ namespace RazorPagesMovie.core.model.elements
                 styles += ";";
             }
 
-            if (MinWidth > 0 && !Fluid)
+            if (MinWidth > 0)
             {
                 styles += $"min-width:{MinWidth}px;";
             }

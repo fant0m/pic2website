@@ -44,7 +44,7 @@ namespace RazorPagesMovie.core
         public const int MaxSeparatorHeight = 10;
         public const int MinSeparatorWidth = 400;
         public const int MaxTextGap = 6;
-        public const int MínColumnGap = 20;
+        public const int MínColumnGap = 15; // @todo možno podľa šírky layoutu
 
         public TemplateParser(string imagePath)
         {
@@ -207,7 +207,6 @@ namespace RazorPagesMovie.core
             var copy = _image.Clone();
 
             // Analyse section layouts
-            var lastY = 0;
             var maxLayout = Layout.LayoutWidth.W800;
             var mostLeftSections = new List<double>();
             var mostRightSections = new List<double>();
@@ -248,7 +247,10 @@ namespace RazorPagesMovie.core
                 }
 
                 // Set section min. width
-                section.MinWidth = (int) section.Layout.Width;
+                if (section.Layout.Type == Layout.LayoutType.Centered)
+                {
+                    section.MinWidth = (int) section.Layout.Width;
+                }
 
                 // Access sections rects
                 var contours = sectionContours[section.Id];
@@ -256,11 +258,6 @@ namespace RazorPagesMovie.core
                 // Analyse section background image / color
                 // @todo vymyslieť ako sa to má správať pri ďalších elementoch, či tam proste pošlem vždy len Element, alebo aj zoznam ktoré elementy nemá prechádzať atď.
                 AnalyseSectionBackground(section, contours);
-
-                // Calculate section left and right padding
-                // @todo toto čo tu bolo je imho bullshit, je to padding priamo voči obrázku (max. containeru obrázku) nie globálnemu containeru
-                // @todo všetko to dať preč aj z layoutu
-                //section.Layout.CalculatePadding(mostLeftSections.FirstOrDefault());
 
                 // Create a container
                 // @todo globálny counter na containery a ostatné veci ale asi až potom ako budú normalizované elementy takže teraz je to fuk čo tam je
@@ -270,17 +267,16 @@ namespace RazorPagesMovie.core
                 // Center content in container and create container rect
                 if (section.Layout.Type == Layout.LayoutType.Centered)
                 {
-                    // left padding
+                    // left container padding
                     container.Padding[3] = (int) Math.Ceiling(((int) section.Layout.Width - (mostRightSections.FirstOrDefault() - mostLeftSections.FirstOrDefault())) / 2);
 
-                    // right padding is not neccessary but for completeness; it's substracted by 1 for rounding error (to not break the layout)
-                    container.Padding[1] = container.Padding[3] - 1;
-
-                    // @todo zmazať
-                    //containerRect = new Rect((_image.Width - (int) section.Layout.Width) / 2 + container.Padding[1], section.Top, (int) section.Layout.Width, section.Height);
+                    // right container padding is not neccessary but calculated for completeness; it's substracted by 3 for rounding error (to not break the layout)
+                    container.Padding[1] = container.Padding[3] - 3;
 
                     // create container rect
-                    containerRect = new Rect((int) mostLeftSections.FirstOrDefault(), section.Top, (int)section.Layout.Width, section.Height);
+                    var mostLeft = (int) mostLeftSections.FirstOrDefault();
+                    var mostRight = (int) mostRightSections.FirstOrDefault();
+                    containerRect = new Rect(mostLeft, section.Top, mostRight - mostLeft, section.Height);
                 }
                 else
                 {
@@ -289,20 +285,20 @@ namespace RazorPagesMovie.core
                 }
 
                 // Process inner blocks
-                // @todo vykresliť do obrázku container inou farbou
-                // @todo vnorené boxy sú rozdrbané to acsascolumn treba inak vyriešiť, tak isto na fluid režime sa neozbrazujú ako fluid
-                // @todo spájanie riadkov / delenie na columny viz. čo robí na template2.png
+                // @todo delenie na columny v prípade že riadky majú rovnaké odsadenie
+                // @todo vnorené boxy sú rozdrbané to acsascolumn treba inak vyriešiť, tak isto na fluid režime sa neozbrazujú ako fluid - actascolumn - ak je true dať elementu inú triedu (nie row ale napr. inline-block) + ten fix na fluid width na percentá
                 // @todo samotné obrázky keď sú iba vedľa seba už nemajú padding/margin
-                //container.Rows = ProcessInnerBlocks(contours, copy, containerRect, section.Layout.Type == Layout.LayoutType.Centered ? new[] { section.Layout.PaddingLeft, section.Layout.PaddingRight } : null);
+                // @todo spájanie riadkov ak sú moc blízko / ak je to text
+                // @todo spájanie do zvlášť containera ak majú rovnaký štýl - rovnaká výška, medzery, ..
+                // @todo text bude nejaký text class/p class a vo vnútri bude list texts = v prípade že text má viac riadkov, potom sa dá join <br>
                 container.Rows = ProcessInnerBlocks(contours, copy, containerRect, section.Layout.Type == Layout.LayoutType.Fluid);
 
                 // Append container to section
                 section.Containers.Add(container);
 
-                // Draw section
-                Debug.WriteLine("section " + lastY + "-" + (lastY + section.Height));
-                Cv2.Rectangle(copy, new Point(0, lastY), new Point(copy.Width, lastY + section.Height), Scalar.Red);
-                lastY += section.Height;
+                // Draw section and container
+                Cv2.Rectangle(copy, new Point(section.Rect.X, section.Rect.Y), new Point(section.Rect.X + section.Rect.Width - 1, section.Rect.Y + section.Rect.Height), Scalar.Red);
+                Cv2.Rectangle(copy, new Point(containerRect.X, containerRect.Y + 1), new Point(containerRect.X + containerRect.Width, containerRect.Y + containerRect.Height - 1), Scalar.LightSeaGreen);
 
                 // Append section into template structure
                 _templateStructure.Sections.Add(section);
@@ -336,7 +332,12 @@ namespace RazorPagesMovie.core
             if (section.Layout.Type == Layout.LayoutType.Centered)
             {
                 // we want to analyse pixels outside of the container
+                
                 var spaceWidth = (section.Rect.Width - (int)section.Layout.Width) / 2;
+                if (spaceWidth < 0)
+                {
+                    spaceWidth = _image.Width / 2;
+                }
                 var leftFrom = section.Rect.X;
                 var leftTo = leftFrom + spaceWidth;
                 var rightFrom = section.Rect.Width - spaceWidth;
@@ -440,12 +441,6 @@ namespace RazorPagesMovie.core
                     if (subitem.Parent == contour)
                     {
                         inner.Add(find);
-                        if (subitem.Child != -1)
-                        {
-                            // Recursive call with child element
-                            // @todo zmazať - tuto rekurzívne do n-tej úrovne už nejdeme
-                           // CheckSubBlocks(find, copy);
-                        }
                     }
                     else
                     {
@@ -492,7 +487,7 @@ namespace RazorPagesMovie.core
             var r = new Random();
             var sectionRows = new List<Row>();
             var sectionRects = new Rect[contours.Count];
-            var sectionRectRows = new List<Row>[contours.Count];
+            var sectionRecursiveRows = new List<Row>[contours.Count];
             var k = 0;
             foreach (var contour in contours)
             {
@@ -504,14 +499,10 @@ namespace RazorPagesMovie.core
                 sectionRects[k] = rect;
 
                 //Debug.WriteLine("processing sub blocks " + k);
-                sectionRectRows[k] = CheckSubBlocks(contour, copy);
+                sectionRecursiveRows[k] = CheckSubBlocks(contour, copy);
 
                 k++;
             }
-
-            // @todo spojenie riadkov ak sú moc blízko
-            // @todo spájanie do zvlášť containera ak majú rovnaký štýl - rovnaká výška, medzery, ..
-            //Debug.WriteLine("sekcia počet rectov " + sectionRects.Length);
 
             // make copy of rects
             var sectionRectsUnsorted = sectionRects;
@@ -531,11 +522,6 @@ namespace RazorPagesMovie.core
                     {
                         var latest = rows.Last();
                         var sortedLeft = latest.Item3.OrderBy(rec => rec.Left).ToList().First();
-                        var sortedRight = latest.Item3.OrderBy(rec => rec.Right).ToList().Last();
-
-                        // @todo zmazať pravý padding nebudeme asi riešiť
-                        // apply right padding for row
-                        //latest.Element.Padding[1] = parent.X + parent.Width - (sortedRight.X + sortedRight.Width);
 
                         // apply left padding for row
                         latest.Element.Padding[3] = sortedLeft.X - parent.X;
@@ -580,15 +566,10 @@ namespace RazorPagesMovie.core
             if (rows.Count > 0)
             {
                 var last = rows.Last();
+                var sortedLeft = last.Item3.OrderBy(rec => rec.Left).ToList().First();
 
                 // apply bottom padding for row
                 last.Element.Padding[2] = parent.Y + parent.Height - last.Item2;
-
-                var sortedLeft = last.Item3.OrderBy(rec => rec.Left).ToList().First();
-                var sortedRight = last.Item3.OrderBy(rec => rec.Right).ToList().Last();
-
-                // apply right padding for row
-                //last.Element.Padding[1] = parent.X + parent.Width - (sortedRight.X + sortedRight.Width);
 
                 // apply left padding for row
                 last.Element.Padding[3] = sortedLeft.X - parent.X;
@@ -598,7 +579,6 @@ namespace RazorPagesMovie.core
             var c = 1;
             foreach (var row in rows)
             {
-                //var container = new Container(c);
                 var sectionRow = (Row) row.Element;
 
                 // @todo treba spracovať každý riadok do stĺpcov, t.j. taký istý princíp ako riadky - zoradia sa zľava doprava (čo už vlastne je vyššie):
@@ -689,49 +669,13 @@ namespace RazorPagesMovie.core
                 // process columns into rows
                 foreach (var column in columns)
                 {
-                    // when we have nested elements we don't need to analyse single contour
-                    var recursiveRows = false;
-
-                    var recursiveAdded = 0;
-                    var nonRecursiveItems = new List<Rect>();
-                    foreach (var e in column.Item3)
-                    {
-                        var index = Array.IndexOf(sectionRectsUnsorted, e);
-                        //Debug.WriteLine("našiel som index " + index + " počet v zozname " + column.Item3.Count);
-
-                        if (sectionRectRows[index] != null)
-                        {
-                            recursiveRows = true;
-                            recursiveAdded++;
-                            //Debug.WriteLine("zoznam nie je prázdny " + sectionRectRows[index].Count);
-                            foreach (var columnRow in sectionRectRows[index])
-                            {
-                                //((Column)column.Element).Elements.Add(columnRow);
-                            }
-                        }
-                        else
-                        {
-                            //nonRecursiveItems.Add(e);
-                        }
-
-                        nonRecursiveItems.Add(e);
-                    }
-
-                    //if (recursiveAdded > 1)
-                    //{
-                    //    Debug.WriteLine("presne tak");
-                    //}
-
-                    //if (recursiveRows) break;
-                    if (nonRecursiveItems.Count == 0) break;
-
                     // @todo refactor rows, columns do metód
 
                     /* Column rows start */
 
                     // align rects from the top to the bottom
-                    //var alignedColumnRects = column.Item3.OrderBy(rec => rec.Top).ToArray();
-                    var alignedColumnRects = nonRecursiveItems.OrderBy(rec => rec.Top).ToArray();
+                    // @todo works15.png, môže sa stať že bude nespojený rect mať rozmery celého obrázku a potom sa jednotlivé element nerozparsujú, možno nejaká podmienka že ak rozmery rectu sa približijú rozmerom columnu a row tak ho z listu alignedColumnRects vyhoď
+                    var alignedColumnRects = column.Item3.OrderBy(rec => rec.Top).ToArray();
 
                     // detect column rows
                     var columnRows = new List<TripleExt<int, int, List<Rect>, Element>>(); // y start y end
@@ -772,36 +716,36 @@ namespace RazorPagesMovie.core
                     // draw column rows
                     foreach (var columnRow in columnRows)
                     {
-
                         Cv2.Rectangle(copy, new Point(column.Item1, columnRow.Item1), new Point(column.Item2, columnRow.Item2), Scalar.DarkOrange);
                     }
 
                     /* Column rows end */
 
 
-                    /* Column row letters merging start */
+                    /* Column row rects */
                     // process column rows
                     foreach (var columnRow in columnRows)
                     {
-                        // align contours inside row from left to right
+                        // align contours inside row from left to right and filter small elements
                         // @todo neviem či filtrovať aj tie rozmery nakoľko môžeme prísť o znaky v text ako bodka
-                        //var alignHorizontal = row.Item3.Where(rect => rect.Width * rect.Height >= 13).OrderBy(rect => rect.X).ToArray();
                         var alignHorizontal = columnRow.Item3.Where(rect => rect.Width * rect.Height >= 5).OrderBy(rect => rect.X).ToArray();
                         var connectedHorizontal = new List<Rect>();
 
-                        var l = 0;
-                        foreach (var contour in alignHorizontal)
-                        {
-                            //var roi2 = _image.Clone(contour);
-                            //roi2.SaveImage("image2-" + l + ".png");
-                            //l++;
-                            //Cv2.Rectangle(copy, new Point(contour.X, contour.Y), new Point(contour.X + contour.Width, contour.Y + contour.Height), Scalar.FromRgb(r.Next(0, 255), r.Next(0, 255), r.Next(0, 255)));
-                        }
+                        //var l = 0;
+                        //foreach (var contour in alignHorizontal)
+                        //{
+                        //    var roi2 = _image.Clone(contour);
+                        //    roi2.SaveImage("image2-" + l + ".png");
+                        //    l++;
+                        //Cv2.Rectangle(copy, new Point(contour.X, contour.Y), new Point(contour.X + contour.Width, contour.Y + contour.Height), Scalar.FromRgb(r.Next(0, 255), r.Next(0, 255), r.Next(0, 255)));
+                        //}
+
+                        /* Column row letters merging start */
 
                         // connect letters into words
                         // @todo tú medzeru medzi textom asi bude treba riešiť tak že sa zistí typ fontu, veľkosť a zistí sa koľko by mala mať px medzera
                         // @todo asi bude aj tak problém zisťovať napr. či nie je vedľa textu ikona, bude sa musieť kontrolovať gap medzi ikonou a samotnými písmenami
-                        var maxTextGap = TemplateParser.MaxTextGap;
+                        var maxTextGap = MaxTextGap;
                         var mergedWidths = new List<double>();
                         var maxGap = 0;
                         for (var j = 0; j < alignHorizontal.Length; j++)
@@ -878,6 +822,8 @@ namespace RazorPagesMovie.core
                                 //Debug.WriteLine("p. " + j + " distance " + distance, " gap " + firstGap);
                             }
                         }
+                        
+                        /* Column row letters merging end */
 
                         // Create single column inside row
                         var singleColumn = new Column(1);
@@ -886,39 +832,27 @@ namespace RazorPagesMovie.core
                         var lastX = -1;
                         foreach (var rect in connectedHorizontal)
                         {
-
                             // Element has recursive content so we need to replace it with the right content
-                            if (sectionRectsUnsorted.Contains(rect) && sectionRectRows[Array.IndexOf(sectionRectsUnsorted, rect)] != null)
+                            if (sectionRectsUnsorted.Contains(rect) && sectionRecursiveRows[Array.IndexOf(sectionRectsUnsorted, rect)] != null)
                             {
                                 var index = Array.IndexOf(sectionRectsUnsorted, rect);
-                                //if (sectionRectRows[index] != null)
-                                //{
-                                    recursiveRows = true;
-                                    recursiveAdded++;
-                                    //Debug.WriteLine("zoznam nie je prázdny " + sectionRectRows[index].Count);
-                                    foreach (var recursiveRow in sectionRectRows[index])
+ 
+                                // Append all recursive rows
+                                foreach (var recursiveRow in sectionRecursiveRows[index])
+                                {
+                                    // @todo neviem či sa to vždy bude mať tváriť ako column
+                                    recursiveRow.ActAsColumn = true;
+                                    if (lastX != -1)
                                     {
-                                        // @todo neviem či sa to vždy bude mať tváriť ako column
-                                        recursiveRow.ActAsColumn = true;
-                                        if (lastX != -1)
-                                        {
-                                            recursiveRow.Margin[3] = rect.X - lastX;
-                                        }
-                                        singleColumn.Elements.Add(recursiveRow);
-                                        //((Column)column.Element).Elements.Add(columnRow);
+                                        recursiveRow.Margin[3] = rect.X - lastX;
                                     }
-                                //}
+                                    singleColumn.Elements.Add(recursiveRow);
+                                }
 
                                 lastX = rect.X + rect.Width;
                             }
                             else
                             {
-                                
-                            
-
-
-
-
                                 limit++;
                                 //if (limit == 100) break;
 
@@ -939,7 +873,6 @@ namespace RazorPagesMovie.core
                                 lastX = rect.X + rect.Width;
 
                                 singleColumn.Elements.Add(image);
-
                             
 
                                 //using (var page = _tess.Process(Pix.LoadFromFile("image-" + limit + ".png"), PageSegMode.SingleBlock))
@@ -957,13 +890,13 @@ namespace RazorPagesMovie.core
                         // Add single column into row
                         ((Row)columnRow.Element).Columns.Add(singleColumn);
                     }
-                    
-                    /* Column row letters merging end */
-                }
 
+                    /* Column row rects end */
+                }
 
                 /* Merge columns into logical parts start */
                 // @todo keď bude normálna štruktúra v inštanciách
+                // @todo toto bolo asi len spájanie blízkych columnov do 1
                 /*
                 Debug.WriteLine("row has " + columns.Count + " columns");
                 if (columns.Count > 2)
@@ -984,6 +917,7 @@ namespace RazorPagesMovie.core
                         {
                             // @todo merge 1 2 into one logical parent
                             // @todo bude ten merge ako nejaký atribút id merge a pri generovaní sa len hodia vedľa seba pod 1 element?
+                            Debug.WriteLine("merge A");
 
                             index++;
                             continue;
@@ -999,6 +933,7 @@ namespace RazorPagesMovie.core
                             if (AreSame(firstGap, thirdGap))
                             {
                                 // @todo merge 1 2 into one logical parent
+                                Debug.WriteLine("merge B");
 
                                 index++;
                             }
@@ -1006,6 +941,7 @@ namespace RazorPagesMovie.core
                             else if (thirdGap > firstGap * 2)
                             {
                                 // @todo merge 1 2  into one logical parent
+                                Debug.WriteLine("merge C");
 
                                 index++;
                             }
@@ -1029,6 +965,209 @@ namespace RazorPagesMovie.core
                 c++;
             }
 
+            // Fix last row in sequence which has different number of columns than rows before e.g. 3 text columns, 1. column has 5 rows, 2. column has 4 rows, 3. column has 5 rows => each column has 5 rows
+            // @todo bude treba vyskúšať všetky možnosti kde ten text môže iba byť
+            // @todo tiež do tej triedy optimizator
+            for (var i = 1; i < sectionRows.Count; i++)
+            {
+                var previousRow = sectionRows[i - 1];
+                var currentRow = sectionRows[i];
+
+                if (AreSame(previousRow.Padding[0], currentRow.Padding[0]) && currentRow.Columns.Count < previousRow.Columns.Count && currentRow.Columns.Count > 0)
+                {
+                    // check previous columns dimensions
+                    var length = previousRow.Columns.Count;
+                    var maxColumnWidth = new int[length];
+                    var maxContentWidth = new int[length];
+                    var leftPositionsPrevious = new int[length];
+                    var positionAccumulator = 0;
+                    for (var j = 0; j < length; j++)
+                    {
+                        var column = previousRow.Columns[j];
+                        var total = (int)column.Width + column.Margin[1];
+
+                        if (total > maxColumnWidth[j])
+                        {
+                            maxColumnWidth[j] = total;
+                        }
+                        if ((int)column.Width > maxContentWidth[j])
+                        {
+                            maxContentWidth[j] = (int)column.Width;
+                        }
+
+                        if (j == 0)
+                        {
+                            leftPositionsPrevious[j] = previousRow.Padding[3] + column.Padding[3];
+                        }
+                        else
+                        {
+                            leftPositionsPrevious[j] = column.Padding[3] + positionAccumulator;
+                        }
+
+                        positionAccumulator += total;
+                    }
+
+                    // check if columns are aligned the same way
+                    var error = false;
+                    var leftPositions = new int[currentRow.Columns.Count];
+                    positionAccumulator = 0;
+                    for (var j = 0; j < currentRow.Columns.Count; j++)
+                    {
+                        var column = currentRow.Columns[j];
+                        var total = (int)column.Width + column.Margin[1];
+                        if (j == 0)
+                        {
+                            leftPositions[j] = currentRow.Padding[3] + column.Padding[3];
+                            total += currentRow.Padding[3];
+                        }
+                        else
+                        {
+                            leftPositions[j] = column.Padding[3] + positionAccumulator;
+                        }
+                        positionAccumulator += total;
+
+                        var match = -1;
+                        for (var h = 0; h < length; h++)
+                        {
+                            if (AreSame(leftPositionsPrevious[h], leftPositions[j]))
+                            {
+                                match = h;
+                            }
+                        }
+
+                        if (match == -1 || (int) column.Width > maxColumnWidth[match])
+                        {
+                            error = true;
+                        }
+
+                    }
+
+                    // it's okay we can split it into more columns
+                    if (!error)
+                    {
+                        var newColumns = new List<Column>(length);
+
+                        for (var j = 0; j < length; j++)
+                        {
+                            var column = new Column(1);
+                            var previousColumn = previousRow.Columns[j];
+                            var match = -1;
+
+                            for (var e = 0; e < currentRow.Columns.Count; e++)
+                            {
+                                if (AreSame(leftPositionsPrevious[j], leftPositions[e]))
+                                {
+                                    match = e;
+                                }
+                            }
+
+                            Debug.WriteLine("match " + match);
+
+                            // paste old content
+                            if (match != -1)
+                            {
+                                column.Elements = currentRow.Columns[match].Elements;
+                                column.Width = maxColumnWidth[j];
+                            }
+                            else
+                            {
+                                column.Width = maxColumnWidth[j];
+                            }
+
+                            newColumns.Add(column);
+                        }
+
+                        currentRow.Padding = previousRow.Padding;
+                        currentRow.Columns = newColumns;
+                    }
+                }
+            }
+
+            /* Split identical columns inside rows into one parent column e.g. Row 1 - column 6, column 6, Row 2 - column 6, column 6 => Row 1 - column 1 (which has 2 rows), column 2 (which has 2 rows) */
+            // @todo trieda merger/optimizator čo bude takto deliť na columny & spájať riadky a bohvie čo ďalšie, možno aj to rušenie zbytočných elemntov
+            var lastColumnWidths = new List<int>();
+            var startSplitIndex = -1;
+            var splitRowIndexes = new List<Tuple<int, int>>();
+            var sectionRowsCopy = new List<Row>(sectionRows);
+            
+            // find pair indexes of rows to me splitted e.g. 0-3, 5-10
+            for (var i = 0; i < sectionRows.Count; i++)
+            {
+                var row = sectionRows[i];
+
+                // detect column widths
+                var columnWidths = new int[row.Columns.Count - 1];
+                for (var j = 0; j < columnWidths.Length; j++)
+                {
+                    var column = row.Columns[j];
+                    var total = (int) column.Width + column.Margin[1];
+                    columnWidths[j] = total;
+                }
+
+                // check with previous widths
+                if (lastColumnWidths.Count != 0)
+                {
+                    // merge only if we have more than 2 columns
+                    bool merge = columnWidths.Length != 0;
+
+                    for (var j = 0; j < columnWidths.Length; j++)
+                    {
+                        // dont merge if previous width doesn't match with current width
+                        if (!AreSame(columnWidths[j], lastColumnWidths[j]))
+                        {
+                            merge = false;
+
+                            break;
+                        }
+                    }
+
+                    // we have got start of new split from index i - 1
+                    if (merge && startSplitIndex == -1)
+                    {
+                        startSplitIndex = i - 1;
+                    }
+                    // we have got end of split to index i - 1
+                    else if (!merge && startSplitIndex != -1)
+                    {
+                        splitRowIndexes.Add(new Tuple<int, int>(startSplitIndex, i - 1));
+                        startSplitIndex = -1;
+                    }
+                }
+
+                lastColumnWidths.Clear();
+                lastColumnWidths = columnWidths.ToList();
+            }
+
+            // finish last row
+            if (startSplitIndex != -1)
+            {
+                splitRowIndexes.Add(new Tuple<int, int>(startSplitIndex, sectionRows.Count - 1));
+            }
+
+            // split index pairs
+            splitRowIndexes.Reverse();
+            foreach (var pair in splitRowIndexes)
+            {
+                Debug.WriteLine("split " + pair.Item1 + "-" + pair.Item2);
+
+                // create list with rows
+                var split = new List<Row>();
+                for (var i = pair.Item1; i <= pair.Item2; i++)
+                {
+                    split.Add(sectionRowsCopy[i]);
+                }
+
+                // remove rows that will be splitted
+                sectionRows.RemoveRange(pair.Item1 + 1, pair.Item2 - pair.Item1);
+
+                // replace with splitted content
+                sectionRows[pair.Item1] = SplitRowsIntoColumns(split);
+            }
+
+            /* Split identical column rows into one parent column end */
+
+
+
             //Debug.WriteLine("sekcia počet row " + rows.Count);
 
             foreach (var row in rows)
@@ -1037,6 +1176,91 @@ namespace RazorPagesMovie.core
             }
 
             return sectionRows;
+        }
+
+        private Row SplitRowsIntoColumns(List<Row> rows)
+        {
+            var result = new Row(1);
+            var maxColumnWidths = new List<int>();
+            var maxContentWidths = new List<int>();
+            var lowestLeftMargin = Int32.MaxValue;
+
+            // find maximum column and content widths
+            foreach (var row in rows)
+            {
+                for (var j = 0; j < row.Columns.Count; j++)
+                {
+                    var column = row.Columns[j];
+                    var total = (int)column.Width + column.Margin[1];
+
+                    if (maxContentWidths.Count <= j)
+                    {
+                        maxContentWidths.Add(0);
+                        maxColumnWidths.Add(0);
+                    }
+
+                    if (total > maxColumnWidths[j])
+                    {
+                        maxColumnWidths[j] = total;
+                    }
+                    if ((int) column.Width > maxContentWidths[j])
+                    {
+                        maxContentWidths[j] = (int) column.Width;
+                    }
+                }
+
+                if (row.Padding[3] < lowestLeftMargin)
+                {
+                    lowestLeftMargin = row.Padding[3];
+                }
+            }
+
+            result.Padding[2] = rows.Last().Padding[2];
+
+            // create columns
+            var columns = new List<Column>(maxContentWidths.Count);
+            for (var i = 0; i < maxContentWidths.Count; i++)
+            {
+                var column = new Column(1);
+                column.Width = maxContentWidths[i];
+                column.Margin[1] = maxColumnWidths[i] - maxContentWidths[i];
+
+                if (i == 0)
+                {
+                    column.Margin[3] = lowestLeftMargin;
+                }
+                
+                columns.Add(column);
+            }
+
+            // fill columns
+            foreach (var row in rows)
+            {
+
+                for (var i = 0; i < row.Columns.Count; i++)
+                {
+                    for (var j = 0; j < row.Columns[i].Elements.Count; j++)
+                    {
+                        var element = row.Columns[i].Elements[j];
+                        if (j == 0)
+                        {
+                            element.Padding[0] += row.Padding[0];
+                        }
+                        element.Padding[3] = row.Padding[3] - lowestLeftMargin;
+                        columns[i].Elements.Add(element);
+                    }
+                }
+            }
+
+            // set columns
+            result.Columns = columns;
+
+            return result;
+        }
+
+        private bool AreSame(double value1, double value2)
+        {
+            return Math.Abs(value2 - value1) <= 2;
         }
 
         private int FindRowForRect(List<TripleExt<int, int, List<Rect>, Element>> rows, Rect rect)
@@ -1109,6 +1333,7 @@ namespace RazorPagesMovie.core
         * 
         * @todo lepší algoritmus na hľadanie oboch súradníc
         * @todo teoreticky skúsiť brať úplne prvý element, alebo skôr hodnota ktorá predstavuje min./max. ohraničenie (ľavý/pravý) pre 90% všetkých hodnôt
+        * @todo asi bude stačiť komplet vynechať elementy mimo containera tak aby neboli v dizajne a potom stačí zobrať najmenšiu ľavú hodnotu a najväčšiu pravú
         */
         private Layout DetectLayout(List<int> contours, double width, double height)
         {

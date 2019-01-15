@@ -55,7 +55,7 @@ namespace RazorPagesMovie.core
         {
             _tess = new TesseractEngine(@"./wwwroot/tessdata", "eng", EngineMode.LstmOnly);
 
-            byte[] imageData = File.ReadAllBytes(@"./wwwroot/images/template2_fluid.png");
+            byte[] imageData = File.ReadAllBytes(@"./wwwroot/images/template2.png");
             _image = Mat.FromImageData(imageData, ImreadModes.Color);
             //Convert the img1 to grayscale and then filter out the noise
             Mat gray1 = Mat.FromImageData(imageData, ImreadModes.GrayScale);
@@ -285,6 +285,7 @@ namespace RazorPagesMovie.core
                 }
 
                 // Process inner blocks
+                // @todo template2 prvý stlpec hnedy má zlú width, nie je tam nastavený max.
                 // @todo vnorené boxy sú rozdrbané to acsascolumn treba inak vyriešiť, actascolumn - ak je true dať elementu inú triedu (nie row ale napr. inline-block) + ten fix na fluid width na percentá
                 // @todo samotné obrázky keď sú iba vedľa seba už nemajú padding/margin
                 // @todo spájanie riadkov ak sú moc blízko / ak je to text
@@ -610,9 +611,9 @@ namespace RazorPagesMovie.core
                             if (fluid)
                             {
                                 // replace width with percentage value
-                                latestElem.Width = Math.Ceiling(latestElem.Width / _image.Width * 100);
+                                latestElem.Width = Math.Round(latestElem.Width / _image.Width * 100);
                                 // in fluid layout it's not necessary to have right margin so we will extend the width
-                                latestElem.Width += (int)Math.Ceiling((100.0 * latestElem.Margin[1] / _image.Width));
+                                latestElem.Width += (int)Math.Round((100.0 * latestElem.Margin[1] / _image.Width));
                                 latestElem.Margin[1] = 0;
                                 latestElem.Fluid = true;
                                 fluidPercents += latestElem.Width;
@@ -950,9 +951,8 @@ namespace RazorPagesMovie.core
 
                 /* Merge columns into logical parts start */
                 // @todo keď bude normálna štruktúra v inštanciách
-                // @todo toto bolo asi len spájanie blízkych columnov do 1
-                /*
-                Debug.WriteLine("row has " + columns.Count + " columns");
+
+                /*Debug.WriteLine("row has " + columns.Count + " columns");
                 if (columns.Count > 2)
                 {
                     var index = 0;
@@ -1057,6 +1057,11 @@ namespace RazorPagesMovie.core
                         {
                             leftPositionsPrevious[j] = column.Padding[3] + positionAccumulator;
                         }
+
+                        if (fluid)
+                        {
+                            leftPositionsPrevious[j] = positionAccumulator;
+                        }
                         Debug.WriteLine("left " +leftPositionsPrevious[j]);
 
                         positionAccumulator += total;
@@ -1079,7 +1084,12 @@ namespace RazorPagesMovie.core
                         {
                             leftPositions[j] = column.Padding[3] + positionAccumulator;
                         }
-                        Debug.WriteLine("left2 " + leftPositions[j]);
+
+                        if (fluid)
+                        {
+                            leftPositions[j] = positionAccumulator;
+                            total -= currentRow.Padding[3];
+                        }
                         positionAccumulator += total;
 
                         var match = -1;
@@ -1204,8 +1214,6 @@ namespace RazorPagesMovie.core
             splitRowIndexes.Reverse();
             foreach (var pair in splitRowIndexes)
             {
-                Debug.WriteLine("split " + pair.Item1 + "-" + pair.Item2);
-
                 // create list with rows
                 var split = new List<Row>();
                 for (var i = pair.Item1; i <= pair.Item2; i++)

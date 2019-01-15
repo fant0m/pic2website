@@ -55,7 +55,7 @@ namespace RazorPagesMovie.core
         {
             _tess = new TesseractEngine(@"./wwwroot/tessdata", "eng", EngineMode.LstmOnly);
 
-            byte[] imageData = File.ReadAllBytes(@"./wwwroot/images/template2.png");
+            byte[] imageData = File.ReadAllBytes(@"./wwwroot/images/template2_fluid.png");
             _image = Mat.FromImageData(imageData, ImreadModes.Color);
             //Convert the img1 to grayscale and then filter out the noise
             Mat gray1 = Mat.FromImageData(imageData, ImreadModes.GrayScale);
@@ -285,8 +285,7 @@ namespace RazorPagesMovie.core
                 }
 
                 // Process inner blocks
-                // @todo delenie na columny v prípade že riadky majú rovnaké odsadenie
-                // @todo vnorené boxy sú rozdrbané to acsascolumn treba inak vyriešiť, tak isto na fluid režime sa neozbrazujú ako fluid - actascolumn - ak je true dať elementu inú triedu (nie row ale napr. inline-block) + ten fix na fluid width na percentá
+                // @todo vnorené boxy sú rozdrbané to acsascolumn treba inak vyriešiť, actascolumn - ak je true dať elementu inú triedu (nie row ale napr. inline-block) + ten fix na fluid width na percentá
                 // @todo samotné obrázky keď sú iba vedľa seba už nemajú padding/margin
                 // @todo spájanie riadkov ak sú moc blízko / ak je to text
                 // @todo spájanie do zvlášť containera ak majú rovnaký štýl - rovnaká výška, medzery, ..
@@ -577,6 +576,7 @@ namespace RazorPagesMovie.core
 
             // proceed rows
             var c = 1;
+            var fluidWidths = new List<int>();
             foreach (var row in rows)
             {
                 var sectionRow = (Row) row.Element;
@@ -610,9 +610,9 @@ namespace RazorPagesMovie.core
                             if (fluid)
                             {
                                 // replace width with percentage value
-                                latestElem.Width = Math.Round(latestElem.Width / _image.Width * 100);
+                                latestElem.Width = Math.Ceiling(latestElem.Width / _image.Width * 100);
                                 // in fluid layout it's not necessary to have right margin so we will extend the width
-                                latestElem.Width += (int)Math.Round((100.0 * latestElem.Margin[1] / _image.Width));
+                                latestElem.Width += (int)Math.Ceiling((100.0 * latestElem.Margin[1] / _image.Width));
                                 latestElem.Margin[1] = 0;
                                 latestElem.Fluid = true;
                                 fluidPercents += latestElem.Width;
@@ -650,9 +650,63 @@ namespace RazorPagesMovie.core
                         latestElem.Fluid = true;
                         // @todo poriadne pozrieť či to nezarovnáva zle
                         // if there are multiple column in fluid layout and last column is located at the end we want to keep it there at any resolution
-                        if (columns.Count >= 2 && latest.Item2 >= _image.Width * 0.95)
+                        if (columns.Count == 2 && latest.Item2 >= _image.Width * 0.95)
                         {
                             latestElem.TextAlign = "right";
+                        }
+                    }
+
+                    // normalize widths for fluid layout
+                    if (fluid)
+                    {
+                        if (fluidWidths.Count == 0)
+                        {
+                            foreach (var column in columns)
+                            {
+                                fluidWidths.Add((int)column.Element.Width);
+                            }
+                        }
+                        else
+                        {
+                            var refill = false;
+                            if (fluidWidths.Count == columns.Count)
+                            {
+                                // check if columns have almost same widths
+                                var sameWidths = true;
+                                for (var i = 0; i < columns.Count; i++)
+                                {
+                                    if (!AreSame(columns[i].Element.Width, fluidWidths[i]))
+                                    {
+                                        sameWidths = false;
+                                    }
+                                }
+
+                                if (sameWidths)
+                                {
+                                    for (var i = 0; i < columns.Count; i++)
+                                    {
+                                        columns[i].Element.Width = fluidWidths[i];
+                                    }
+                                }
+                                else
+                                {
+                                    refill = true;
+                                }
+                            }
+                            else
+                            {
+                                refill = true;
+                            }
+
+
+                            if (refill)
+                            {
+                                fluidWidths.Clear();
+                                foreach (var column in columns)
+                                {
+                                    fluidWidths.Add((int)column.Element.Width);
+                                }
+                            }
                         }
                     }
                 }
@@ -1003,6 +1057,7 @@ namespace RazorPagesMovie.core
                         {
                             leftPositionsPrevious[j] = column.Padding[3] + positionAccumulator;
                         }
+                        Debug.WriteLine("left " +leftPositionsPrevious[j]);
 
                         positionAccumulator += total;
                     }
@@ -1024,6 +1079,7 @@ namespace RazorPagesMovie.core
                         {
                             leftPositions[j] = column.Padding[3] + positionAccumulator;
                         }
+                        Debug.WriteLine("left2 " + leftPositions[j]);
                         positionAccumulator += total;
 
                         var match = -1;
@@ -1035,11 +1091,11 @@ namespace RazorPagesMovie.core
                             }
                         }
 
-                        if (match == -1 || (int) column.Width > maxColumnWidth[match])
+                        // @todo možno tu bude treba podmienku na width pre fluid layout
+                        if (match == -1 || ((int)column.Width > maxColumnWidth[match] && !column.Fluid))
                         {
                             error = true;
                         }
-
                     }
 
                     // it's okay we can split it into more columns
@@ -1051,6 +1107,7 @@ namespace RazorPagesMovie.core
                         {
                             var column = new Column(1);
                             var previousColumn = previousRow.Columns[j];
+                            column.Fluid = previousColumn.Fluid;
                             var match = -1;
 
                             for (var e = 0; e < currentRow.Columns.Count; e++)
@@ -1061,12 +1118,11 @@ namespace RazorPagesMovie.core
                                 }
                             }
 
-                            Debug.WriteLine("match " + match);
-
                             // paste old content
                             if (match != -1)
                             {
                                 column.Elements = currentRow.Columns[match].Elements;
+
                                 column.Width = maxColumnWidth[j];
                             }
                             else
@@ -1183,7 +1239,7 @@ namespace RazorPagesMovie.core
             var result = new Row(1);
             var maxColumnWidths = new List<int>();
             var maxContentWidths = new List<int>();
-            var lowestLeftMargin = Int32.MaxValue;
+            var lowestLeftPadding = Int32.MaxValue;
 
             // find maximum column and content widths
             foreach (var row in rows)
@@ -1209,9 +1265,9 @@ namespace RazorPagesMovie.core
                     }
                 }
 
-                if (row.Padding[3] < lowestLeftMargin)
+                if (row.Padding[3] < lowestLeftPadding)
                 {
-                    lowestLeftMargin = row.Padding[3];
+                    lowestLeftPadding = row.Padding[3];
                 }
             }
 
@@ -1219,15 +1275,17 @@ namespace RazorPagesMovie.core
 
             // create columns
             var columns = new List<Column>(maxContentWidths.Count);
+            var fluid = rows[0].Columns[0].Fluid;
             for (var i = 0; i < maxContentWidths.Count; i++)
             {
                 var column = new Column(1);
                 column.Width = maxContentWidths[i];
                 column.Margin[1] = maxColumnWidths[i] - maxContentWidths[i];
+                column.Fluid = fluid;
 
                 if (i == 0)
                 {
-                    column.Margin[3] = lowestLeftMargin;
+                    column.Padding[3] = lowestLeftPadding;
                 }
                 
                 columns.Add(column);
@@ -1246,7 +1304,7 @@ namespace RazorPagesMovie.core
                         {
                             element.Padding[0] += row.Padding[0];
                         }
-                        element.Padding[3] = row.Padding[3] - lowestLeftMargin;
+                        element.Padding[3] = row.Padding[3] - lowestLeftPadding;
                         columns[i].Elements.Add(element);
                     }
                 }

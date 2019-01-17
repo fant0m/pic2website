@@ -257,7 +257,8 @@ namespace RazorPagesMovie.core
 
                 // Analyse section background image / color
                 // @todo vymyslieť ako sa to má správať pri ďalších elementoch, či tam proste pošlem vždy len Element, alebo aj zoznam ktoré elementy nemá prechádzať atď.
-                AnalyseSectionBackground(section, contours);
+                var rectangles = ContoursToRects(contours);
+                BackgroundAnalyser.AnalyseSection(section, rectangles, _image);
 
                 // Create a container
                 // @todo globálny counter na containery a ostatné veci ale asi až potom ako budú normalizované elementy takže teraz je to fuk čo tam je
@@ -285,7 +286,7 @@ namespace RazorPagesMovie.core
                 }
 
                 // Process inner blocks
-                // @todo template2 prvý stlpec hnedy má zlú width, nie je tam nastavený max.
+                // @todo template2 ako sa parsuje horné menu
                 // @todo vnorené boxy sú rozdrbané to acsascolumn treba inak vyriešiť, actascolumn - ak je true dať elementu inú triedu (nie row ale napr. inline-block) + ten fix na fluid width na percentá
                 // @todo samotné obrázky keď sú iba vedľa seba už nemajú padding/margin
                 // @todo spájanie riadkov ak sú moc blízko / ak je to text
@@ -309,8 +310,7 @@ namespace RazorPagesMovie.core
             return startIndex;
         }
 
-        // @todo asi vlastná trieda, kde budú metódy na seckciu a elementy zvlášť
-        private void AnalyseSectionBackground(Section section, List<int> contours)
+        private Rect[] ContoursToRects(List<int> contours)
         {
             // init an array of section rectangles (which we don't want to proccess)
             var rects = new Rect[contours.Count];
@@ -327,93 +327,7 @@ namespace RazorPagesMovie.core
                 k++;
             }
 
-            Vec3b[] colors;
-
-            if (section.Layout.Type == Layout.LayoutType.Centered)
-            {
-                // we want to analyse pixels outside of the container
-                
-                var spaceWidth = (section.Rect.Width - (int)section.Layout.Width) / 2;
-                if (spaceWidth < 0)
-                {
-                    spaceWidth = _image.Width / 2;
-                }
-                var leftFrom = section.Rect.X;
-                var leftTo = leftFrom + spaceWidth;
-                var rightFrom = section.Rect.Width - spaceWidth;
-                var rightTo = section.Rect.Width;
-                var yFrom = section.Rect.Y;
-                var yTo = section.Rect.Y + section.Rect.Height;
-
-                var random = new Random();
-                var num = 5;
-                colors = new Vec3b[num * 2];
-                // test random 5*2 pixels
-                for (var i = 0; i < num; i++)
-                {
-                    // generate random coordinates
-                    var x1 = random.Next(leftFrom, leftTo);
-                    var x2 = random.Next(rightFrom, rightTo);
-                    var y = random.Next(yFrom, yTo);
-
-                    // check pixels
-                    colors[i] = _image.At<Vec3b>(y, x1);
-                    colors[i + 5] = _image.At<Vec3b>(y, x2);
-                }
-            }
-            else
-            {
-                // we want to analyse all pixels except those saved in rects array
-                var random = new Random();
-                var num = 5;
-                colors = new Vec3b[num];
-                var found = 0;
-
-                var xFrom = section.Rect.X;
-                var xTo = section.Rect.X + section.Rect.Width;
-                var yFrom = section.Rect.Y;
-                var yTo = section.Rect.Y + section.Rect.Height;
-
-                while (found != num)
-                {
-                    // generate random coordinates
-                    var x = random.Next(xFrom, xTo);
-                    var y = random.Next(yFrom, yTo);
-
-                    // check if coordinates don't collide with rects
-                    var collides = false;
-                    for (var i = 0; i < rects.Length; i++)
-                    {
-                        var rect = rects[i];
-                        if (rect.Contains(new Rect(x, y, 1, 1)))
-                        {
-                            collides = true;
-                        }
-
-                        if (collides) break;
-                    }
-
-                    // if doesn't collide check background color
-                    if (!collides)
-                    {
-                        colors[found] = _image.At<Vec3b>(y, x);
-                        found++;
-                    }
-                }
-            }
-
-            var unique = colors.Distinct().Count();
-            if (unique <= 2)
-            {
-                // background is just one color
-                var color = colors.MostCommon();
-                section.BackgroundColor = new int[] { color.Item2, color.Item1, color.Item0 };
-            }
-            else
-            {
-                // background seems to be more complicated (image)
-                section.BackgroundImage = $"https://via.placeholder.com/{section.Rect.Width}x{section.Rect.Height}";
-            }
+            return rects;
         }
 
         /**
@@ -1020,308 +934,18 @@ namespace RazorPagesMovie.core
             }
 
             // Fix last row in sequence which has different number of columns than rows before e.g. 3 text columns, 1. column has 5 rows, 2. column has 4 rows, 3. column has 5 rows => each column has 5 rows
-            // @todo bude treba vyskúšať všetky možnosti kde ten text môže iba byť
-            // @todo tiež do tej triedy optimizator
-            for (var i = 1; i < sectionRows.Count; i++)
-            {
-                var previousRow = sectionRows[i - 1];
-                var currentRow = sectionRows[i];
+            StructureOptimiser.FixColumnsCount(sectionRows, fluid);
 
-                if (AreSame(previousRow.Padding[0], currentRow.Padding[0]) && currentRow.Columns.Count < previousRow.Columns.Count && currentRow.Columns.Count > 0)
-                {
-                    // check previous columns dimensions
-                    var length = previousRow.Columns.Count;
-                    var maxColumnWidth = new int[length];
-                    var maxContentWidth = new int[length];
-                    var leftPositionsPrevious = new int[length];
-                    var positionAccumulator = 0;
-                    for (var j = 0; j < length; j++)
-                    {
-                        var column = previousRow.Columns[j];
-                        var total = (int)column.Width + column.Margin[1];
+            // Split identical columns inside rows into one parent column e.g. Row 1 - column 6, column 6, Row 2 - column 6, column 6 => Row 1 - column 1 (which has 2 rows), column 2 (which has 2 rows)
+            StructureOptimiser.SplitIntoColumns(sectionRows);
 
-                        if (total > maxColumnWidth[j])
-                        {
-                            maxColumnWidth[j] = total;
-                        }
-                        if ((int)column.Width > maxContentWidth[j])
-                        {
-                            maxContentWidth[j] = (int)column.Width;
-                        }
-
-                        if (j == 0)
-                        {
-                            leftPositionsPrevious[j] = previousRow.Padding[3] + column.Padding[3];
-                        }
-                        else
-                        {
-                            leftPositionsPrevious[j] = column.Padding[3] + positionAccumulator;
-                        }
-
-                        if (fluid)
-                        {
-                            leftPositionsPrevious[j] = positionAccumulator;
-                        }
-                        Debug.WriteLine("left " +leftPositionsPrevious[j]);
-
-                        positionAccumulator += total;
-                    }
-
-                    // check if columns are aligned the same way
-                    var error = false;
-                    var leftPositions = new int[currentRow.Columns.Count];
-                    positionAccumulator = 0;
-                    for (var j = 0; j < currentRow.Columns.Count; j++)
-                    {
-                        var column = currentRow.Columns[j];
-                        var total = (int)column.Width + column.Margin[1];
-                        if (j == 0)
-                        {
-                            leftPositions[j] = currentRow.Padding[3] + column.Padding[3];
-                            total += currentRow.Padding[3];
-                        }
-                        else
-                        {
-                            leftPositions[j] = column.Padding[3] + positionAccumulator;
-                        }
-
-                        if (fluid)
-                        {
-                            leftPositions[j] = positionAccumulator;
-                            total -= currentRow.Padding[3];
-                        }
-                        positionAccumulator += total;
-
-                        var match = -1;
-                        for (var h = 0; h < length; h++)
-                        {
-                            if (AreSame(leftPositionsPrevious[h], leftPositions[j]))
-                            {
-                                match = h;
-                            }
-                        }
-
-                        // @todo možno tu bude treba podmienku na width pre fluid layout
-                        if (match == -1 || ((int)column.Width > maxColumnWidth[match] && !column.Fluid))
-                        {
-                            error = true;
-                        }
-                    }
-
-                    // it's okay we can split it into more columns
-                    if (!error)
-                    {
-                        var newColumns = new List<Column>(length);
-
-                        for (var j = 0; j < length; j++)
-                        {
-                            var column = new Column(1);
-                            var previousColumn = previousRow.Columns[j];
-                            column.Fluid = previousColumn.Fluid;
-                            var match = -1;
-
-                            for (var e = 0; e < currentRow.Columns.Count; e++)
-                            {
-                                if (AreSame(leftPositionsPrevious[j], leftPositions[e]))
-                                {
-                                    match = e;
-                                }
-                            }
-
-                            // paste old content
-                            if (match != -1)
-                            {
-                                column.Elements = currentRow.Columns[match].Elements;
-
-                                column.Width = maxColumnWidth[j];
-                            }
-                            else
-                            {
-                                column.Width = maxColumnWidth[j];
-                            }
-
-                            newColumns.Add(column);
-                        }
-
-                        currentRow.Padding = previousRow.Padding;
-                        currentRow.Columns = newColumns;
-                    }
-                }
-            }
-
-            /* Split identical columns inside rows into one parent column e.g. Row 1 - column 6, column 6, Row 2 - column 6, column 6 => Row 1 - column 1 (which has 2 rows), column 2 (which has 2 rows) */
-            // @todo trieda merger/optimizator čo bude takto deliť na columny & spájať riadky a bohvie čo ďalšie, možno aj to rušenie zbytočných elemntov
-            var lastColumnWidths = new List<int>();
-            var startSplitIndex = -1;
-            var splitRowIndexes = new List<Tuple<int, int>>();
-            var sectionRowsCopy = new List<Row>(sectionRows);
-            
-            // find pair indexes of rows to me splitted e.g. 0-3, 5-10
-            for (var i = 0; i < sectionRows.Count; i++)
-            {
-                var row = sectionRows[i];
-
-                // detect column widths
-                var columnWidths = new int[row.Columns.Count - 1];
-                for (var j = 0; j < columnWidths.Length; j++)
-                {
-                    var column = row.Columns[j];
-                    var total = (int) column.Width + column.Margin[1];
-                    columnWidths[j] = total;
-                }
-
-                // check with previous widths
-                if (lastColumnWidths.Count != 0)
-                {
-                    // merge only if we have more than 2 columns
-                    bool merge = columnWidths.Length != 0;
-
-                    for (var j = 0; j < columnWidths.Length; j++)
-                    {
-                        // dont merge if previous width doesn't match with current width
-                        if (!AreSame(columnWidths[j], lastColumnWidths[j]))
-                        {
-                            merge = false;
-
-                            break;
-                        }
-                    }
-
-                    // we have got start of new split from index i - 1
-                    if (merge && startSplitIndex == -1)
-                    {
-                        startSplitIndex = i - 1;
-                    }
-                    // we have got end of split to index i - 1
-                    else if (!merge && startSplitIndex != -1)
-                    {
-                        splitRowIndexes.Add(new Tuple<int, int>(startSplitIndex, i - 1));
-                        startSplitIndex = -1;
-                    }
-                }
-
-                lastColumnWidths.Clear();
-                lastColumnWidths = columnWidths.ToList();
-            }
-
-            // finish last row
-            if (startSplitIndex != -1)
-            {
-                splitRowIndexes.Add(new Tuple<int, int>(startSplitIndex, sectionRows.Count - 1));
-            }
-
-            // split index pairs
-            splitRowIndexes.Reverse();
-            foreach (var pair in splitRowIndexes)
-            {
-                // create list with rows
-                var split = new List<Row>();
-                for (var i = pair.Item1; i <= pair.Item2; i++)
-                {
-                    split.Add(sectionRowsCopy[i]);
-                }
-
-                // remove rows that will be splitted
-                sectionRows.RemoveRange(pair.Item1 + 1, pair.Item2 - pair.Item1);
-
-                // replace with splitted content
-                sectionRows[pair.Item1] = SplitRowsIntoColumns(split);
-            }
-
-            /* Split identical column rows into one parent column end */
-
-
-
-            //Debug.WriteLine("sekcia počet row " + rows.Count);
-
+            // Draw rows
             foreach (var row in rows)
             {
                 Cv2.Rectangle(copy, new Point(parent.X, row.Item1), new Point(parent.X + parent.Width, row.Item2), Scalar.Orange);
             }
 
             return sectionRows;
-        }
-
-        private Row SplitRowsIntoColumns(List<Row> rows)
-        {
-            var result = new Row(1);
-            var maxColumnWidths = new List<int>();
-            var maxContentWidths = new List<int>();
-            var lowestLeftPadding = Int32.MaxValue;
-
-            // find maximum column and content widths
-            foreach (var row in rows)
-            {
-                for (var j = 0; j < row.Columns.Count; j++)
-                {
-                    var column = row.Columns[j];
-                    var total = (int)column.Width + column.Margin[1];
-
-                    if (maxContentWidths.Count <= j)
-                    {
-                        maxContentWidths.Add(0);
-                        maxColumnWidths.Add(0);
-                    }
-
-                    if (total > maxColumnWidths[j])
-                    {
-                        maxColumnWidths[j] = total;
-                    }
-                    if ((int) column.Width > maxContentWidths[j])
-                    {
-                        maxContentWidths[j] = (int) column.Width;
-                    }
-                }
-
-                if (row.Padding[3] < lowestLeftPadding)
-                {
-                    lowestLeftPadding = row.Padding[3];
-                }
-            }
-
-            result.Padding[2] = rows.Last().Padding[2];
-
-            // create columns
-            var columns = new List<Column>(maxContentWidths.Count);
-            var fluid = rows[0].Columns[0].Fluid;
-            for (var i = 0; i < maxContentWidths.Count; i++)
-            {
-                var column = new Column(1);
-                column.Width = maxContentWidths[i];
-                column.Margin[1] = maxColumnWidths[i] - maxContentWidths[i];
-                column.Fluid = fluid;
-
-                if (i == 0)
-                {
-                    column.Padding[3] = lowestLeftPadding;
-                }
-                
-                columns.Add(column);
-            }
-
-            // fill columns
-            foreach (var row in rows)
-            {
-
-                for (var i = 0; i < row.Columns.Count; i++)
-                {
-                    for (var j = 0; j < row.Columns[i].Elements.Count; j++)
-                    {
-                        var element = row.Columns[i].Elements[j];
-                        if (j == 0)
-                        {
-                            element.Padding[0] += row.Padding[0];
-                        }
-                        element.Padding[3] = row.Padding[3] - lowestLeftPadding;
-                        columns[i].Elements.Add(element);
-                    }
-                }
-            }
-
-            // set columns
-            result.Columns = columns;
-
-            return result;
         }
 
         private bool AreSame(double value1, double value2)

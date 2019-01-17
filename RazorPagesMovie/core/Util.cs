@@ -16,5 +16,10 @@ namespace RazorPagesMovie.core
 
             return most;
         }
+
+        public static bool AreSame(double value1, double value2)
+        {
+            return Math.Abs(value2 - value1) <= 2;
+        }
     }
 }

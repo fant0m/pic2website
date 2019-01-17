@@ -18,7 +18,7 @@ namespace RazorPagesMovie.core
                 var previousRow = sectionRows[i - 1];
                 var currentRow = sectionRows[i];
 
-                if (AreSame(previousRow.Padding[0], currentRow.Padding[0]) && currentRow.Columns.Count < previousRow.Columns.Count && currentRow.Columns.Count > 0)
+                if (Util.AreSame(previousRow.Padding[0], currentRow.Padding[0]) && currentRow.Columns.Count < previousRow.Columns.Count && currentRow.Columns.Count > 0)
                 {
                     // check previous columns dimensions
                     var length = previousRow.Columns.Count;
@@ -86,7 +86,7 @@ namespace RazorPagesMovie.core
                         var match = -1;
                         for (var h = 0; h < length; h++)
                         {
-                            if (AreSame(leftPositionsPrevious[h], leftPositions[j]))
+                            if (Util.AreSame(leftPositionsPrevious[h], leftPositions[j]))
                             {
                                 match = h;
                             }
@@ -113,7 +113,7 @@ namespace RazorPagesMovie.core
 
                             for (var e = 0; e < currentRow.Columns.Count; e++)
                             {
-                                if (AreSame(leftPositionsPrevious[j], leftPositions[e]))
+                                if (Util.AreSame(leftPositionsPrevious[j], leftPositions[e]))
                                 {
                                     match = e;
                                 }
@@ -173,7 +173,7 @@ namespace RazorPagesMovie.core
                     for (var j = 0; j < columnWidths.Length; j++)
                     {
                         // dont merge if previous width doesn't match with current width
-                        if (!AreSame(columnWidths[j], lastColumnWidths[j]))
+                        if (!Util.AreSame(columnWidths[j], lastColumnWidths[j]))
                         {
                             merge = false;
 
@@ -313,11 +313,6 @@ namespace RazorPagesMovie.core
             result.Columns = columns;
 
             return result;
-        }
-
-        public static bool AreSame(double value1, double value2)
-        {
-            return Math.Abs(value2 - value1) <= 2;
         }
     }
 }

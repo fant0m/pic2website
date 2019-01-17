@@ -55,7 +55,7 @@ namespace RazorPagesMovie.core
         {
             _tess = new TesseractEngine(@"./wwwroot/tessdata", "eng", EngineMode.LstmOnly);
 
-            byte[] imageData = File.ReadAllBytes(@"./wwwroot/images/template2.png");
+            byte[] imageData = File.ReadAllBytes(@"./wwwroot/images/template4.png");
             _image = Mat.FromImageData(imageData, ImreadModes.Color);
             //Convert the img1 to grayscale and then filter out the noise
             Mat gray1 = Mat.FromImageData(imageData, ImreadModes.GrayScale);
@@ -85,8 +85,6 @@ namespace RazorPagesMovie.core
 
 
             Debug.WriteLine("počet " + _contours.Length);
-
-
 
 
             var convertor = new WebConvertor();
@@ -286,8 +284,7 @@ namespace RazorPagesMovie.core
                 }
 
                 // Process inner blocks
-                // @todo template2 ako sa parsuje horné menu
-                // @todo vnorené boxy sú rozdrbané to acsascolumn treba inak vyriešiť, actascolumn - ak je true dať elementu inú triedu (nie row ale napr. inline-block) + ten fix na fluid width na percentá
+                // @todo acsascolumn treba inak vyriešiť, actascolumn - ak je true dať elementu inú triedu (nie row ale napr. inline-block)
                 // @todo samotné obrázky keď sú iba vedľa seba už nemajú padding/margin
                 // @todo spájanie riadkov ak sú moc blízko / ak je to text
                 // @todo spájanie do zvlášť containera ak majú rovnaký štýl - rovnaká výška, medzery, ..
@@ -443,6 +440,7 @@ namespace RazorPagesMovie.core
 
                     // create section row
                     var sectionRow = new Row(1);
+                    sectionRow.Rect = new Rect(0, rect.Y, 0, rect.Height);
 
                     // set section row styles
                     var latestTop = rows.Count == 0 ? parent.Y : rows.Last().Item2;
@@ -590,7 +588,7 @@ namespace RazorPagesMovie.core
                                 var sameWidths = true;
                                 for (var i = 0; i < columns.Count; i++)
                                 {
-                                    if (!AreSame(columns[i].Element.Width, fluidWidths[i]))
+                                    if (!Util.AreSame(columns[i].Element.Width, fluidWidths[i]))
                                     {
                                         sameWidths = false;
                                     }
@@ -713,6 +711,7 @@ namespace RazorPagesMovie.core
 
                         // connect letters into words
                         // @todo tú medzeru medzi textom asi bude treba riešiť tak že sa zistí typ fontu, veľkosť a zistí sa koľko by mala mať px medzera
+                        // @todo taktiež sa bude spájať iba to čo je jasné že je text, t.j. podľa rozmerov určite nemôže spojiť input a button ako v template2
                         // @todo asi bude aj tak problém zisťovať napr. či nie je vedľa textu ikona, bude sa musieť kontrolovať gap medzi ikonou a samotnými písmenami
                         var maxTextGap = MaxTextGap;
                         var mergedWidths = new List<double>();
@@ -807,17 +806,24 @@ namespace RazorPagesMovie.core
                                 var index = Array.IndexOf(sectionRectsUnsorted, rect);
  
                                 // Append all recursive rows
+                                Rect? lastRect = null;
+
                                 foreach (var recursiveRow in sectionRecursiveRows[index])
                                 {
-                                    // @todo neviem či sa to vždy bude mať tváriť ako column
-                                    recursiveRow.ActAsColumn = true;
+                                    // check if items are is in the same row
+                                    if (lastRect == null || recursiveRow.Rect.Y >= ((Rect)lastRect).Y && recursiveRow.Rect.Y <= ((Rect)lastRect).Y + ((Rect)lastRect).Height)
+                                    {
+                                        recursiveRow.ActAsColumn = true;
+                                    }
+
                                     if (lastX != -1)
                                     {
                                         recursiveRow.Margin[3] = rect.X - lastX;
                                     }
                                     singleColumn.Elements.Add(recursiveRow);
-                                }
 
+                                    lastRect = recursiveRow.Rect;
+                                }
                                 lastX = rect.X + rect.Width;
                             }
                             else
@@ -881,7 +887,7 @@ namespace RazorPagesMovie.core
 
                         // Compare first and second gap between columns
                         //Debug.WriteLine("gap 1. - 2. " + firstGap + "," + secondGap);
-                        if (AreSame(firstGap, secondGap))
+                        if (Util.AreSame(firstGap, secondGap))
                         {
                             // @todo merge 1 2 into one logical parent
                             // @todo bude ten merge ako nejaký atribút id merge a pri generovaní sa len hodia vedľa seba pod 1 element?
@@ -898,7 +904,7 @@ namespace RazorPagesMovie.core
                             var thirdGap = thirdColumn.Item1 - secondColumn.Item2;
 
                             //Debug.WriteLine("gap 1. - 3. " + firstGap + "," + secondGap);
-                            if (AreSame(firstGap, thirdGap))
+                            if (Util.AreSame(firstGap, thirdGap))
                             {
                                 // @todo merge 1 2 into one logical parent
                                 Debug.WriteLine("merge B");
@@ -946,11 +952,6 @@ namespace RazorPagesMovie.core
             }
 
             return sectionRows;
-        }
-
-        private bool AreSame(double value1, double value2)
-        {
-            return Math.Abs(value2 - value1) <= 2;
         }
 
         private int FindRowForRect(List<TripleExt<int, int, List<Rect>, Element>> rows, Rect rect)

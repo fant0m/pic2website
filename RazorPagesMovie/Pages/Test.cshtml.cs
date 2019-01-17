@@ -18,6 +18,7 @@ using RazorPagesMovie.core.model.elements.basic;
 using RazorPagesMovie.core.model.elements.grid;
 using Tesseract;
 using Image = RazorPagesMovie.core.model.elements.basic.Image;
+using ImageFormat = System.Drawing.Imaging.ImageFormat;
 using Point = OpenCvSharp.Point;
 
 namespace RazorPagesMovie.Pages
@@ -28,7 +29,25 @@ namespace RazorPagesMovie.Pages
 
         public void OnGet()
         {
-            Output = TestParser();
+            var result = OCR.DetectFontSize(60, 80, "courier new", "Hello");
+            Debug.WriteLine(result);
+            Debug.WriteLine(OCR.PointsToPixels(result));
+
+            Font font = new Font("courier new", 87);
+            Debug.WriteLine("font height " + font.Height);
+            Bitmap fakeImage = new Bitmap(500, 500);
+            Graphics g = Graphics.FromImage(fakeImage);
+            g.DrawString("Hello", font, new SolidBrush(Color.White), 0, 0);
+            g.PageUnit = GraphicsUnit.Pixel;
+            Debug.WriteLine(g.DpiX + "," + g.DpiY);
+            Graphics graphics = Graphics.FromImage(fakeImage);
+            graphics.PageUnit = GraphicsUnit.Pixel;
+            SizeF size = graphics.MeasureString("Hello", font, Int32.MaxValue, StringFormat.GenericTypographic);
+            Debug.WriteLine("sizes " + size.Width + "," + size.Height);
+            fakeImage.Save("hm.jpg", ImageFormat.Jpeg);
+
+
+            //Output = TestParser();
             //Output = TestConvertor();
 
 

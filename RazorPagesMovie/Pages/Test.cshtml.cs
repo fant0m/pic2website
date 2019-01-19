@@ -29,11 +29,16 @@ namespace RazorPagesMovie.Pages
 
         public void OnGet()
         {
-            var result = OCR.DetectFontSize(60, 80, "courier new", "Hello");
-            Debug.WriteLine(result);
-            Debug.WriteLine(OCR.PointsToPixels(result));
+            var ocr = new Ocr();
+            var text = ocr.GetText("hm.png");
 
-            Font font = new Font("courier new", 87);
+
+
+            /*var result = OCR.DetectFontSize(60, 80, "courier new", "Hello");
+            Debug.WriteLine(result);
+            Debug.WriteLine(OCR.PointsToPixels(result));*/
+
+            /*Font font = new Font("courier new", 90);
             Debug.WriteLine("font height " + font.Height);
             Bitmap fakeImage = new Bitmap(500, 500);
             Graphics g = Graphics.FromImage(fakeImage);
@@ -44,7 +49,7 @@ namespace RazorPagesMovie.Pages
             graphics.PageUnit = GraphicsUnit.Pixel;
             SizeF size = graphics.MeasureString("Hello", font, Int32.MaxValue, StringFormat.GenericTypographic);
             Debug.WriteLine("sizes " + size.Width + "," + size.Height);
-            fakeImage.Save("hm.jpg", ImageFormat.Jpeg);
+            fakeImage.Save("hm.jpg", ImageFormat.Jpeg);*/
 
 
             //Output = TestParser();

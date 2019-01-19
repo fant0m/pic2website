@@ -17,6 +17,7 @@ using Rect = OpenCvSharp.Rect;
 
 namespace RazorPagesMovie.core
 {
+    // @todo rename tripleext and move somewhere?
     public class Triple<T, X, Y>
     {
         public T Item1 { get; set; }

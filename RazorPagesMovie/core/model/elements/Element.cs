@@ -17,6 +17,11 @@ namespace RazorPagesMovie.core.model.elements
         public int[] BackgroundColor;
         public string BackgroundImage;
         public string TextAlign;
+        // @todo neviem či to nedať iba elementu text alebo to budú aj iné využívať (aby to nemusel mať každý text)
+        public string FontFamily;
+        public int FontSize;
+        public int FontWeight;
+        public string FontStyle;
         public Rect Rect;
         public bool Fluid;
 

@@ -40,6 +40,7 @@ namespace RazorPagesMovie.core
         private HierarchyIndex[] _hierarchy;
         private TemplateStructure _templateStructure;
         private TesseractEngine _tess;
+        private Ocr _ocr;
         private int limit = 0;
 
         public const int MaxSeparatorHeight = 10;
@@ -50,13 +51,14 @@ namespace RazorPagesMovie.core
         public TemplateParser(string imagePath)
         {
             _imagePath = imagePath;
+            _ocr = new Ocr();
         }
 
         public string Analyse()
         {
             _tess = new TesseractEngine(@"./wwwroot/tessdata", "eng", EngineMode.LstmOnly);
 
-            byte[] imageData = File.ReadAllBytes(@"./wwwroot/images/template4.png");
+            byte[] imageData = File.ReadAllBytes(@"./wwwroot/images/works8.png");
             _image = Mat.FromImageData(imageData, ImreadModes.Color);
             //Convert the img1 to grayscale and then filter out the noise
             Mat gray1 = Mat.FromImageData(imageData, ImreadModes.GrayScale);
@@ -285,6 +287,7 @@ namespace RazorPagesMovie.core
                 }
 
                 // Process inner blocks
+                // @todo poriešiť v štýloch ten line-height aby to fungovalo..
                 // @todo acsascolumn treba inak vyriešiť, actascolumn - ak je true dať elementu inú triedu (nie row ale napr. inline-block)
                 // @todo samotné obrázky keď sú iba vedľa seba už nemajú padding/margin
                 // @todo spájanie riadkov ak sú moc blízko / ak je to text
@@ -838,18 +841,31 @@ namespace RazorPagesMovie.core
                                 roi2.SaveImage("wwwroot/images/image-" + limit + ".png");
 
                                 // @todo replace with object recognizer
-                                var image = new Image("./images/image-" + limit + ".png");
 
-                                //Debug.WriteLine("margin " + (rect.Y - columnRow.Item1) + "," + (columnRow.Item2 - (rect.Y + rect.Height)));
-                                if (lastX != -1)
+                                var text = true;
+                                if (text)
                                 {
-                                    image.Margin[3] = rect.X - lastX;
-                                
+                                    // @todo var text, niekde pri spájaní to bude mať ako atribút
+                                    // @todo do getText či sa nepošle rovno roi2 / rect
+                                    var textElem = _ocr.GetText("/image-" + limit + ".png");
+                                    singleColumn.Elements.Add(textElem);
                                 }
-                                lastX = rect.X + rect.Width;
+                                else
+                                {
+                                    var image = new Image("./images/image-" + limit + ".png");
 
-                                singleColumn.Elements.Add(image);
-                            
+                                    //Debug.WriteLine("margin " + (rect.Y - columnRow.Item1) + "," + (columnRow.Item2 - (rect.Y + rect.Height)));
+                                    if (lastX != -1)
+                                    {
+                                        image.Margin[3] = rect.X - lastX;
+                                    }
+
+                                    singleColumn.Elements.Add(image);
+                                }
+
+
+                              
+                                lastX = rect.X + rect.Width;
 
                                 //using (var page = _tess.Process(Pix.LoadFromFile("image-" + limit + ".png"), PageSegMode.SingleBlock))
                                 //{

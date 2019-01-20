@@ -29,8 +29,8 @@ namespace RazorPagesMovie.Pages
 
         public void OnGet()
         {
-            var ocr = new Ocr();
-            var text = ocr.GetText("hm.png");
+            //var ocr = new Ocr();
+            //var text = ocr.GetText("hm.png");
 
 
 
@@ -52,7 +52,7 @@ namespace RazorPagesMovie.Pages
             fakeImage.Save("hm.jpg", ImageFormat.Jpeg);*/
 
 
-            //Output = TestParser();
+            Output = TestParser();
             //Output = TestConvertor();
 
 

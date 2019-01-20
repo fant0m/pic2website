@@ -6,6 +6,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using RazorPagesMovie.core.model.elements.basic;
 using Tesseract;
+using Image = System.Drawing.Image;
+using ImageFormat = System.Drawing.Imaging.ImageFormat;
 
 namespace RazorPagesMovie.core
 {
@@ -29,10 +31,26 @@ namespace RazorPagesMovie.core
             bool bold = false;
             bool italic = false;
             Pix img = Pix.LoadFromFile(@"./wwwroot/images/" + image);
+            Bitmap imgBmp = new Bitmap(@"./wwwroot/images/" + image);
+            Pix threshold;
+            int xFrom, xTo, yFrom, yTo;
+            Random random = new Random();
 
             // 2. detect font family
             using (var page = _tessOnly.Process(img, PageSegMode.SingleBlock))
             {
+                var regions = page.GetSegmentedRegions(PageIteratorLevel.Symbol);
+                if (regions.Count == 0)
+                {
+                    return null;
+                }
+
+                threshold = page.GetThresholdedImage();
+                xFrom = regions[0].X;
+                xTo = regions[0].X + regions[0].Width;
+                yFrom = regions[0].Y;
+                yTo = regions[0].Y + regions[0].Height;
+
                 var iterator = page.GetIterator();
                 var attr = iterator?.GetWordFontAttributes();
                 if (attr != null)
@@ -62,10 +80,36 @@ namespace RazorPagesMovie.core
             var size = DetectFontSize(img.Width, img.Height, fontFamily, text);
             fontSize = PointsToPixels(size);
 
-            // @todo 5. font color´-> statický call na backgroundanalyser s konkrétnymi pixelom zisteným z bounds?
+            // 5. detect font color
+            // @todo skúsiť to riešiť bez ukladania temp.png ale nejak to prekonvertovať na image/bmp
+            // @todo neviem či niečo z toho nenechať triede backgroundanalyser (premenovať na coloranalyser?)
+            // save thresholded image
+            threshold.Save("temp.png", Tesseract.ImageFormat.Png);
+            var bmp = new Bitmap("temp.png");
+            var foundX = 0;
+            var foundY = 0;
+
+            // find pixel with black color (text)
+            var found = false;
+            while (!found)
+            {
+                var x = random.Next(xFrom, xTo);
+                var y = random.Next(yFrom, yTo);
+                var color = bmp.GetPixel(x, y);
+                if (color.R == 0 && color.G == 0 && color.B == 0)
+                {
+                    foundX = x;
+                    foundY = y;
+                    found = true;
+                }
+            }
+
+            // get original color
+            var px = imgBmp.GetPixel(foundX, foundY);
+            var fontColor = new int[] { px.R, px.G, px.B };
 
             // 6. return new text instance
-            return new Text(text, fontFamily, fontSize, bold, italic);
+            return new Text(text, fontFamily, fontColor, fontSize, bold, italic);
         }
 
         private string NormalizeText(string text)
@@ -75,9 +119,11 @@ namespace RazorPagesMovie.core
 
         private string NormalizeFontName(string name)
         {
-            var map = new Dictionary<string, string>()
+            var map = new Dictionary<string, string>
             {
-                { "Courier_New", "Courier New"}
+                { "Courier_New", "Courier New" },
+                { "Verdana", "Verdana" },
+                { "Arial", "Arial" }
             };
 
             return map[name];

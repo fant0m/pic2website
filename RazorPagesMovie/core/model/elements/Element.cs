@@ -29,7 +29,7 @@ namespace RazorPagesMovie.core.model.elements
 
         protected Element()
         {
-            Color = new int[3];
+            Color = null;
             Margin = new[] { 0, 0, 0, 0 };
             Padding = new[] { 0, 0, 0, 0 };
             Padding = new[] { 0, 0, 0, 0 };
@@ -41,6 +41,7 @@ namespace RazorPagesMovie.core.model.elements
             return (GetType().Name + "-" + Id).ToLower();
         }
 
+        // @todo refactor
         public string GetStyles()
         {
             var styles = "";
@@ -63,11 +64,11 @@ namespace RazorPagesMovie.core.model.elements
 
             if (BackgroundImage != null)
             {
-                styles += $"background: url({BackgroundImage});";
+                styles += $"background:url({BackgroundImage});";
             }
             else if (BackgroundColor[0] != 0)
             {
-                styles += $"background: rgb({BackgroundColor[0]},{BackgroundColor[1]},{BackgroundColor[2]});";
+                styles += $"background:rgb({BackgroundColor[0]},{BackgroundColor[1]},{BackgroundColor[2]});";
             }
 
             if (Fluid)
@@ -83,6 +84,31 @@ namespace RazorPagesMovie.core.model.elements
             if (TextAlign != null)
             {
                 styles += $"text-align:{TextAlign};";
+            }
+
+            if (!string.IsNullOrEmpty(FontFamily))
+            {
+                styles += $"font-family:{FontFamily};";
+            }
+
+            if (!string.IsNullOrEmpty(FontStyle))
+            {
+                styles += $"font-style:{FontStyle};";
+            }
+
+            if (FontSize > 0)
+            {
+                styles += $"font-size:{FontSize}px;";
+            }
+
+            if (FontWeight > 0)
+            {
+                styles += $"font-weight:{FontWeight};";
+            }
+
+            if (Color != null)
+            {
+                styles += $"color:rgb({Color[0]},{Color[1]},{Color[2]});";
             }
 
             return styles;

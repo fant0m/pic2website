@@ -29,8 +29,16 @@ namespace RazorPagesMovie.Pages
 
         public void OnGet()
         {
+            //var tess = new TesseractEngine(@"./wwwroot/tessdata", "eng", EngineMode.LstmOnly);
+            //using (var page = tess.Process(Pix.LoadFromFile("image-17.png"), PageSegMode.SingleLine))
+            //{
+            //    Debug.WriteLine("text == " + page.GetText());
+            //}
+
+
             //var ocr = new Ocr();
-            //var text = ocr.GetText("hm.png");
+            //var text = ocr.GetText("image-17.png");
+            //Debug.WriteLine(text.Content());
 
 
 

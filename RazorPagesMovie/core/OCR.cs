@@ -2,12 +2,13 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using System.Drawing.Imaging;
 using System.Linq;
 using System.Threading.Tasks;
 using RazorPagesMovie.core.model.elements.basic;
 using Tesseract;
-using Image = System.Drawing.Image;
-using ImageFormat = System.Drawing.Imaging.ImageFormat;
+using RazorPagesMovie.core.helper;
+using ImageFormat = Tesseract.ImageFormat;
 
 namespace RazorPagesMovie.core
 {
@@ -25,11 +26,10 @@ namespace RazorPagesMovie.core
         public Text GetText(string image)
         {
             // 1. Init font variables
-            string text = "";
-            string fontFamily = "";
-            int fontSize = 0;
-            bool bold = false;
-            bool italic = false;
+            string text;
+            string fontFamily;
+            bool bold;
+            bool italic;
             Pix img = Pix.LoadFromFile(@"./wwwroot/images/" + image);
             Bitmap imgBmp = new Bitmap(@"./wwwroot/images/" + image);
             Pix threshold;
@@ -37,7 +37,8 @@ namespace RazorPagesMovie.core
             Random random = new Random();
 
             // 2. detect font family
-            using (var page = _tessOnly.Process(img, PageSegMode.SingleBlock))
+            var mode = PageSegMode.SingleLine;
+            using (var page = _tessOnly.Process(img, mode))
             {
                 var regions = page.GetSegmentedRegions(PageIteratorLevel.Symbol);
                 if (regions.Count == 0)
@@ -46,6 +47,7 @@ namespace RazorPagesMovie.core
                 }
 
                 threshold = page.GetThresholdedImage();
+                threshold.Save("thr.bmp", ImageFormat.Bmp);
                 xFrom = regions[0].X;
                 xTo = regions[0].X + regions[0].Width;
                 yFrom = regions[0].Y;
@@ -55,6 +57,7 @@ namespace RazorPagesMovie.core
                 var attr = iterator?.GetWordFontAttributes();
                 if (attr != null)
                 {
+                    Debug.WriteLine(attr.FontInfo);
                     fontFamily = NormalizeFontName(attr.FontInfo.Name);
                     bold = attr.FontInfo.IsBold;
                     italic = attr.FontInfo.IsItalic;
@@ -66,7 +69,7 @@ namespace RazorPagesMovie.core
             }
 
             // 3. detect text
-            using (var page = _tessOnly.Process(img, PageSegMode.SingleBlock))
+            using (var page = _tessLstm.Process(img, mode))
             {
                 text = NormalizeText(page.GetText());
                 if (text.Equals(""))
@@ -78,35 +81,34 @@ namespace RazorPagesMovie.core
             // 4. detect font size
             // @todo maxWidth možno podľa iterator bounds, možno zapojiť aj tú height
             var size = DetectFontSize(img.Width, img.Height, fontFamily, text);
-            fontSize = PointsToPixels(size);
+            var fontSize = PointsToPixels(size);
 
             // 5. detect font color
-            // @todo skúsiť to riešiť bez ukladania temp.png ale nejak to prekonvertovať na image/bmp
             // @todo neviem či niečo z toho nenechať triede backgroundanalyser (premenovať na coloranalyser?)
-            // save thresholded image
-            threshold.Save("temp.png", Tesseract.ImageFormat.Png);
-            var bmp = new Bitmap("temp.png");
-            var foundX = 0;
-            var foundY = 0;
+            var bmp = PixToBitmapConverter.Convert(threshold);
 
             // find pixel with black color (text)
-            var found = false;
-            while (!found)
+            // @todo doesn't work well
+            var found = new Color[20];
+            var i = 0;
+            while (i < 20)
             {
                 var x = random.Next(xFrom, xTo);
                 var y = random.Next(yFrom, yTo);
                 var color = bmp.GetPixel(x, y);
-                if (color.R == 0 && color.G == 0 && color.B == 0)
+                // should be R,G,B == 0, not sure why 255 acts as 0
+                if (color.R == 255 && color.G == 255 && color.B == 255)
                 {
-                    foundX = x;
-                    foundY = y;
-                    found = true;
+                    // get original color
+                    found[i] = imgBmp.GetPixel(x, y);
+                    i++;
                 }
             }
+            // filter most common
+            var mostCommon = found.MostCommon();
 
-            // get original color
-            var px = imgBmp.GetPixel(foundX, foundY);
-            var fontColor = new int[] { px.R, px.G, px.B };
+            // fill color variable
+            var fontColor = new int[] { mostCommon.R, mostCommon.G, mostCommon.B };
 
             // 6. return new text instance
             return new Text(text, fontFamily, fontColor, fontSize, bold, italic);
@@ -119,14 +121,31 @@ namespace RazorPagesMovie.core
 
         private string NormalizeFontName(string name)
         {
+            // @todo load https://github.com/tesseract-ocr/langdata/blob/master/font_properties
+            Debug.WriteLine(name);
+
             var map = new Dictionary<string, string>
             {
                 { "Courier_New", "Courier New" },
                 { "Verdana", "Verdana" },
-                { "Arial", "Arial" }
+                { "Arial", "Arial" },
+                { "DejaVu_Sans_Ultra-Light", "Dejavu Sans" },
+                { "Times_New_Roman", "Times New Roman" },
+                { "Trebuchet_MS", "Trebuchet MS" }
             };
 
-            return map[name];
+            if (map.ContainsKey(name))
+            {
+                return map[name];
+            }
+
+            var cut = name.Split("_")[0];
+            if (map.ContainsKey(cut))
+            {
+                return map[cut];
+            }
+
+            return "";
         }
 
         private int DetectFontSize(int maxWidth, int maxHeight, string fontFamily, string text)

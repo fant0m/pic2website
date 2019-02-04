@@ -58,8 +58,8 @@ namespace RazorPagesMovie.core
         {
             _tess = new TesseractEngine(@"./wwwroot/tessdata", "eng", EngineMode.LstmOnly);
 
-            byte[] imageData = File.ReadAllBytes(@"./wwwroot/images/works8.png");
-            _image = Mat.FromImageData(imageData, ImreadModes.Color);
+            byte[] imageData = File.ReadAllBytes(@"./wwwroot/images/works17.png");
+            _image = Mat.FromImageData(imageData);
             //Convert the img1 to grayscale and then filter out the noise
             Mat gray1 = Mat.FromImageData(imageData, ImreadModes.GrayScale);
             // @todo naozaj to chceme blurovať? robí to len bordel a zbytočné contours
@@ -287,7 +287,8 @@ namespace RazorPagesMovie.core
                 }
 
                 // Process inner blocks
-                // @todo poriešiť v štýloch ten line-height aby to fungovalo..
+                // @todo text gap merging - space podľa fontu + info že je to text
+                // @todo text veci čo sú pri sebe, v 1 riadku nech majú rovnaké font family, veľkosť, farbu
                 // @todo acsascolumn treba inak vyriešiť, actascolumn - ak je true dať elementu inú triedu (nie row ale napr. inline-block)
                 // @todo samotné obrázky keď sú iba vedľa seba už nemajú padding/margin
                 // @todo spájanie riadkov ak sú moc blízko / ak je to text
@@ -698,7 +699,7 @@ namespace RazorPagesMovie.core
                     foreach (var columnRow in columnRows)
                     {
                         // align contours inside row from left to right and filter small elements
-                        // @todo neviem či filtrovať aj tie rozmery nakoľko môžeme prísť o znaky v text ako bodka
+                        // @todo neviem či filtrovať aj tie rozmery nakoľko môžeme prísť o znaky v texte ako bodka
                         var alignHorizontal = columnRow.Item3.Where(rect => rect.Width * rect.Height >= 5).OrderBy(rect => rect.X).ToArray();
                         var connectedHorizontal = new List<Rect>();
 
@@ -762,8 +763,6 @@ namespace RazorPagesMovie.core
                                     //Debug.WriteLine("merging " + j + " with " + (j+1) + ", distance = " + distance);
 
                                     j++;
-
-                                    // @todo na font size bude musieť byť asi js skript ktorý vytvorí html a bude skúšať tak aby sa to tam vošlo a zistí teda koľko px bude mať font
 
                                     // Check if we are not on the last element in the row
                                     if (j + 1 <= alignHorizontal.Length - 1)
@@ -833,26 +832,43 @@ namespace RazorPagesMovie.core
                             else
                             {
                                 limit++;
-                                //if (limit == 100) break;
-
-                                //Debug.WriteLine(limit + "=" + rect.Width + "," + rect.Height);
-
-                                var roi2 = _image.Clone(rect);
-                                roi2.SaveImage("wwwroot/images/image-" + limit + ".png");
 
                                 // @todo replace with object recognizer
 
                                 var text = true;
                                 if (text)
                                 {
+                                    // tesseract needs a margin to read text properly
+                                    var margin = 2;
+                                    var x = rect.X - margin;
+                                    var y = rect.Y - margin;
+                                    var width = rect.Width + 2 * margin;
+                                    var height = rect.Height + 2 * margin;
+
+                                    if (x < 0) x = 0;
+                                    if (y < 0) y = 0;
+                                    if (x + width > _image.Width) width = _image.Width - x;
+                                    if (y + height > _image.Height) height = _image.Height - y;
+
+                                    var tessRect = new Rect(x, y, width, height);
+
+                                    var roi2 = _image.Clone(tessRect);
+                                    roi2.SaveImage("wwwroot/images/image-" + limit + ".png");
+
+
                                     // @todo var text, niekde pri spájaní to bude mať ako atribút
                                     // @todo do getText či sa nepošle rovno roi2 / rect
                                     var textElem = _ocr.GetText("/image-" + limit + ".png");
+                                    textElem.Display = "inline";
                                     singleColumn.Elements.Add(textElem);
                                 }
                                 else
                                 {
+                                    var roi2 = _image.Clone(rect);
+                                    roi2.SaveImage("wwwroot/images/image-" + limit + ".png");
+
                                     var image = new Image("./images/image-" + limit + ".png");
+                                    image.Display = "inline";
 
                                     //Debug.WriteLine("margin " + (rect.Y - columnRow.Item1) + "," + (columnRow.Item2 - (rect.Y + rect.Height)));
                                     if (lastX != -1)

@@ -1,6 +1,7 @@
 ﻿body {
     margin: 0;
     padding: 0;
+    line-height: 1;
 }
 section {
     width: 100%;
@@ -24,8 +25,7 @@ section {
 .col {
     float: left;
     position: relative;
-    /* @todo len dočasne, riešiť cez flex alebo obrázky budú mať float: left */
-    line-height: 0;
+    font-size: 0;
     /* @todo neviem či je dobrý nápad colu dávať 100% width */
     /* @todo column width sa možno budú potom nejak normalizovať, že sa to replacne ako col-3 col-3 col-6 a pod.*/
     width: 100%;

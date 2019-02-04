@@ -22,6 +22,8 @@ namespace RazorPagesMovie.core.model.elements
         public int FontSize;
         public int FontWeight;
         public string FontStyle;
+        // @todo display by nebolo zlé dať aj ako enum
+        public string Display;
         public Rect Rect;
         public bool Fluid;
 
@@ -109,6 +111,11 @@ namespace RazorPagesMovie.core.model.elements
             if (Color != null)
             {
                 styles += $"color:rgb({Color[0]},{Color[1]},{Color[2]});";
+            }
+
+            if (Display != null)
+            {
+                styles += $"display:{Display}";
             }
 
             return styles;

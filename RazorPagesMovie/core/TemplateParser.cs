@@ -58,10 +58,10 @@ namespace RazorPagesMovie.core
         {
             _tess = new TesseractEngine(@"./wwwroot/tessdata", "eng", EngineMode.LstmOnly);
 
-            byte[] imageData = File.ReadAllBytes(@"./wwwroot/images/works17.png");
+            byte[] imageData = File.ReadAllBytes(@"./wwwroot/images/section-6.png");
             _image = Mat.FromImageData(imageData);
             //Convert the img1 to grayscale and then filter out the noise
-            Mat gray1 = Mat.FromImageData(imageData, ImreadModes.GrayScale);
+            Mat gray1 = Mat.FromImageData(imageData, ImreadModes.Grayscale);
             // @todo naozaj to chceme blurovať? robí to len bordel a zbytočné contours
             gray1 = gray1.GaussianBlur(new OpenCvSharp.Size(3, 3), 0);
 
@@ -259,7 +259,7 @@ namespace RazorPagesMovie.core
                 // Analyse section background image / color
                 // @todo vymyslieť ako sa to má správať pri ďalších elementoch, či tam proste pošlem vždy len Element, alebo aj zoznam ktoré elementy nemá prechádzať atď.
                 var rectangles = ContoursToRects(contours);
-                BackgroundAnalyser.AnalyseSection(section, rectangles, _image);
+                ColorAnalyser.AnalyseSectionBackground(section, rectangles, _image);
 
                 // Create a container
                 // @todo globálny counter na containery a ostatné veci ale asi až potom ako budú normalizované elementy takže teraz je to fuk čo tam je
@@ -287,6 +287,9 @@ namespace RazorPagesMovie.core
                 }
 
                 // Process inner blocks
+                // @todo ocr 4 font size doriešiť
+                // @todo hm7.png nezoberie dobre text button ako sublement, algoritmu určite vadia rohy, to by chcelo nejak zisťovať a rovno aplikovať border-radius len pozor aby si to nemýlilo s inými tvarmi potom, kontrolovať sa musia iba rohy
+                // @todo skúsiť pozerať pozadie elementov, napr. ten button by mal mať pozadie
                 // @todo text gap merging - space podľa fontu + info že je to text
                 // @todo text veci čo sú pri sebe, v 1 riadku nech majú rovnaké font family, veľkosť, farbu
                 // @todo acsascolumn treba inak vyriešiť, actascolumn - ak je true dať elementu inú triedu (nie row ale napr. inline-block)

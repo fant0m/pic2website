@@ -32,10 +32,8 @@ namespace RazorPagesMovie.core
             bool italic;
             Pix img = Pix.LoadFromFile(@"./wwwroot/images/" + image);
             Bitmap imgBmp = new Bitmap(@"./wwwroot/images/" + image);
-            Pix threshold;
-            int xFrom, xTo, yFrom, yTo;
-            Random random = new Random();
-
+            Rectangle region;
+            
             // 2. detect font family
             var mode = PageSegMode.SingleLine;
             using (var page = _tessOnly.Process(img, mode))
@@ -45,13 +43,7 @@ namespace RazorPagesMovie.core
                 {
                     return null;
                 }
-
-                threshold = page.GetThresholdedImage();
-                threshold.Save("thr.bmp", ImageFormat.Bmp);
-                xFrom = regions[0].X;
-                xTo = regions[0].X + regions[0].Width;
-                yFrom = regions[0].Y;
-                yTo = regions[0].Y + regions[0].Height;
+                region = regions[0];
 
                 var iterator = page.GetIterator();
                 var attr = iterator?.GetWordFontAttributes();
@@ -80,38 +72,28 @@ namespace RazorPagesMovie.core
 
             // 4. detect font size
             // @todo maxWidth možno podľa iterator bounds, možno zapojiť aj tú height
+            // @todo tá font size nie je dobrá, bol tam všade tiež dáva asi by som to vypol globálne
             var size = DetectFontSize(img.Width, img.Height, fontFamily, text);
             var fontSize = PointsToPixels(size);
 
             // 5. detect font color
-            // @todo neviem či niečo z toho nenechať triede backgroundanalyser (premenovať na coloranalyser?)
-            var bmp = PixToBitmapConverter.Convert(threshold);
-
-            // find pixel with black color (text)
-            // @todo doesn't work well
-            var found = new Color[20];
-            var i = 0;
-            while (i < 20)
-            {
-                var x = random.Next(xFrom, xTo);
-                var y = random.Next(yFrom, yTo);
-                var color = bmp.GetPixel(x, y);
-                // should be R,G,B == 0, not sure why 255 acts as 0
-                if (color.R == 255 && color.G == 255 && color.B == 255)
-                {
-                    // get original color
-                    found[i] = imgBmp.GetPixel(x, y);
-                    i++;
-                }
-            }
-            // filter most common
-            var mostCommon = found.MostCommon();
-
-            // fill color variable
-            var fontColor = new int[] { mostCommon.R, mostCommon.G, mostCommon.B };
+            var fontColor = ColorAnalyser.AnalyseTextColor(region, image);
+            Debug.WriteLine("color " + fontColor[0] + "," + fontColor[1] + "," + fontColor[2]);
 
             // 6. return new text instance
             return new Text(text, fontFamily, fontColor, fontSize, bold, italic);
+        }
+
+        public static IEnumerable<Color> GetPixels(Bitmap bitmap)
+        {
+            for (int x = 0; x < bitmap.Width; x++)
+            {
+                for (int y = 0; y < bitmap.Height; y++)
+                {
+                    Color pixel = bitmap.GetPixel(x, y);
+                    yield return pixel;
+                }
+            }
         }
 
         private string NormalizeText(string text)
@@ -139,7 +121,10 @@ namespace RazorPagesMovie.core
                 return map[name];
             }
 
-            var cut = name.Split("_")[0];
+            // remove last key after _ e.g. Arial_Bold => Arial, Trebuchet_MS_Bold => Trebuchet_MS
+            var split = name.Split("_");
+            Array.Resize(ref split, split.Length - 1);
+            var cut = String.Join("_", split);
             if (map.ContainsKey(cut))
             {
                 return map[cut];

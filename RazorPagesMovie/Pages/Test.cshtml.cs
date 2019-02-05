@@ -29,17 +29,15 @@ namespace RazorPagesMovie.Pages
 
         public void OnGet()
         {
+            //var ocr = new Ocr();
+            //var text = ocr.GetText("image-6.png");
+
+
             //var tess = new TesseractEngine(@"./wwwroot/tessdata", "eng", EngineMode.LstmOnly);
             //using (var page = tess.Process(Pix.LoadFromFile("image-17.png"), PageSegMode.SingleLine))
             //{
             //    Debug.WriteLine("text == " + page.GetText());
             //}
-
-
-            //var ocr = new Ocr();
-            //var text = ocr.GetText("image-17.png");
-            //Debug.WriteLine(text.Content());
-
 
 
             /*var result = OCR.DetectFontSize(60, 80, "courier new", "Hello");
@@ -95,7 +93,7 @@ namespace RazorPagesMovie.Pages
         {
             byte[] imageData = System.IO.File.ReadAllBytes(@"./wwwroot/images/template2.png");
             Mat img1 = Mat.FromImageData(imageData, ImreadModes.Color);
-            Mat gray1 = Mat.FromImageData(imageData, ImreadModes.GrayScale);
+            Mat gray1 = Mat.FromImageData(imageData, ImreadModes.Grayscale);
 
             //gray1 = gray1.GaussianBlur (new OpenCvSharp.Size(3, 3), 0);
             gray1 = gray1.AdaptiveThreshold(255, AdaptiveThresholdTypes.GaussianC, ThresholdTypes.BinaryInv, 105, 2); // 11,2 ; 75,10 ; 60,255

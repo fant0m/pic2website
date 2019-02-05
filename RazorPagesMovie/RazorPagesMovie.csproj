@@ -13,7 +13,7 @@
     <PackageReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="Microsoft.AspNetCore.Razor.Design" Version="2.1.2" PrivateAssets="All" />
     <PackageReference Include="Microsoft.Net.Compilers" Version="2.9.0" />
-    <PackageReference Include="OpenCvSharp3-AnyCPU" Version="3.4.1.20180830" />
+    <PackageReference Include="OpenCvSharp3-AnyCPU" Version="4.0.0.20181129" />
     <PackageReference Include="Tesseract-test" Version="4.0.0-beta15" />
 
   </ItemGroup>

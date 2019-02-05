@@ -43,7 +43,7 @@ namespace RazorPagesMovie.Pages
             byte[] imageData = System.IO.File.ReadAllBytes(@"./wwwroot/images/section-4.png");
             Mat img1 = Mat.FromImageData(imageData, ImreadModes.Color);
             //Convert the img1 to grayscale and then filter out the noise
-            Mat gray1 = Mat.FromImageData(imageData, ImreadModes.GrayScale).PyrDown().PyrUp();
+            Mat gray1 = Mat.FromImageData(imageData, ImreadModes.Grayscale).PyrDown().PyrUp();
             //gray1 = gray1.GaussianBlur(new OpenCvSharp.Size(blur, blur), 0);
             var edges = gray1.Canny(canny1, canny2);
             //var lines = edges.HoughLines(1, Math.PI / 180, 250);
@@ -78,7 +78,7 @@ namespace RazorPagesMovie.Pages
             byte[] imageData = System.IO.File.ReadAllBytes(@"./wwwroot/images/" + img);
             Mat img1 = Mat.FromImageData(imageData, ImreadModes.Color);
             //Convert the img1 to grayscale and then filter out the noise
-            Mat gray1 = Mat.FromImageData(imageData, ImreadModes.GrayScale)/*.PyrDown().PyrUp()*/;
+            Mat gray1 = Mat.FromImageData(imageData, ImreadModes.Grayscale)/*.PyrDown().PyrUp()*/;
             //gray1 = gray1.GaussianBlur(new OpenCvSharp.Size(blur, blur), 0);
 
             //gray1 = gray1.AdaptiveThreshold(255, AdaptiveThresholdTypes.MeanC, ThresholdTypes.BinaryInv, (int)canny1, canny2); // 11,2 ; 75,10 ; 60,255
@@ -156,7 +156,7 @@ namespace RazorPagesMovie.Pages
             byte[] imageData = System.IO.File.ReadAllBytes(@"./wwwroot/images/" + img);
             Mat img1 = Mat.FromImageData(imageData, ImreadModes.Color);
             //Convert the img1 to grayscale and then filter out the noise
-            Mat gray1 = Mat.FromImageData(imageData, ImreadModes.GrayScale)/*.PyrDown().PyrUp()*/;
+            Mat gray1 = Mat.FromImageData(imageData, ImreadModes.Grayscale)/*.PyrDown().PyrUp()*/;
             //gray1 = gray1.GaussianBlur(new OpenCvSharp.Size(blur, blur), 0);
             //gray1 = gray1.AdaptiveThreshold(255, AdaptiveThresholdTypes.GaussianC, ThresholdTypes.BinaryInv, 105, 2); // 11,2 ; 75,10 ; 60,255
             //gray1 = gray1.Threshold(60, 255, ThresholdTypes.BinaryInv);

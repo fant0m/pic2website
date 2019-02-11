@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using OpenCvSharp;
@@ -11,9 +12,58 @@ using Point = OpenCvSharp.Point;
 
 namespace RazorPagesMovie.core
 {
-    public static class ColorAnalyser
+    public class ColorAnalyser
     {
-        // @todo metóda pre analýzu rectu
+        private Mat _image;
+        public ColorAnalyser(Mat image)
+        {
+            _image = image;
+        }
+
+        public int[] AnalyseRect(Rect rect)
+        {
+            var outerColor = _image.At<Vec3b>(rect.Y, rect.X - 2);
+
+            var middleX = (int)Math.Round(rect.X + rect.Width / 2.0);
+            var middleY = (int)Math.Round(rect.Y + rect.Height / 2.0);
+            var innerLeft = _image.At<Vec3b>(middleY, rect.X + 3);
+            var innerRight = _image.At<Vec3b>(middleY, rect.X + rect.Width - 3);
+            var innerTop = _image.At<Vec3b>(rect.Y + 3, middleX);
+            var innerBottom = _image.At<Vec3b>(rect.Y + rect.Height - 3, middleX);
+
+            // check if rect contains other color than in outer area
+            if (outerColor != innerLeft || outerColor != innerRight || outerColor != innerTop || outerColor != innerBottom)
+            {
+                // calculate histogram
+                var roi = new Mat(_image, rect);
+                var split = roi.Split();
+                var hist = new[] { new Mat(), new Mat(), new Mat() };
+
+                for (var i = 0; i < 3; i++)
+                {
+                    Cv2.CalcHist(new[] { split[i] }, new[] { 0 }, null, hist[i], 1, new[] { 256 }, new[] { new Rangef(0, 256) });
+                }
+
+                // find most common value
+                var mostCommon = new int[3];
+                for (var j = 0; j < 3; j++)
+                {
+                    // detect min max values and it's positions
+                    Cv2.MinMaxLoc(hist[j], out _, out var max, out _, out var maxLoc);
+                    mostCommon[j] = maxLoc.Y;
+                }
+
+                // check if most common color is not outer color
+                if (mostCommon[0] == outerColor.Item0 && mostCommon[1] == outerColor.Item1 && mostCommon[2] == outerColor.Item2)
+                {
+                    return null;
+                }
+
+                return new[] { mostCommon[2], mostCommon[1], mostCommon[0] };
+            }
+
+            return null;
+        }
 
         public static void AnalyseSectionBackground(Section section, Rect[] rects, Mat image)
         {
@@ -153,7 +203,6 @@ namespace RazorPagesMovie.core
                 if (i == 1)
                 {
                     firstBg = maxLocs[0, 0] == bgColor.Item0 && maxLocs[0, 1] == bgColor.Item1 && maxLocs[0, 2] == bgColor.Item2;
-                    Debug.WriteLine("is first color bg = " + firstBg);
                 }
                 else if (i == 2)
                 {
@@ -201,8 +250,6 @@ namespace RazorPagesMovie.core
                     var g = average[1] - maxLocs[i, 1];
                     var r = average[2] - maxLocs[i, 2];
                     distances[i] = (int)Math.Sqrt(b * b + g * g + r * r);
-                    //Debug.WriteLine("distance " + i + " " + distances[i]);
-                    //Debug.WriteLine(maxLocs[i, 0] + "," + maxLocs[i, 1] + "," + maxLocs[i, 2]);
                 }
 
                 // find the closest
@@ -210,12 +257,9 @@ namespace RazorPagesMovie.core
                     .Select((x, i) => new KeyValuePair<int, int>(i, x))
                     .OrderBy(x => x.Value)
                     .First();
-                //Debug.WriteLine("closest index " + closest.Key + "," + closest.Value);
                 var closestIndex = firstBg ? closest.Key + 1 : closest.Key;
 
                 color = new[] { maxLocs[closestIndex, 2], maxLocs[closestIndex, 1], maxLocs[closestIndex, 0] };
-
-                //Debug.WriteLine(color[0] + ", " + color[1] + "," + color[2]);
             }
 
             return color;

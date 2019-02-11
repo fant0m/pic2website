@@ -5,7 +5,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore.Metadata.Conventions.Internal;
 using OpenCvSharp;
 using RazorPagesMovie.core.convertor;
 using RazorPagesMovie.core.model;
@@ -41,12 +40,13 @@ namespace RazorPagesMovie.core
         private TemplateStructure _templateStructure;
         private TesseractEngine _tess;
         private Ocr _ocr;
+        private ColorAnalyser _colorAnalyser;
         private int limit = 0;
 
         public const int MaxSeparatorHeight = 10;
         public const int MinSeparatorWidth = 400;
         public const int MaxTextGap = 6;
-        public const int MínColumnGap = 15; // @todo možno podľa šírky layoutu
+        public const int MinColumnGap = 15; // @todo možno podľa šírky layoutu
 
         public TemplateParser(string imagePath)
         {
@@ -58,8 +58,9 @@ namespace RazorPagesMovie.core
         {
             _tess = new TesseractEngine(@"./wwwroot/tessdata", "eng", EngineMode.LstmOnly);
 
-            byte[] imageData = File.ReadAllBytes(@"./wwwroot/images/section-6.png");
+            byte[] imageData = File.ReadAllBytes(@"./wwwroot/images/section-5.png");
             _image = Mat.FromImageData(imageData);
+            _colorAnalyser = new ColorAnalyser(_image);
             //Convert the img1 to grayscale and then filter out the noise
             Mat gray1 = Mat.FromImageData(imageData, ImreadModes.Grayscale);
             // @todo naozaj to chceme blurovať? robí to len bordel a zbytočné contours
@@ -74,6 +75,7 @@ namespace RazorPagesMovie.core
             Cv2.FindContours(cannyGray, out _contours, out _hierarchy, mode: RetrievalModes.Tree, method: ContourApproximationModes.ApproxSimple);
 
             _templateStructure = new TemplateStructure();
+            
 
             //var gray2 = Mat.FromImageData(imageData, ImreadModes.GrayScale);
             //gray2 = gray2.AdaptiveThreshold(255, AdaptiveThresholdTypes.GaussianC, ThresholdTypes.BinaryInv, 105, 2);
@@ -291,6 +293,7 @@ namespace RazorPagesMovie.core
                 // @todo hm7.png nezoberie dobre text button ako sublement, algoritmu určite vadia rohy, to by chcelo nejak zisťovať a rovno aplikovať border-radius len pozor aby si to nemýlilo s inými tvarmi potom, kontrolovať sa musia iba rohy
                 // @todo skúsiť pozerať pozadie elementov, napr. ten button by mal mať pozadie
                 // @todo text gap merging - space podľa fontu + info že je to text
+                // @todo replace element width with right padding
                 // @todo text veci čo sú pri sebe, v 1 riadku nech majú rovnaké font family, veľkosť, farbu
                 // @todo acsascolumn treba inak vyriešiť, actascolumn - ak je true dať elementu inú triedu (nie row ale napr. inline-block)
                 // @todo samotné obrázky keď sú iba vedľa seba už nemajú padding/margin
@@ -448,7 +451,7 @@ namespace RazorPagesMovie.core
 
                     // create section row
                     var sectionRow = new Row(1);
-                    sectionRow.Rect = new Rect(0, rect.Y, 0, rect.Height);
+                    sectionRow.Rect = new Rect(parent.X, rect.Y, parent.Width, rect.Height);
 
                     // set section row styles
                     var latestTop = rows.Count == 0 ? parent.Y : rows.Last().Item2;
@@ -464,6 +467,8 @@ namespace RazorPagesMovie.core
                         sectionRow.Padding[3] = rect.X - latestLeft;
                         sectionRow.Padding[2] = latestBottom - (rect.Y + rect.Height);
                     }
+
+                    // @todo test
                     //sectionRow.BackgroundColor = new[] { r.Next(0, 255), r.Next(0, 255), r.Next(0, 255) };
 
                     var triple = new TripleExt<int, int, List<Rect>, Element>
@@ -528,6 +533,11 @@ namespace RazorPagesMovie.core
                             var latestElem = latest.Element;
                             latestElem.Width = latest.Item2 - latest.Item1;
                             latestElem.Margin[1] = rect.X - latest.Item2;
+                            latestElem.Rect = new Rect(latest.Item1, row.Item1, latest.Item2 - latest.Item1, row.Item2 - row.Item1);
+                            latestElem.BackgroundColor = _colorAnalyser.AnalyseRect(latestElem.Rect);
+                            if (latestElem.BackgroundColor != null)
+                                Debug.WriteLine("farba 2 " + latestElem.Width + "=" + latestElem.BackgroundColor[0] + "," + latestElem.BackgroundColor[1] + "," + latestElem.BackgroundColor[2]);
+
                             if (fluid)
                             {
                                 // replace width with percentage value
@@ -565,6 +575,10 @@ namespace RazorPagesMovie.core
                     var latest = columns.Last();
                     var latestElem = latest.Element;
                     latestElem.Width = latest.Item2 - latest.Item1;
+                    latestElem.Rect = new Rect(latest.Item1, row.Item1, latest.Item2 - latest.Item1, row.Item2 - row.Item1);
+                    latestElem.BackgroundColor = _colorAnalyser.AnalyseRect(latestElem.Rect);
+                    if (latestElem.BackgroundColor != null)
+                        Debug.WriteLine("farba " + latestElem.Width + "=" + latestElem.BackgroundColor[0] + "," + latestElem.BackgroundColor[1] + "," + latestElem.BackgroundColor[2]);
                     if (fluid)
                     {
                         latestElem.Width = 100 - fluidPercents;
@@ -838,7 +852,7 @@ namespace RazorPagesMovie.core
 
                                 // @todo replace with object recognizer
 
-                                var text = true;
+                                var text = false;
                                 if (text)
                                 {
                                     // tesseract needs a margin to read text properly
@@ -984,7 +998,7 @@ namespace RazorPagesMovie.core
             // Draw rows
             foreach (var row in rows)
             {
-                Cv2.Rectangle(copy, new Point(parent.X, row.Item1), new Point(parent.X + parent.Width, row.Item2), Scalar.Orange);
+                Cv2.Rectangle(copy, new Point(parent.X, row.Item1), new Point(parent.X + parent.Width, row.Item2), Scalar.Green);
             }
 
             return sectionRows;
@@ -1034,7 +1048,7 @@ namespace RazorPagesMovie.core
                     return i;
                 }
                 // rect doesn't fit just by a few pixels so we will merge them anyway
-                if (rect.X > column.Item2 && rect.X - column.Item2  <= MínColumnGap)
+                if (rect.X > column.Item2 && rect.X - column.Item2  <= MinColumnGap)
                 {
                     column.Item2 += rect.Width + rect.X - column.Item2;
                     return i;
@@ -1089,7 +1103,8 @@ namespace RazorPagesMovie.core
 
                 // add right corners from 20% right-most of image
                 // @todo to filtrovanie z pravej/lavej strany už asi nie je potrebné max pár %
-                if (/*rect.Right > width * 0.5 &&*/ rect.Left != 0 && (area > 100 || rect.Width * rect.Height > 100))
+                //if (/*rect.Right > width * 0.5 &&*/ rect.Left != 0 && (area > 100 || rect.Width * rect.Height > 100))
+                if (/*rect.Right > width * 0.5 &&*/ rect.Left != 0 && (area > 10 || rect.Width * rect.Height > 10))
                 {
                     right.Add(rect.Right);
                 }

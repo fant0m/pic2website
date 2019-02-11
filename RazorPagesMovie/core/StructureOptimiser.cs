@@ -150,7 +150,9 @@ namespace RazorPagesMovie.core
             var splitRowIndexes = new List<Tuple<int, int>>();
             var sectionRowsCopy = new List<Row>(sectionRows);
 
-            // find pair indexes of rows to me splitted e.g. 0-3, 5-10
+            Debug.WriteLine("počet split " + sectionRows.Count);
+
+            // find pair indexes of rows to be splitted e.g. 0-3, 5-10
             for (var i = 0; i < sectionRows.Count; i++)
             {
                 var row = sectionRows[i];
@@ -170,16 +172,25 @@ namespace RazorPagesMovie.core
                     // merge only if we have more than 2 columns
                     bool merge = columnWidths.Length != 0;
 
-                    for (var j = 0; j < columnWidths.Length; j++)
+                    // check if we have same number of columns
+                    if (columnWidths.Length != lastColumnWidths.Count)
                     {
-                        // dont merge if previous width doesn't match with current width
-                        if (!Util.AreSame(columnWidths[j], lastColumnWidths[j]))
+                        merge = false;
+                    }
+                    else
+                    {
+                        for (var j = 0; j < columnWidths.Length; j++)
                         {
-                            merge = false;
+                            // dont merge if previous width doesn't match with current width
+                            if (!Util.AreSame(columnWidths[j], lastColumnWidths[j]))
+                            {
+                                merge = false;
 
-                            break;
+                                break;
+                            }
                         }
                     }
+                  
 
                     // we have got start of new split from index i - 1
                     if (merge && startSplitIndex == -1)
@@ -285,7 +296,6 @@ namespace RazorPagesMovie.core
             // fill columns
             foreach (var row in rows)
             {
-
                 for (var i = 0; i < row.Columns.Count; i++)
                 {
                     for (var j = 0; j < row.Columns[i].Elements.Count; j++)

@@ -35,7 +35,6 @@ namespace RazorPagesMovie.core.model.elements
             Margin = new[] { 0, 0, 0, 0 };
             Padding = new[] { 0, 0, 0, 0 };
             Padding = new[] { 0, 0, 0, 0 };
-            BackgroundColor = new[] { 0, 0, 0 };
         }
 
         public string GetId()
@@ -68,7 +67,7 @@ namespace RazorPagesMovie.core.model.elements
             {
                 styles += $"background:url({BackgroundImage});";
             }
-            else if (BackgroundColor[0] != 0)
+            else if (BackgroundColor != null)
             {
                 styles += $"background:rgb({BackgroundColor[0]},{BackgroundColor[1]},{BackgroundColor[2]});";
             }

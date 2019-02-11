@@ -142,7 +142,7 @@ namespace RazorPagesMovie.core
                 var fakeImage = new Bitmap(1, 1);
                 var graphics = Graphics.FromImage(fakeImage);
                 graphics.PageUnit = GraphicsUnit.Pixel;
-                var size = graphics.MeasureString(text, font, int.MaxValue, StringFormat.GenericTypographic);
+                var size = graphics.MeasureString(text, font, int.MaxValue, StringFormat.GenericDefault);
 
                 //if (size.Width > maxWidth || size.Height > maxHeight)
                 if (size.Width > maxWidth)
@@ -157,7 +157,7 @@ namespace RazorPagesMovie.core
 
         private int PointsToPixels(double points)
         {
-            return (int) Math.Ceiling(points * (96.0 / 72.0));
+            return (int) Math.Round(points * (96.0 / 72.0));
         }
     }
 }

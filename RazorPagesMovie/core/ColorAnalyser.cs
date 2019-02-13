@@ -62,7 +62,7 @@ namespace RazorPagesMovie.core
                 return new[] { mostCommon[2], mostCommon[1], mostCommon[0] };
             }
 
-            return null;
+            return new int[] { outerColor.Item2, outerColor.Item1, outerColor.Item0 };
         }
 
         public static void AnalyseSectionBackground(Section section, Rect[] rects, Mat image)

@@ -49,7 +49,6 @@ namespace RazorPagesMovie.core
                 var attr = iterator?.GetWordFontAttributes();
                 if (attr != null)
                 {
-                    Debug.WriteLine(attr.FontInfo);
                     fontFamily = NormalizeFontName(attr.FontInfo.Name);
                     bold = attr.FontInfo.IsBold;
                     italic = attr.FontInfo.IsItalic;
@@ -73,12 +72,11 @@ namespace RazorPagesMovie.core
             // 4. detect font size
             // @todo maxWidth možno podľa iterator bounds, možno zapojiť aj tú height
             // @todo tá font size nie je dobrá, bol tam všade tiež dáva asi by som to vypol globálne
-            var size = DetectFontSize(img.Width, img.Height, fontFamily, text);
+            var size = DetectFontSize(bold, img.Width, img.Height, fontFamily, text);
             var fontSize = PointsToPixels(size);
 
             // 5. detect font color
             var fontColor = ColorAnalyser.AnalyseTextColor(region, image);
-            Debug.WriteLine("color " + fontColor[0] + "," + fontColor[1] + "," + fontColor[2]);
 
             // 6. return new text instance
             return new Text(text, fontFamily, fontColor, fontSize, bold, italic);
@@ -104,7 +102,6 @@ namespace RazorPagesMovie.core
         private string NormalizeFontName(string name)
         {
             // @todo load https://github.com/tesseract-ocr/langdata/blob/master/font_properties
-            Debug.WriteLine(name);
 
             var map = new Dictionary<string, string>
             {
@@ -133,12 +130,12 @@ namespace RazorPagesMovie.core
             return "";
         }
 
-        private int DetectFontSize(int maxWidth, int maxHeight, string fontFamily, string text)
+        private int DetectFontSize(bool bold, int maxWidth, int maxHeight, string fontFamily, string text)
         {
             var best = 1;
             for (var i = 1; i < 100; i++)
             {
-                var font = new Font(fontFamily, i);
+                var font = new Font(fontFamily, i, bold ? FontStyle.Bold : FontStyle.Regular);
                 var fakeImage = new Bitmap(1, 1);
                 var graphics = Graphics.FromImage(fakeImage);
                 graphics.PageUnit = GraphicsUnit.Pixel;

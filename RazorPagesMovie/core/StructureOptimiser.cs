@@ -150,8 +150,6 @@ namespace RazorPagesMovie.core
             var splitRowIndexes = new List<Tuple<int, int>>();
             var sectionRowsCopy = new List<Row>(sectionRows);
 
-            Debug.WriteLine("počet split " + sectionRows.Count);
-
             // find pair indexes of rows to be splitted e.g. 0-3, 5-10
             for (var i = 0; i < sectionRows.Count; i++)
             {

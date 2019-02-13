@@ -42,11 +42,12 @@ namespace RazorPagesMovie.core
         private Ocr _ocr;
         private ColorAnalyser _colorAnalyser;
         private int limit = 0;
+        private int test = 0;
 
         public const int MaxSeparatorHeight = 10;
         public const int MinSeparatorWidth = 400;
         public const int MaxTextGap = 6;
-        public const int MinColumnGap = 15; // @todo možno podľa šírky layoutu
+        public const int MinColumnGap = 10; // @todo možno podľa šírky layoutu
 
         public TemplateParser(string imagePath)
         {
@@ -58,7 +59,7 @@ namespace RazorPagesMovie.core
         {
             _tess = new TesseractEngine(@"./wwwroot/tessdata", "eng", EngineMode.LstmOnly);
 
-            byte[] imageData = File.ReadAllBytes(@"./wwwroot/images/section-5.png");
+            byte[] imageData = File.ReadAllBytes(@"./wwwroot/images/template2.png");
             _image = Mat.FromImageData(imageData);
             _colorAnalyser = new ColorAnalyser(_image);
             //Convert the img1 to grayscale and then filter out the noise
@@ -291,7 +292,7 @@ namespace RazorPagesMovie.core
                 // Process inner blocks
                 // @todo ocr 4 font size doriešiť
                 // @todo hm7.png nezoberie dobre text button ako sublement, algoritmu určite vadia rohy, to by chcelo nejak zisťovať a rovno aplikovať border-radius len pozor aby si to nemýlilo s inými tvarmi potom, kontrolovať sa musia iba rohy
-                // @todo skúsiť pozerať pozadie elementov, napr. ten button by mal mať pozadie
+                // @todo pozadie elementov bude treba ešte tuning, niekedy treba aby row mal farbu; taktiež optimiser bude asi musieť prejsť a nechať farbu len v poslednej úrovni
                 // @todo text gap merging - space podľa fontu + info že je to text
                 // @todo replace element width with right padding
                 // @todo text veci čo sú pri sebe, v 1 riadku nech majú rovnaké font family, veľkosť, farbu
@@ -720,13 +721,17 @@ namespace RazorPagesMovie.core
                         var alignHorizontal = columnRow.Item3.Where(rect => rect.Width * rect.Height >= 5).OrderBy(rect => rect.X).ToArray();
                         var connectedHorizontal = new List<Rect>();
 
+                        // is item x in connectedHorizontal merged from more than 2 elements?
+                        var mergedHorizontal = new List<bool>();
+
                         //var l = 0;
                         //foreach (var contour in alignHorizontal)
                         //{
                         //    var roi2 = _image.Clone(contour);
-                        //    roi2.SaveImage("image2-" + l + ".png");
+                        //    roi2.SaveImage("image2-" + test + ".png");
                         //    l++;
-                        //Cv2.Rectangle(copy, new Point(contour.X, contour.Y), new Point(contour.X + contour.Width, contour.Y + contour.Height), Scalar.FromRgb(r.Next(0, 255), r.Next(0, 255), r.Next(0, 255)));
+                        //    test++;
+                        //    Cv2.Rectangle(copy, new Point(contour.X, contour.Y), new Point(contour.X + contour.Width, contour.Y + contour.Height), Scalar.FromRgb(r.Next(0, 255), r.Next(0, 255), r.Next(0, 255)));
                         //}
 
                         /* Column row letters merging start */
@@ -744,6 +749,7 @@ namespace RazorPagesMovie.core
                             if (j + 1 == alignHorizontal.Length)
                             {
                                 connectedHorizontal.Add(alignHorizontal[j]);
+                                mergedHorizontal.Add(false);
                             }
                             else
                             {
@@ -751,6 +757,7 @@ namespace RazorPagesMovie.core
                                 var nextRect = alignHorizontal[j + 1];
                                 var gap = Math.Abs(nextRect.X - (currentRect.X + currentRect.Width));
                                 var merge = currentRect;
+                                var merged = false;
 
                                 // Add current item's width
                                 mergedWidths.Add(merge.Width);
@@ -776,8 +783,9 @@ namespace RazorPagesMovie.core
 
                                     // Merge items
                                     merge = merge | nextRect;
+                                    merged = true;
 
-                                    //Debug.WriteLine("merging " + j + " with " + (j+1) + ", distance = " + distance);
+                                    //Debug.WriteLine("merging " + j + " with " + (j + 1) );
 
                                     j++;
 
@@ -800,6 +808,7 @@ namespace RazorPagesMovie.core
                                 }
 
                                 connectedHorizontal.Add(merge);
+                                mergedHorizontal.Add(merged);
 
                                 // Reset gaps
                                 mergedWidths = new List<double>();
@@ -818,8 +827,11 @@ namespace RazorPagesMovie.core
 
                         // Add items to col
                         var lastX = -1;
-                        foreach (var rect in connectedHorizontal)
+                        for (var i = 0; i < connectedHorizontal.Count; i++)
                         {
+                            // Access current rect
+                            var rect = connectedHorizontal[i];
+
                             // Element has recursive content so we need to replace it with the right content
                             if (sectionRectsUnsorted.Contains(rect) && sectionRecursiveRows[Array.IndexOf(sectionRectsUnsorted, rect)] != null)
                             {
@@ -852,7 +864,8 @@ namespace RazorPagesMovie.core
 
                                 // @todo replace with object recognizer
 
-                                var text = false;
+                                var text = mergedHorizontal[i];
+                                Debug.WriteLine("text=" + text);
                                 if (text)
                                 {
                                     // tesseract needs a margin to read text properly
@@ -876,10 +889,18 @@ namespace RazorPagesMovie.core
                                     // @todo var text, niekde pri spájaní to bude mať ako atribút
                                     // @todo do getText či sa nepošle rovno roi2 / rect
                                     var textElem = _ocr.GetText("/image-" + limit + ".png");
-                                    textElem.Display = "inline";
-                                    singleColumn.Elements.Add(textElem);
+                                    if (textElem == null)
+                                    {
+                                        text = false;
+                                    }
+                                    else
+                                    {
+                                        textElem.Display = "inline";
+                                        singleColumn.Elements.Add(textElem);
+                                    }
                                 }
-                                else
+
+                                if (!text)
                                 {
                                     var roi2 = _image.Clone(rect);
                                     roi2.SaveImage("wwwroot/images/image-" + limit + ".png");
@@ -897,7 +918,6 @@ namespace RazorPagesMovie.core
                                 }
 
 
-                              
                                 lastX = rect.X + rect.Width;
 
                                 //using (var page = _tess.Process(Pix.LoadFromFile("image-" + limit + ".png"), PageSegMode.SingleBlock))

@@ -306,7 +306,12 @@ namespace RazorPagesMovie.core
                             element.Padding[0] += row.Padding[0];
                             element.Margin[3] += row.Columns[i].Margin[3];
                         }
-                        element.Padding[3] = row.Padding[3] - lowestLeftPadding;
+
+                        if (i == 0)
+                        {
+                            element.Padding[3] = row.Padding[3] - lowestLeftPadding;
+                        }
+                        
                         columns[i].Elements.Add(element);
 
                         // check if padding + width is not greater than max content width

@@ -36,7 +36,7 @@ namespace RazorPagesMovie.core
             Pix threshold;
             
             // 2. detect font family
-            var mode = PageSegMode.RawLine;
+            var mode = PageSegMode.SingleLine;
             using (var page = _tessOnly.Process(img, mode))
             {
                 var regions = page.GetSegmentedRegions(PageIteratorLevel.Symbol);

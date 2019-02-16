@@ -59,7 +59,7 @@ namespace RazorPagesMovie.core
         {
             _tess = new TesseractEngine(@"./wwwroot/tessdata", "eng", EngineMode.LstmOnly);
 
-            byte[] imageData = File.ReadAllBytes(@"./wwwroot/images/template4.png");
+            byte[] imageData = File.ReadAllBytes(@"./wwwroot/images/template.jpg");
             _image = Mat.FromImageData(imageData);
             _colorAnalyser = new ColorAnalyser(_image);
             //Convert the img1 to grayscale and then filter out the noise
@@ -382,14 +382,11 @@ namespace RazorPagesMovie.core
                     List<Row> rows;
 
                     //Check if inner elements doesn't form an image
-                    //var isImage = IsImage(contour, inner, copy);
-                    var isImage = false;
+                    var isImage = IsImage(contour, inner, copy);
                     Debug.WriteLine("result is image " + isImage);
                     Debug.WriteLine(rect.X + "," + rect.Y + "," + rect.Width + "," + rect.Height);
                     if (isImage)
                     {
-                       
-                        // @todo return row col with one element - Image
                         return new Tuple<bool, List<Row>>(true, null);
                     }
                     else
@@ -410,7 +407,7 @@ namespace RazorPagesMovie.core
          */
         private bool HasContourSubElements(Point[] edges)
         {
-            var contoursAp = Cv2.ApproxPolyDP(edges, Cv2.ArcLength(edges, true) * 0.02, true);
+            var contoursAp = Cv2.ApproxPolyDP(edges, Cv2.ArcLength(edges, true) * 0.03, true);
             var rect = Cv2.BoundingRect(edges);
 
             // @todo možno bude treba inú podmienku ako length = 4, niečo viac sotisfikované čo sa pozrie či to má body len ako obdĺžnik alebo aj niečo vo vnútri
@@ -421,107 +418,6 @@ namespace RazorPagesMovie.core
             //}
 
             return contoursAp.Length == 4 && rect.Width >= 10 && rect.Height >= 10;
-        }
-
-        private bool IsImage(Rect[] rects)
-        {
-            var checkSmallElements = rects.Where(r => r.Width < 10 && r.Height < 10).Count();
-            if (checkSmallElements > 10)
-            {
-                return true;
-            }
-
-            return false;
-        }
-
-        private bool IsImage(Rect parent, List<int> contours, Mat copy)
-        {
-            var parentRect = parent;
-            var isSmall = parentRect.Width < 40 && parentRect.Height < 40;
-            if (isSmall)
-            {
-                return true;
-            }
-
-
-            var count = contours.Count;
-
-
-
-            //var sectionRects = new Rect[contours.Count];
-            //var k = 0;
-            var r = new Random();
-            //foreach (var contour in contours)
-            //{
-            //    // Edges
-            //    var edges = _contours[contour];
-
-            //    // Bounding box
-            //    var rect = Cv2.BoundingRect(edges);
-            //    sectionRects[k] = rect;
-
-            //    //Cv2.Rectangle(copy, new Point(rect.X, rect.Y), new Point(rect.X + rect.Width, rect.Y + rect.Height), Scalar.FromRgb(r.Next(0, 255), r.Next(0, 255), r.Next(0, 255)));
-            //    //Debug.WriteLine(rect.Width + "," + rect.Height);
-            //    k++;
-            //}
-            var rects = ContoursToRects(contours);
-            foreach (var rect in rects)
-            {
-                Cv2.Rectangle(copy, new Point(rect.X, rect.Y), new Point(rect.X + rect.Width, rect.Y + rect.Height), Scalar.FromRgb(r.Next(0, 255), r.Next(0, 255), r.Next(0, 255)));
-            }
-
-
-            Debug.WriteLine("check is image " + contours.Count() + "," + parentRect.Width + "," + parentRect.Height);
-
-            var checkSmallElements = rects.Where(e => (e.Width < 10 && e.Height < 10) || e.Height < 5 || e.Width < 5).Count();
-            Debug.WriteLine("počet malých elem " + checkSmallElements);
-            if (checkSmallElements > 7)
-            {
-                return true;
-            }
-
-            var subCount = 0;
-            var subRects = new List<Rect>();
-            //Debug.WriteLine("normal count " + count);
-            foreach (var contour in contours)
-            {
-                var item = _hierarchy[contour];
-                if (item.Child != -1)
-                {
-                    var subItem = _hierarchy[item.Child];
-                    while (subItem.Next != -1)
-                    {
-                        subCount++;
-
-                        if (subCount <= 50)
-                        {
-                            var edges = _contours[subItem.Next];
-                            var rect = Cv2.BoundingRect(edges);
-                            subRects.Add(rect);
-                        }
-
-                        subItem = _hierarchy[subItem.Next];
-                    }
-                }
-            }
-            // @todo to číslo nejak podľa proporcí obrázka?
-            if (subCount > 300)
-            {
-                return true;
-            }
-            else
-            {
-                //Debug.WriteLine("menej ako 300");
-                //checkSmallElements = subRects.Where(e => (e.Width < 10 && e.Height < 10) || e.Height < 5 || e.Width < 5).Count();
-                //Debug.WriteLine("počet dodatočných " + subRects.Count() + ", počet z nich malých " + checkSmallElements + ",pomer" + (checkSmallElements * 1.0 / subRects.Count()));
-                //if (checkSmallElements * 1.0 / subRects.Count() >= 0.3)
-                //{
-                //    //return true;
-                //}
-            }
-            Debug.WriteLine("sub count " + subCount);
-
-            return false;
         }
 
         private bool IsImage(int parent, List<int> contours, Mat copy)
@@ -572,7 +468,7 @@ namespace RazorPagesMovie.core
             }
 
             var subCount = 0;
-            var subRects = new List<Rect>();
+            //var subRects = new List<Rect>();
             //Debug.WriteLine("normal count " + count);
             foreach (var contour in contours)
             {
@@ -584,12 +480,12 @@ namespace RazorPagesMovie.core
                     {
                         subCount++;
 
-                        if (subCount <= 50)
-                        {
-                            var edges = _contours[subItem.Next];
-                            var rect = Cv2.BoundingRect(edges);
-                            subRects.Add(rect);
-                        }
+                        //if (subCount <= 50)
+                        //{
+                        //    var edges = _contours[subItem.Next];
+                        //    var rect = Cv2.BoundingRect(edges);
+                        //    subRects.Add(rect);
+                        //}
 
                         subItem = _hierarchy[subItem.Next];
                     }
@@ -638,7 +534,7 @@ namespace RazorPagesMovie.core
             }
 
             // check if there's not rect which should have recursive content but it's children rects are here
-            /*var wrongRects = sectionRects.Where(rect => rect.Width > 100 && rect.Height > 100);
+            var wrongRects = sectionRects.Where(rect => rect.Width > 100 && rect.Height > 100);
             var rectsCopy = sectionRects;
             for (var i = 0; i < rectsCopy.Length; i++)
             {
@@ -651,10 +547,10 @@ namespace RazorPagesMovie.core
                     {
                         Debug.WriteLine("carefull! removed one element");
                         sectionRects = sectionRects.Where(re => re != rect).ToArray();
-                        contours.RemoveAt(i);
+                        contours.Remove(contours[i]);
                     }
                 }
-            }*/
+            }
 
             // process sub blocks of contours
             var sectionRecursiveRows = new List<Row>[sectionRects.Length];
@@ -736,7 +632,7 @@ namespace RazorPagesMovie.core
             // skip content parsing if it's image
             if (isImg)
             {
-              /*  Debug.WriteLine("its directly image, skipping content parsing");
+                Debug.WriteLine("its directly image, skipping content parsing");
                 var row = new Row(1);
                 var column = new Column(1);
 
@@ -757,7 +653,7 @@ namespace RazorPagesMovie.core
                 row.Columns.Add(column);
                 sectionRows.Add(row);
 
-                return sectionRows;*/
+                return sectionRows;
             }
 
             // align rects from the top to the bottom
@@ -1134,9 +1030,10 @@ namespace RazorPagesMovie.core
                                     j++;
 
                                     // Check if we are not on the last element in the row
-                                    if (j + 1 <= alignHorizontal.Length - 1 &&
+                                    // @todo not sure či to má byť zakomentované, neviem či je prednejší rekurzívny obsah alebo že sa to má mergnúť
+                                    if (j + 1 <= alignHorizontal.Length - 1 /*&&
                                         sectionRecursiveRows[Array.IndexOf(sectionRectsUnsorted, alignHorizontal[j + 1])] == null &&
-                                        sectionRectsImages[Array.IndexOf(sectionRectsUnsorted, alignHorizontal[j + 1])] == false)
+                                        sectionRectsImages[Array.IndexOf(sectionRectsUnsorted, alignHorizontal[j + 1])] == false*/)
                                     {
                                         // Next rect's right position might be lower than current rect's (next rect is inside current rect)
                                         if (nextRect.Right >= currentRect.Right)
@@ -1236,15 +1133,18 @@ namespace RazorPagesMovie.core
                             }
                             else
                             {
-                                limit++;
-
                                 // @todo replace with object recognizer
 
-                                //var text = mergedHorizontal[i];
-                                var text = false;
-                                Debug.WriteLine("text=" + text);
+                                var text = mergedHorizontal[i];
+                                if (rect.Width < 20 || rect.Height < 10 || rect.Height > 100)
+                                {
+                                    text = false;
+                                }
+                                Debug.WriteLine("text=" + text + "," + rect.ToString());
                                 if (text)
                                 {
+                                    limit++;
+
                                     // tesseract needs a margin to read text properly
                                     var margin = 2;
                                     var x = rect.X - margin;
@@ -1259,6 +1159,7 @@ namespace RazorPagesMovie.core
 
                                     var tessRect = new Rect(x, y, width, height);
 
+                                    // @todo treba to riešiť cez nejaký iný obrázok (aby to nešlo do výstupu užívateľovi), jeden názov iba nefunguje neviem prečo asi sa to hneď neuloží
                                     var roi2 = _image.Clone(tessRect);
                                     roi2.SaveImage("wwwroot/images/image-" + limit + ".png");
 
@@ -1280,8 +1181,11 @@ namespace RazorPagesMovie.core
 
                                 if (!text)
                                 {
+                                    limit++;
+
                                     var roi2 = _image.Clone(rect);
                                     Debug.WriteLine(rect.X + "," + rect.Y + "," + rect.Width + "," + rect.Height);
+                                    Debug.WriteLine(roi2.Width + "," + roi2.Height);
                                     roi2.SaveImage("wwwroot/images/image-" + limit + ".png");
 
                                     var image = new Image("./images/image-" + limit + ".png");

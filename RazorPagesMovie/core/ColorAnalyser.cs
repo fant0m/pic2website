@@ -25,6 +25,10 @@ namespace RazorPagesMovie.core
 
         public int[] AnalyseRect(OpenCvSharp.Rect rect)
         {
+            if (rect.Width == 0)
+            {
+                return null;
+            }
             //Debug.WriteLine("analysing" + rect.X + "," + rect.Y + "," + rect.Width + "," + rect.Height);
             var outerColor = _image.At<Vec3b>(rect.Y, rect.X - 2);
 

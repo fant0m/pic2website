@@ -59,7 +59,7 @@ namespace RazorPagesMovie.core
         {
             _tess = new TesseractEngine(@"./wwwroot/tessdata", "eng", EngineMode.LstmOnly);
 
-            byte[] imageData = File.ReadAllBytes(@"./wwwroot/images/template2.png");
+            byte[] imageData = File.ReadAllBytes(@"./wwwroot/images/template4.png");
             _image = Mat.FromImageData(imageData);
             _colorAnalyser = new ColorAnalyser(_image);
             //Convert the img1 to grayscale and then filter out the noise
@@ -273,15 +273,16 @@ namespace RazorPagesMovie.core
                 if (section.Layout.Type == Layout.LayoutType.Centered)
                 {
                     // left container padding
-                    container.Padding[3] = (int) Math.Ceiling(((int) section.Layout.Width - (mostRightSections.FirstOrDefault() - mostLeftSections.FirstOrDefault())) / 2);
+                    container.Padding[3] = (int) Math.Floor(((int) section.Layout.Width - (mostRightSections.FirstOrDefault() - mostLeftSections.FirstOrDefault() + 1)) / 2);
 
                     // right container padding is not neccessary but calculated for completeness; it's substracted by 3 for rounding error (to not break the layout)
-                    container.Padding[1] = container.Padding[3] - 3;
+                    // @todo should not be necessary to substract it
+                    container.Padding[1] = container.Padding[3] /* - 3*/;
 
                     // create container rect
                     var mostLeft = (int) mostLeftSections.FirstOrDefault();
                     var mostRight = (int) mostRightSections.FirstOrDefault();
-                    containerRect = new Rect(mostLeft, section.Top, mostRight - mostLeft, section.Height);
+                    containerRect = new Rect(mostLeft, section.Top, mostRight - mostLeft + 1, section.Height);
                 }
                 else
                 {
@@ -307,8 +308,8 @@ namespace RazorPagesMovie.core
                 section.Containers.Add(container);
 
                 // Draw section and container
-                Cv2.Rectangle(copy, new Point(section.Rect.X, section.Rect.Y), new Point(section.Rect.X + section.Rect.Width - 1, section.Rect.Y + section.Rect.Height), Scalar.Red);
-                Cv2.Rectangle(copy, new Point(containerRect.X, containerRect.Y + 1), new Point(containerRect.X + containerRect.Width, containerRect.Y + containerRect.Height - 1), Scalar.LightSeaGreen);
+                Cv2.Rectangle(copy, new Point(section.Rect.Left, section.Rect.Top), new Point(section.Rect.Right, section.Rect.Bottom), Scalar.Red);
+                Cv2.Rectangle(copy, new Point(containerRect.Left, containerRect.Top + 1), new Point(containerRect.Right, containerRect.Bottom - 1), Scalar.LightSeaGreen);
 
                 // Append section into template structure
                 _templateStructure.Sections.Add(section);
@@ -342,7 +343,7 @@ namespace RazorPagesMovie.core
         /**
          * Check if contour doesn't have more blocks inside it
          */
-        private List<Row> CheckSubBlocks(int contour, Mat copy)
+        private Tuple<bool, List<Row>> CheckSubBlocks(int contour, Mat copy)
         {
             // Find current item
             var item = _hierarchy[contour];
@@ -378,13 +379,30 @@ namespace RazorPagesMovie.core
                 // We have found inner elements
                 if (inner.Count > 0)
                 {
-                    List<Row> rows = ProcessInnerBlocks(inner, copy, rect);
+                    List<Row> rows;
 
-                    return rows;
+                    //Check if inner elements doesn't form an image
+                    //var isImage = IsImage(contour, inner, copy);
+                    var isImage = false;
+                    Debug.WriteLine("result is image " + isImage);
+                    Debug.WriteLine(rect.X + "," + rect.Y + "," + rect.Width + "," + rect.Height);
+                    if (isImage)
+                    {
+                       
+                        // @todo return row col with one element - Image
+                        return new Tuple<bool, List<Row>>(true, null);
+                    }
+                    else
+                    {
+                        // Otherwise process them
+                        rows = ProcessInnerBlocks(inner, copy, rect);
+                    }
+
+                    return new Tuple<bool, List<Row>>(false, rows);
                 }
             }
 
-            return null;
+            return new Tuple<bool, List<Row>>(false, null);
         }
 
         /**
@@ -405,12 +423,207 @@ namespace RazorPagesMovie.core
             return contoursAp.Length == 4 && rect.Width >= 10 && rect.Height >= 10;
         }
 
+        private bool IsImage(Rect[] rects)
+        {
+            var checkSmallElements = rects.Where(r => r.Width < 10 && r.Height < 10).Count();
+            if (checkSmallElements > 10)
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        private bool IsImage(Rect parent, List<int> contours, Mat copy)
+        {
+            var parentRect = parent;
+            var isSmall = parentRect.Width < 40 && parentRect.Height < 40;
+            if (isSmall)
+            {
+                return true;
+            }
+
+
+            var count = contours.Count;
+
+
+
+            //var sectionRects = new Rect[contours.Count];
+            //var k = 0;
+            var r = new Random();
+            //foreach (var contour in contours)
+            //{
+            //    // Edges
+            //    var edges = _contours[contour];
+
+            //    // Bounding box
+            //    var rect = Cv2.BoundingRect(edges);
+            //    sectionRects[k] = rect;
+
+            //    //Cv2.Rectangle(copy, new Point(rect.X, rect.Y), new Point(rect.X + rect.Width, rect.Y + rect.Height), Scalar.FromRgb(r.Next(0, 255), r.Next(0, 255), r.Next(0, 255)));
+            //    //Debug.WriteLine(rect.Width + "," + rect.Height);
+            //    k++;
+            //}
+            var rects = ContoursToRects(contours);
+            foreach (var rect in rects)
+            {
+                Cv2.Rectangle(copy, new Point(rect.X, rect.Y), new Point(rect.X + rect.Width, rect.Y + rect.Height), Scalar.FromRgb(r.Next(0, 255), r.Next(0, 255), r.Next(0, 255)));
+            }
+
+
+            Debug.WriteLine("check is image " + contours.Count() + "," + parentRect.Width + "," + parentRect.Height);
+
+            var checkSmallElements = rects.Where(e => (e.Width < 10 && e.Height < 10) || e.Height < 5 || e.Width < 5).Count();
+            Debug.WriteLine("počet malých elem " + checkSmallElements);
+            if (checkSmallElements > 7)
+            {
+                return true;
+            }
+
+            var subCount = 0;
+            var subRects = new List<Rect>();
+            //Debug.WriteLine("normal count " + count);
+            foreach (var contour in contours)
+            {
+                var item = _hierarchy[contour];
+                if (item.Child != -1)
+                {
+                    var subItem = _hierarchy[item.Child];
+                    while (subItem.Next != -1)
+                    {
+                        subCount++;
+
+                        if (subCount <= 50)
+                        {
+                            var edges = _contours[subItem.Next];
+                            var rect = Cv2.BoundingRect(edges);
+                            subRects.Add(rect);
+                        }
+
+                        subItem = _hierarchy[subItem.Next];
+                    }
+                }
+            }
+            // @todo to číslo nejak podľa proporcí obrázka?
+            if (subCount > 300)
+            {
+                return true;
+            }
+            else
+            {
+                //Debug.WriteLine("menej ako 300");
+                //checkSmallElements = subRects.Where(e => (e.Width < 10 && e.Height < 10) || e.Height < 5 || e.Width < 5).Count();
+                //Debug.WriteLine("počet dodatočných " + subRects.Count() + ", počet z nich malých " + checkSmallElements + ",pomer" + (checkSmallElements * 1.0 / subRects.Count()));
+                //if (checkSmallElements * 1.0 / subRects.Count() >= 0.3)
+                //{
+                //    //return true;
+                //}
+            }
+            Debug.WriteLine("sub count " + subCount);
+
+            return false;
+        }
+
+        private bool IsImage(int parent, List<int> contours, Mat copy)
+        {
+            var parentEdges = _contours[parent];
+            var parentRect = Cv2.BoundingRect(parentEdges);
+            var isSmall = parentRect.Width < 40 && parentRect.Height < 40;
+            if (isSmall)
+            {
+                return true;
+            }
+
+
+            var count = contours.Count;
+           
+
+
+            //var sectionRects = new Rect[contours.Count];
+            //var k = 0;
+            var r = new Random();
+            //foreach (var contour in contours)
+            //{
+            //    // Edges
+            //    var edges = _contours[contour];
+
+            //    // Bounding box
+            //    var rect = Cv2.BoundingRect(edges);
+            //    sectionRects[k] = rect;
+
+            //    //Cv2.Rectangle(copy, new Point(rect.X, rect.Y), new Point(rect.X + rect.Width, rect.Y + rect.Height), Scalar.FromRgb(r.Next(0, 255), r.Next(0, 255), r.Next(0, 255)));
+            //    //Debug.WriteLine(rect.Width + "," + rect.Height);
+            //    k++;
+            //}
+            var rects = ContoursToRects(contours);
+            foreach (var rect in rects)
+            {
+                Cv2.Rectangle(copy, new Point(rect.X, rect.Y), new Point(rect.X + rect.Width, rect.Y + rect.Height), Scalar.FromRgb(r.Next(0, 255), r.Next(0, 255), r.Next(0, 255)));
+            }
+
+
+            Debug.WriteLine("check is image " + contours.Count() + "," + parentRect.Width + "," + parentRect.Height);
+
+            var checkSmallElements = rects.Where(e => (e.Width < 10 && e.Height < 10) || e.Height < 5 || e.Width < 5).Count();
+            Debug.WriteLine("počet malých elem " + checkSmallElements);
+            if (checkSmallElements * 1.0 / rects.Count() >= 0.7)
+            {
+                return true;
+            }
+
+            var subCount = 0;
+            var subRects = new List<Rect>();
+            //Debug.WriteLine("normal count " + count);
+            foreach (var contour in contours)
+            {
+                var item = _hierarchy[contour];
+                if (item.Child != -1)
+                {
+                    var subItem = _hierarchy[item.Child];
+                    while (subItem.Next != -1)
+                    {
+                        subCount++;
+
+                        if (subCount <= 50)
+                        {
+                            var edges = _contours[subItem.Next];
+                            var rect = Cv2.BoundingRect(edges);
+                            subRects.Add(rect);
+                        }
+
+                        subItem = _hierarchy[subItem.Next];
+                    }
+                }
+            }
+            // @todo to číslo nejak podľa proporcí obrázka?
+            if (subCount > 300)
+            {
+                return true;
+            }
+            else
+            {
+                //Debug.WriteLine("menej ako 300");
+                //checkSmallElements = subRects.Where(e => (e.Width < 10 && e.Height < 10) || e.Height < 5 || e.Width < 5).Count();
+                //Debug.WriteLine("počet dodatočných " + subRects.Count() + ", počet z nich malých " + checkSmallElements + ",pomer" + (checkSmallElements * 1.0 / subRects.Count()));
+                //if (checkSmallElements * 1.0 / subRects.Count() >= 0.7)
+                //{
+                    //return true;
+                //}
+            }
+            //Debug.WriteLine("sub count " + subCount);
+
+            return false;
+        }
+
+        
+
         private List<Row> ProcessInnerBlocks(List<int> contours, Mat copy, Rect parent, bool fluid = false)
         {
+            Debug.WriteLine("process inner blocks count " + contours.Count + "=rect " + parent.X + "," + parent.Y + "," + parent.Width + "," + parent.Height);
             var r = new Random();
             var sectionRows = new List<Row>();
             var sectionRects = new Rect[contours.Count];
-            var sectionRecursiveRows = new List<Row>[contours.Count];
+            
             var k = 0;
             foreach (var contour in contours)
             {
@@ -421,14 +634,131 @@ namespace RazorPagesMovie.core
                 var rect = Cv2.BoundingRect(edges);
                 sectionRects[k] = rect;
 
-                //Debug.WriteLine("processing sub blocks " + k);
-                sectionRecursiveRows[k] = CheckSubBlocks(contour, copy);
-
                 k++;
             }
 
+            // check if there's not rect which should have recursive content but it's children rects are here
+            /*var wrongRects = sectionRects.Where(rect => rect.Width > 100 && rect.Height > 100);
+            var rectsCopy = sectionRects;
+            for (var i = 0; i < rectsCopy.Length; i++)
+            {
+                var rect = rectsCopy[i];
+                if (rect.Width > 100 && rect.Height > 100)
+                {
+                    var contains = sectionRects.Where(re => rect.Contains(re)).Count();
+
+                    if (contains > 1)
+                    {
+                        Debug.WriteLine("carefull! removed one element");
+                        sectionRects = sectionRects.Where(re => re != rect).ToArray();
+                        contours.RemoveAt(i);
+                    }
+                }
+            }*/
+
+            // process sub blocks of contours
+            var sectionRecursiveRows = new List<Row>[sectionRects.Length];
+            var sectionRectsImages = new bool[sectionRects.Length];
+            var img = 0;
+            k = 0;
+            foreach (var contour in contours)
+            {
+                //Debug.WriteLine("processing sub blocks " + k);
+                var result = CheckSubBlocks(contour, copy);
+                //Debug.WriteLine("end of sub block " + k + "=" + result.Item1 + "," + result.Item2);
+                sectionRectsImages[k] = result.Item1;
+                sectionRecursiveRows[k] = result.Item2;
+
+                img += result.Item1 ? 1 : 0;
+                k++;
+            }
+
+
             // make copy of rects
             var sectionRectsUnsorted = sectionRects;
+
+            var isImg = false;
+            // all sub contours are images
+            if (img == contours.Count)
+            {
+                // @todo not sure
+                isImg = true;
+                Debug.WriteLine("all contours are images");
+            }
+            else
+            {
+                // count mess elements
+                //var mess = sectionRects.Where(e => (e.Width < 10 && e.Height < 10) || e.Height < 5 || e.Width < 5).Count();
+                //if (mess * 1.0 / sectionRects.Length >= 0.5)
+                //{
+                //    isImg = true;
+                //}
+
+                // @todo skúsiť pozrieť vo zvýšných rectoch či sa nenachádza aj niečo rozumné ako text
+
+
+                if (img > 0)
+                {
+                    // find image rects
+                    var imageRects = new List<Rect>(img);
+                    for (var i = 0; i < sectionRects.Length; i++)
+                    {
+                        if (sectionRectsImages[i])
+                        {
+                            imageRects.Add(sectionRects[i]);
+                        }
+                    }
+
+                    // check if other rects are not intersecting image rects
+                    //bool intersects = false;
+                    //for (var i = 0; i < sectionRects.Length; i++)
+                    //{
+                    //    var rect = sectionRects[i];
+                    //    foreach (var imageRect in imageRects)
+                    //    {
+                    //        if (imageRect != rect && (imageRect.Contains(rect) || imageRect.IntersectsWith(rect)))
+                    //        {
+                    //            intersects = true;
+                    //            break;
+                    //        }
+                    //    }
+                    //}
+
+                    //// @todo intersects > xx?
+                    //if (intersects)
+                    //{
+                        //Debug.WriteLine("it intersects so its image");
+                        //isImg = true;
+                    //}
+                }
+            }
+
+            // skip content parsing if it's image
+            if (isImg)
+            {
+              /*  Debug.WriteLine("its directly image, skipping content parsing");
+                var row = new Row(1);
+                var column = new Column(1);
+
+                limit++;
+
+                // create image
+                var roi = _image.Clone(parent);
+                roi.SaveImage("wwwroot/images/image-" + limit + ".png");
+
+                var image = new Image("./images/image-" + limit + ".png");
+                image.Display = "inline";
+
+                // draw image
+                Cv2.Rectangle(copy, new Point(parent.Left, parent.Top + 1), new Point(parent.Right, parent.Bottom - 1), Scalar.Purple);
+
+                // fill structure
+                column.Elements.Add(image);
+                row.Columns.Add(column);
+                sectionRows.Add(row);
+
+                return sectionRows;*/
+            }
 
             // align rects from the top to the bottom
             sectionRects = sectionRects.OrderBy(rec => rec.Top).ToArray();
@@ -457,7 +787,7 @@ namespace RazorPagesMovie.core
                     // set section row styles
                     var latestTop = rows.Count == 0 ? parent.Y : rows.Last().Item2;
                     // @todo bez tej podmienky vždy to tak asi bude
-                    var latestBottom = rows.Count == 0 ? parent.Y + parent.Height : parent.Y + parent.Height;
+                    var latestBottom = rows.Count == 0 ? parent.Bottom : parent.Bottom;
                     var latestLeft = parent.X;
 
                     // apply top padding
@@ -466,7 +796,7 @@ namespace RazorPagesMovie.core
                     if (sectionRects.Length == 1)
                     {
                         sectionRow.Padding[3] = rect.X - latestLeft;
-                        sectionRow.Padding[2] = latestBottom - (rect.Y + rect.Height);
+                        sectionRow.Padding[2] = latestBottom - rect.Bottom;
                     }
 
                     // @todo test
@@ -475,8 +805,8 @@ namespace RazorPagesMovie.core
                     var triple = new TripleExt<int, int, List<Rect>, Element>
                     {
                         
-                        Item1 = rect.Y,
-                        Item2 = rect.Y + rect.Height,
+                        Item1 = rect.Top,
+                        Item2 = rect.Bottom,
                         Item3 = new List<Rect> { rect },
                         Element = sectionRow
                     };
@@ -495,7 +825,7 @@ namespace RazorPagesMovie.core
                 var sortedLeft = last.Item3.OrderBy(rec => rec.Left).ToList().First();
 
                 // apply bottom padding for row
-                last.Element.Padding[2] = parent.Y + parent.Height - last.Item2;
+                last.Element.Padding[2] = parent.Bottom - last.Item2;
 
                 // apply left padding for row
                 last.Element.Padding[3] = sortedLeft.X - parent.X;
@@ -532,12 +862,13 @@ namespace RazorPagesMovie.core
                             // apply right margin for column
                             var latest = columns.Last();
                             var latestElem = latest.Element;
-                            latestElem.Width = latest.Item2 - latest.Item1;
-                            latestElem.Margin[1] = rect.X - latest.Item2;
+                            latestElem.Width = latest.Item2 - latest.Item1 + 1;
+                            latestElem.Margin[1] = rect.X - latest.Item2 - 1;
                             latestElem.Rect = new Rect(latest.Item1, row.Item1, latest.Item2 - latest.Item1, row.Item2 - row.Item1);
-                            latestElem.BackgroundColor = _colorAnalyser.AnalyseRect(latestElem.Rect);
-                            if (latestElem.BackgroundColor != null)
-                                Debug.WriteLine("farba 2 " + latestElem.Width + "=" + latestElem.BackgroundColor[0] + "," + latestElem.BackgroundColor[1] + "," + latestElem.BackgroundColor[2]);
+                            if (latestElem.Rect.Height > 20)
+                            {
+                                latestElem.BackgroundColor = _colorAnalyser.AnalyseRect(latestElem.Rect);
+                            }
 
                             if (fluid)
                             {
@@ -556,8 +887,8 @@ namespace RazorPagesMovie.core
 
                         var triple = new TripleExt<int, int, List<Rect>, Element>
                         {
-                            Item1 = rect.X,
-                            Item2 = rect.X + rect.Width,
+                            Item1 = rect.Left,
+                            Item2 = rect.Right,
                             Item3 = new List<Rect> { rect },
                             Element = column
                         };
@@ -575,11 +906,13 @@ namespace RazorPagesMovie.core
                 {
                     var latest = columns.Last();
                     var latestElem = latest.Element;
-                    latestElem.Width = latest.Item2 - latest.Item1;
-                    latestElem.Rect = new Rect(latest.Item1, row.Item1, latest.Item2 - latest.Item1, row.Item2 - row.Item1);
-                    latestElem.BackgroundColor = _colorAnalyser.AnalyseRect(latestElem.Rect);
-                    if (latestElem.BackgroundColor != null)
-                        Debug.WriteLine("farba " + latestElem.Width + "=" + latestElem.BackgroundColor[0] + "," + latestElem.BackgroundColor[1] + "," + latestElem.BackgroundColor[2]);
+                    latestElem.Width = latest.Item2 - latest.Item1 + 1;
+                    latestElem.Rect = new Rect(latest.Item1, row.Item1, latest.Item2 - latest.Item1 + 1, row.Item2 - row.Item1 + 1);
+                    if (latestElem.Rect.Height > 20)
+                    {
+                        latestElem.BackgroundColor = _colorAnalyser.AnalyseRect(latestElem.Rect);
+                    }
+
                     if (fluid)
                     {
                         latestElem.Width = 100 - fluidPercents;
@@ -677,8 +1010,8 @@ namespace RazorPagesMovie.core
                             var columnRow = new Row(1);
                             var triple = new TripleExt<int, int, List<Rect>, Element>
                             {
-                                Item1 = rect.Y,
-                                Item2 = rect.Y + rect.Height,
+                                Item1 = rect.Top,
+                                Item2 = rect.Bottom,
                                 Item3 = new List<Rect> { rect },
                                 Element = columnRow
                             };
@@ -728,6 +1061,8 @@ namespace RazorPagesMovie.core
                         //foreach (var contour in alignHorizontal)
                         //{
                         //    var roi2 = _image.Clone(contour);
+                        //    var roi2 = _image.Clone();
+                        //    Cv2.Rectangle(roi2, new Point(contour.X, contour.Y), new Point(contour.X + contour.Width, contour.Y + contour.Height), Scalar.FromRgb(r.Next(0, 255), r.Next(0, 255), r.Next(0, 255)));
                         //    roi2.SaveImage("image2-" + test + ".png");
                         //    l++;
                         //    test++;
@@ -745,8 +1080,14 @@ namespace RazorPagesMovie.core
                         var maxGap = 0;
                         for (var j = 0; j < alignHorizontal.Length; j++)
                         {
-                            // last element cant have a gap
-                            if (j + 1 == alignHorizontal.Length)
+                            // last element cant have a gap or element might have sub elements or it might be an image
+                            var indexCurrent = Array.IndexOf(sectionRectsUnsorted, alignHorizontal[j]);
+                            var indexNext = Array.IndexOf(sectionRectsUnsorted, alignHorizontal[j + 1 <= alignHorizontal.Length - 1 ? j + 1 : j]);
+                            if (j + 1 == alignHorizontal.Length ||
+                                sectionRecursiveRows[indexCurrent] != null ||
+                                sectionRectsImages[indexCurrent] == true ||
+                                sectionRecursiveRows[indexNext] != null ||
+                                sectionRectsImages[indexNext] == true)
                             {
                                 connectedHorizontal.Add(alignHorizontal[j]);
                                 mergedHorizontal.Add(false);
@@ -755,7 +1096,7 @@ namespace RazorPagesMovie.core
                             {
                                 var currentRect = alignHorizontal[j];
                                 var nextRect = alignHorizontal[j + 1];
-                                var gap = Math.Abs(nextRect.X - (currentRect.X + currentRect.Width));
+                                var gap = Math.Abs(nextRect.Left - currentRect.Right - 1);
                                 var merge = currentRect;
                                 var merged = false;
 
@@ -763,7 +1104,10 @@ namespace RazorPagesMovie.core
                                 mergedWidths.Add(merge.Width);
 
                                 //while ((distance <= maxTextGap || (currentRect & nextRect).area() > 0) && j + 1 < alignVertical.Length - 1)
-                                while (gap <= maxTextGap || merge.IntersectsWith(nextRect))
+                                // either end position of next element is smaller end position of current element or slightly higher
+                                var horizontalMerge = nextRect.Right <= currentRect.Right || Util.AreSame(nextRect.Right, currentRect.Right);
+
+                                while (gap <= maxTextGap || merge.IntersectsWith(nextRect) || horizontalMerge)
                                 {
                                     // Add merging item's width
                                     if (!merge.IntersectsWith(nextRect))
@@ -785,21 +1129,23 @@ namespace RazorPagesMovie.core
                                     merge = merge | nextRect;
                                     merged = true;
 
-                                    //Debug.WriteLine("merging " + j + " with " + (j + 1) );
+                                    //Debug.WriteLine("merging " + j + " with " + (j + 1));
 
                                     j++;
 
                                     // Check if we are not on the last element in the row
-                                    if (j + 1 <= alignHorizontal.Length - 1)
+                                    if (j + 1 <= alignHorizontal.Length - 1 &&
+                                        sectionRecursiveRows[Array.IndexOf(sectionRectsUnsorted, alignHorizontal[j + 1])] == null &&
+                                        sectionRectsImages[Array.IndexOf(sectionRectsUnsorted, alignHorizontal[j + 1])] == false)
                                     {
                                         // Next rect's right position might be lower than current rect's (next rect is inside current rect)
-                                        if (nextRect.X + nextRect.Width >= currentRect.X + currentRect.Width)
+                                        if (nextRect.Right >= currentRect.Right)
                                         {
                                             currentRect = alignHorizontal[j];
                                         }
 
                                         nextRect = alignHorizontal[j + 1];
-                                        gap = Math.Abs(nextRect.X - (currentRect.X + currentRect.Width));
+                                        gap = Math.Abs(nextRect.Left - currentRect.Right - 1);
                                     }
                                     else
                                     {
@@ -825,6 +1171,36 @@ namespace RazorPagesMovie.core
                         // Create single column inside row
                         var singleColumn = new Column(1);
 
+                        /*var intersect = false;
+                        var connectedCopy = connectedHorizontal;
+                        for (var i = 0; i < connectedCopy.Count; i++)
+                        {
+                            var mergedCount = 0;
+                            for (var j = i + 1; j < connectedCopy.Count; j++)
+                            {
+                                if (connectedCopy[i].IntersectsWith(connectedCopy[j]))
+                                {
+                                    mergedCount++;
+                                    Debug.WriteLine("it intersects :O");
+                                    Debug.WriteLine(connectedCopy[i].X + "," + connectedCopy[i].Y + "," + connectedCopy[i].Width + "," + connectedCopy[i].Height);
+                                    Debug.WriteLine(connectedCopy[j].X + "," + connectedCopy[j].Y + "," + connectedCopy[j].Width + "," + connectedCopy[j].Height);
+                                    //break;
+                                }
+                            }
+
+                            if (mergedCount > 0)
+                            {
+                                connectedHorizontal.RemoveRange(i + 1, mergedCount);
+                                connectedHorizontal[i] = merged;
+                                break;
+                            }
+                        }
+
+                        if (intersect)
+                        {
+                            Debug.WriteLine("it intersects :O" + parent.X + "," + parent.Y + "," + parent.Width + "," + parent.Height);
+                        }*/
+
                         // Add items to col
                         var lastX = -1;
                         for (var i = 0; i < connectedHorizontal.Count; i++)
@@ -843,20 +1219,20 @@ namespace RazorPagesMovie.core
                                 foreach (var recursiveRow in sectionRecursiveRows[index])
                                 {
                                     // check if items are is in the same row
-                                    if (lastRect == null || recursiveRow.Rect.Y >= ((Rect)lastRect).Y && recursiveRow.Rect.Y <= ((Rect)lastRect).Y + ((Rect)lastRect).Height)
+                                    if (lastRect == null || recursiveRow.Rect.Y >= ((Rect)lastRect).Y && recursiveRow.Rect.Y <= ((Rect)lastRect).Bottom)
                                     {
                                         recursiveRow.ActAsColumn = true;
                                     }
 
                                     if (lastX != -1)
                                     {
-                                        recursiveRow.Margin[3] = rect.X - lastX;
+                                        recursiveRow.Margin[3] = rect.X - lastX - 1;
                                     }
                                     singleColumn.Elements.Add(recursiveRow);
 
                                     lastRect = recursiveRow.Rect;
                                 }
-                                lastX = rect.X + rect.Width;
+                                lastX = rect.Right;
                             }
                             else
                             {
@@ -864,7 +1240,8 @@ namespace RazorPagesMovie.core
 
                                 // @todo replace with object recognizer
 
-                                var text = mergedHorizontal[i];
+                                //var text = mergedHorizontal[i];
+                                var text = false;
                                 Debug.WriteLine("text=" + text);
                                 if (text)
                                 {
@@ -889,8 +1266,9 @@ namespace RazorPagesMovie.core
                                     // @todo var text, niekde pri spájaní to bude mať ako atribút
                                     // @todo do getText či sa nepošle rovno roi2 / rect
                                     var textElem = _ocr.GetText("/image-" + limit + ".png");
-                                    if (textElem == null)
+                                    if (textElem == null || !IsTextValid(textElem, rect))
                                     {
+                                        Debug.WriteLine("textelem = null, create img");
                                         text = false;
                                     }
                                     else
@@ -903,6 +1281,7 @@ namespace RazorPagesMovie.core
                                 if (!text)
                                 {
                                     var roi2 = _image.Clone(rect);
+                                    Debug.WriteLine(rect.X + "," + rect.Y + "," + rect.Width + "," + rect.Height);
                                     roi2.SaveImage("wwwroot/images/image-" + limit + ".png");
 
                                     var image = new Image("./images/image-" + limit + ".png");
@@ -911,14 +1290,14 @@ namespace RazorPagesMovie.core
                                     //Debug.WriteLine("margin " + (rect.Y - columnRow.Item1) + "," + (columnRow.Item2 - (rect.Y + rect.Height)));
                                     if (lastX != -1)
                                     {
-                                        image.Margin[3] = rect.X - lastX;
+                                        image.Margin[3] = rect.X - lastX - 1;
                                     }
 
                                     singleColumn.Elements.Add(image);
                                 }
 
 
-                                lastX = rect.X + rect.Width;
+                                lastX = rect.Right;
 
                                 //using (var page = _tess.Process(Pix.LoadFromFile("image-" + limit + ".png"), PageSegMode.SingleBlock))
                                 //{
@@ -926,9 +1305,14 @@ namespace RazorPagesMovie.core
 
                                 //    Debug.Write("image " + limit + "=" + text);
                                 //}
-
-                                Cv2.Rectangle(copy, new Point(rect.X, rect.Y), new Point(rect.X + rect.Width, rect.Y + rect.Height), Scalar.Purple);
-
+                                if (rect.Height > 1)
+                                {
+                                    Cv2.Rectangle(copy, new Point(rect.Left, rect.Top + 1), new Point(rect.Right, rect.Bottom - 1), Scalar.Purple);
+                                }
+                                else
+                                {
+                                    Cv2.Rectangle(copy, new Point(rect.Left, rect.Top + 1), new Point(rect.Right, rect.Bottom), Scalar.Purple);
+                                }
                             }
                         }
 
@@ -1018,10 +1402,25 @@ namespace RazorPagesMovie.core
             // Draw rows
             foreach (var row in rows)
             {
-                Cv2.Rectangle(copy, new Point(parent.X, row.Item1), new Point(parent.X + parent.Width, row.Item2), Scalar.Green);
+                Cv2.Rectangle(copy, new Point(parent.Left + 1, row.Item1), new Point(parent.Right - 1, row.Item2), Scalar.Green);
             }
 
             return sectionRows;
+        }
+
+        private bool IsTextValid(Text textElem, Rect rect)
+        {
+            if (textElem.GetText().Length == 1)
+            {
+                return false;
+            }
+
+            if (textElem.FontSize > 30 && textElem.GetText().Length <= 2)
+            {
+                return false;
+            }
+
+            return true;
         }
 
         private int FindRowForRect(List<TripleExt<int, int, List<Rect>, Element>> rows, Rect rect)
@@ -1032,14 +1431,14 @@ namespace RazorPagesMovie.core
             foreach (var row in rows)
             {
                 // rect fits exactly into row
-                if (rect.Y >= row.Item1 && rect.Y + rect.Height <= row.Item2)
+                if (rect.Top >= row.Item1 && rect.Bottom <= row.Item2)
                 {
                     return i;
                 }
                 // end of the rect doesnt fit
-                if (rect.Y <= row.Item2 && rect.Y + rect.Height > row.Item2)
+                if (rect.Top <= row.Item2 && rect.Bottom > row.Item2)
                 {
-                    row.Item2 += rect.Y + rect.Height - row.Item2;
+                    row.Item2 += rect.Bottom - row.Item2;
                     return i;
                 }
 
@@ -1057,20 +1456,20 @@ namespace RazorPagesMovie.core
             foreach (var column in columns)
             {
                 // rect fits exactly into column
-                if (rect.X >= column.Item1 && rect.X + rect.Width <= column.Item2)
+                if (rect.Left >= column.Item1 && rect.Right <= column.Item2)
                 {
                     return i;
                 }
                 // end of the rect doesnt fit
-                if (rect.X <= column.Item2 && rect.X + rect.Width > column.Item2)
+                if (rect.Left <= column.Item2 && rect.Right > column.Item2)
                 {
-                    column.Item2 += rect.X + rect.Width - column.Item2;
+                    column.Item2 += rect.Right - column.Item2;
                     return i;
                 }
                 // rect doesn't fit just by a few pixels so we will merge them anyway
-                if (rect.X > column.Item2 && rect.X - column.Item2  <= MinColumnGap)
+                if (rect.Left > column.Item2 && rect.Left - column.Item2  <= MinColumnGap)
                 {
-                    column.Item2 += rect.Width + rect.X - column.Item2;
+                    column.Item2 += rect.Right - column.Item2;
                     return i;
                 }
 
@@ -1116,7 +1515,8 @@ namespace RazorPagesMovie.core
                 //Debug.WriteLine("area " + area + " left " + rect.Left + " right " + rect.Right + " width " + rect.Width);
 
                 // add left corners from 50 % left-most of image
-                if (rect.Left < width * 0.50 && (area > 100 || rect.Width * rect.Height > 100))
+                //if (rect.Left < width * 0.50 && (area > 100 || rect.Width * rect.Height > 100))
+                if (rect.Left < width * 0.50 && (area > 10 || rect.Width * rect.Height > 10))
                 {
                     left.Add(rect.Left);
                 }

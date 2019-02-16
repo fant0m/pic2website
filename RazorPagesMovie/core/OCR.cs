@@ -33,9 +33,10 @@ namespace RazorPagesMovie.core
             Pix img = Pix.LoadFromFile(@"./wwwroot/images/" + image);
             Bitmap imgBmp = new Bitmap(@"./wwwroot/images/" + image);
             Rectangle region;
+            Pix threshold;
             
             // 2. detect font family
-            var mode = PageSegMode.SingleLine;
+            var mode = PageSegMode.RawLine;
             using (var page = _tessOnly.Process(img, mode))
             {
                 var regions = page.GetSegmentedRegions(PageIteratorLevel.Symbol);
@@ -67,6 +68,8 @@ namespace RazorPagesMovie.core
                 {
                     return null;
                 }
+
+                threshold = page.GetThresholdedImage();
             }
 
             // 4. detect font size
@@ -76,7 +79,9 @@ namespace RazorPagesMovie.core
             var fontSize = PointsToPixels(size);
 
             // 5. detect font color
-            var fontColor = ColorAnalyser.AnalyseTextColor(region, image);
+            var fontColor = ColorAnalyser.AnalyseTextColor(region, image, threshold);
+
+            //Debug.WriteLine("text=" + text);
 
             // 6. return new text instance
             return new Text(text, fontFamily, fontColor, fontSize, bold, italic);

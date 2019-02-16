@@ -83,7 +83,7 @@ namespace RazorPagesMovie.Pages
 
             //gray1 = gray1.AdaptiveThreshold(255, AdaptiveThresholdTypes.MeanC, ThresholdTypes.BinaryInv, (int)canny1, canny2); // 11,2 ; 75,10 ; 60,255
 
-            gray1 = gray1.GaussianBlur(new Size(blur, blur), 0);
+            //gray1 = gray1.GaussianBlur(new Size(blur, blur), 0);
 
             //gray1 = gray1.Threshold(128, 255, ThresholdTypes.Binary);
 

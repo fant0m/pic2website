@@ -18,42 +18,43 @@ namespace RazorPagesMovie.core
                 var previousRow = sectionRows[i - 1];
                 var currentRow = sectionRows[i];
 
-                if (Util.AreSame(previousRow.Padding[0], currentRow.Padding[0]) && currentRow.Columns.Count < previousRow.Columns.Count && currentRow.Columns.Count > 0)
+                if (currentRow.Columns.Count < previousRow.Columns.Count && currentRow.Columns.Count > 0)
                 {
                     // check previous columns dimensions
                     var length = previousRow.Columns.Count;
                     var maxColumnWidth = new int[length];
-                    var maxContentWidth = new int[length];
+                    //var maxContentWidth = new int[length];
                     var leftPositionsPrevious = new int[length];
                     var positionAccumulator = 0;
                     for (var j = 0; j < length; j++)
                     {
                         var column = previousRow.Columns[j];
-                        var total = (int)column.Width + column.Margin[1];
+                        var total = (int)column.Width + column.Margin[1] + column.Margin[3] + column.Padding[3];
 
                         if (total > maxColumnWidth[j])
                         {
                             maxColumnWidth[j] = total;
                         }
-                        if ((int)column.Width > maxContentWidth[j])
-                        {
-                            maxContentWidth[j] = (int)column.Width;
-                        }
+                        //if ((int)column.Width > maxContentWidth[j])
+                        //{
+                        //    maxContentWidth[j] = (int)column.Width;
+                        //}
 
                         if (j == 0)
                         {
-                            leftPositionsPrevious[j] = previousRow.Padding[3] + column.Padding[3];
+                            leftPositionsPrevious[j] = previousRow.Padding[3];
+                            positionAccumulator += previousRow.Padding[3];
                         }
                         else
                         {
-                            leftPositionsPrevious[j] = column.Padding[3] + positionAccumulator;
+                            leftPositionsPrevious[j] = positionAccumulator;
                         }
 
                         if (fluid)
                         {
                             leftPositionsPrevious[j] = positionAccumulator;
                         }
-                        Debug.WriteLine("left " + leftPositionsPrevious[j]);
+                        //Debug.WriteLine("left " + leftPositionsPrevious[j]);
 
                         positionAccumulator += total;
                     }
@@ -61,11 +62,12 @@ namespace RazorPagesMovie.core
                     // check if columns are aligned the same way
                     var error = false;
                     var leftPositions = new int[currentRow.Columns.Count];
+                    var matched = new int[length];
                     positionAccumulator = 0;
                     for (var j = 0; j < currentRow.Columns.Count; j++)
                     {
                         var column = currentRow.Columns[j];
-                        var total = (int)column.Width + column.Margin[1];
+                        var total = (int)column.Width + column.Margin[1] + column.Margin[3];
                         if (j == 0)
                         {
                             leftPositions[j] = currentRow.Padding[3] + column.Padding[3];
@@ -86,14 +88,18 @@ namespace RazorPagesMovie.core
                         var match = -1;
                         for (var h = 0; h < length; h++)
                         {
-                            if (Util.AreSame(leftPositionsPrevious[h], leftPositions[j]))
+                            if (matched[h] == 0 && (
+                                Util.AreSame(leftPositionsPrevious[h], leftPositions[j]) ||
+                                (leftPositions[j] > leftPositionsPrevious[h] && leftPositions[j] + column.Width <= leftPositionsPrevious[h] + maxColumnWidth[h])))
                             {
                                 match = h;
+                                matched[h] = j + 1;
+                                break;
                             }
                         }
 
                         // @todo možno tu bude treba podmienku na width pre fluid layout
-                        if (match == -1 || ((int)column.Width > maxColumnWidth[match] && !column.Fluid))
+                        if (match == -1 || ((int)column.Width > maxColumnWidth[match] && match != length - 1 && !column.Fluid))
                         {
                             error = true;
                         }
@@ -109,22 +115,16 @@ namespace RazorPagesMovie.core
                             var column = new Column(1);
                             var previousColumn = previousRow.Columns[j];
                             column.Fluid = previousColumn.Fluid;
-                            var match = -1;
-
-                            for (var e = 0; e < currentRow.Columns.Count; e++)
-                            {
-                                if (Util.AreSame(leftPositionsPrevious[j], leftPositions[e]))
-                                {
-                                    match = e;
-                                }
-                            }
+                            var match = matched[j] - 1;
 
                             // paste old content
                             if (match != -1)
                             {
-                                column.Elements = currentRow.Columns[match].Elements;
+                                var currentColumn = currentRow.Columns[match];
+                                column.Elements = currentColumn.Elements;
 
-                                column.Width = maxColumnWidth[j];
+                                column.Margin[3] = Math.Abs(leftPositions[match] - leftPositionsPrevious[j]);
+                                column.Width = Math.Max(maxColumnWidth[j] - column.Margin[3], currentColumn.Width);
                             }
                             else
                             {
@@ -134,7 +134,8 @@ namespace RazorPagesMovie.core
                             newColumns.Add(column);
                         }
 
-                        currentRow.Padding = previousRow.Padding;
+                        currentRow.Padding[1] = previousRow.Padding[1];
+                        currentRow.Padding[3] = previousRow.Padding[3];
                         currentRow.Columns = newColumns;
                     }
                 }
@@ -155,13 +156,16 @@ namespace RazorPagesMovie.core
             {
                 var row = sectionRows[i];
 
+                //Debug.WriteLine("row " + i);
+
                 // detect column widths
                 var columnWidths = new int[row.Columns.Count - 1];
                 for (var j = 0; j < columnWidths.Length; j++)
                 {
                     var column = row.Columns[j];
-                    var total = (int)column.Width + column.Margin[1];
+                    var total = (int)column.Width + column.Margin[1] + column.Margin[3];
                     columnWidths[j] = total;
+                    //Debug.WriteLine("column width " + total);
                 }
 
                 // check with previous widths
@@ -183,6 +187,8 @@ namespace RazorPagesMovie.core
                             if (!Util.AreSame(columnWidths[j], lastColumnWidths[j]))
                             {
                                 merge = false;
+
+                                //Debug.WriteLine("not same widths " + i);
 
                                 break;
                             }
@@ -237,31 +243,27 @@ namespace RazorPagesMovie.core
         private static Row SplitRowsIntoColumns(List<Row> rows)
         {
             var result = new Row(1);
-            var maxColumnWidths = new List<int>();
-            var maxContentWidths = new List<int>();
-            var lowestLeftPadding = Int32.MaxValue;
+            var count = rows[0].Columns.Count;
+            var maxColumnWidths = new int[count];
+            var maxContentWidths = new int[count, 2];
+            var lowestLeftPadding = int.MaxValue;
 
             // find maximum column and content widths
             foreach (var row in rows)
             {
-                for (var j = 0; j < row.Columns.Count; j++)
+                for (var j = 0; j < count; j++)
                 {
                     var column = row.Columns[j];
                     var total = (int) column.Width + column.Margin[1];
-
-                    if (maxContentWidths.Count <= j)
-                    {
-                        maxContentWidths.Add(0);
-                        maxColumnWidths.Add(0);
-                    }
 
                     if (total > maxColumnWidths[j])
                     {
                         maxColumnWidths[j] = total;
                     }
-                    if ((int)column.Width > maxContentWidths[j])
+                    if ((int)column.Width > maxContentWidths[j, 0])
                     {
-                        maxContentWidths[j] = (int)column.Width;
+                        maxContentWidths[j, 0] = (int)column.Width;
+                        maxContentWidths[j, 1] = column.Margin[1];
                     }
                 }
 
@@ -274,13 +276,13 @@ namespace RazorPagesMovie.core
             result.Padding[2] = rows.Last().Padding[2];
 
             // create columns
-            var columns = new List<Column>(maxContentWidths.Count);
+            var columns = new List<Column>(count);
             var fluid = rows[0].Columns[0].Fluid;
-            for (var i = 0; i < maxContentWidths.Count; i++)
+            for (var i = 0; i < count; i++)
             {
                 var column = new Column(1);
-                column.Width = maxContentWidths[i];
-                column.Margin[1] = maxColumnWidths[i] - maxContentWidths[i];
+                column.Width = maxContentWidths[i, 0];
+                column.Margin[1] = maxContentWidths[i, 1] - (maxColumnWidths[i] - (maxContentWidths[i, 0] + maxContentWidths[i, 1]));
                 column.Fluid = fluid;
 
                 if (i == 0)
@@ -302,16 +304,17 @@ namespace RazorPagesMovie.core
                         if (j == 0)
                         {
                             element.Padding[0] += row.Padding[0];
+                            element.Margin[3] += row.Columns[i].Margin[3];
                         }
                         element.Padding[3] = row.Padding[3] - lowestLeftPadding;
                         columns[i].Elements.Add(element);
 
                         // check if padding + width is not greater than max content width
-                        if (element.Padding[3] + row.Columns[i].Width > maxContentWidths[i])
+                        if (element.Padding[3] + row.Columns[i].Width > maxContentWidths[i, 0])
                         {
-                            maxContentWidths[i] = element.Padding[3] + (int) row.Columns[i].Width;
-                            columns[i].Width = maxContentWidths[i];
-                            columns[i].Margin[1] = maxColumnWidths[i] - maxContentWidths[i];
+                            maxContentWidths[i, 0] = element.Padding[3] + (int) row.Columns[i].Width;
+                            columns[i].Width = maxContentWidths[i, 0];
+                            columns[i].Margin[1] = maxContentWidths[i, 1] - (maxColumnWidths[i] - (maxContentWidths[i, 0] - maxContentWidths[i, 1]));
                         }
                     }
                 }

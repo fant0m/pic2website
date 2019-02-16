@@ -6,8 +6,11 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using OpenCvSharp;
+using OpenCvSharp.Extensions;
+using RazorPagesMovie.core.helper;
 using RazorPagesMovie.core.model;
 using RazorPagesMovie.core.model.elements;
+using Tesseract;
 using Point = OpenCvSharp.Point;
 
 namespace RazorPagesMovie.core
@@ -20,8 +23,9 @@ namespace RazorPagesMovie.core
             _image = image;
         }
 
-        public int[] AnalyseRect(Rect rect)
+        public int[] AnalyseRect(OpenCvSharp.Rect rect)
         {
+            //Debug.WriteLine("analysing" + rect.X + "," + rect.Y + "," + rect.Width + "," + rect.Height);
             var outerColor = _image.At<Vec3b>(rect.Y, rect.X - 2);
 
             var middleX = (int)Math.Round(rect.X + rect.Width / 2.0);
@@ -56,16 +60,21 @@ namespace RazorPagesMovie.core
                 // check if most common color is not outer color
                 if (mostCommon[0] == outerColor.Item0 && mostCommon[1] == outerColor.Item1 && mostCommon[2] == outerColor.Item2)
                 {
+                    //return new int[] { outerColor.Item2, outerColor.Item1, outerColor.Item0 };
                     return null;
                 }
+
+                //Debug.WriteLine("its most common color" + mostCommon[2] + "," + mostCommon[1] + "," + mostCommon[0]);
 
                 return new[] { mostCommon[2], mostCommon[1], mostCommon[0] };
             }
 
+            Debug.WriteLine("its outer color");
+
             return new int[] { outerColor.Item2, outerColor.Item1, outerColor.Item0 };
         }
 
-        public static void AnalyseSectionBackground(Section section, Rect[] rects, Mat image)
+        public static void AnalyseSectionBackground(Section section, OpenCvSharp.Rect[] rects, Mat image)
         {
             Vec3b[] colors;
 
@@ -125,7 +134,7 @@ namespace RazorPagesMovie.core
                     for (var i = 0; i < rects.Length; i++)
                     {
                         var rect = rects[i];
-                        if (rect.Contains(new Rect(x, y, 1, 1)))
+                        if (rect.Contains(new OpenCvSharp.Rect(x, y, 1, 1)))
                         {
                             collides = true;
                         }
@@ -156,10 +165,21 @@ namespace RazorPagesMovie.core
             }
         }
 
-        public static int[] AnalyseTextColor(Rectangle region, String image)
+        public static int[] AnalyseTextColor(Rectangle region, string image, Pix threshold)
         {
             // load image
             Mat src = Cv2.ImRead(@"./wwwroot/images/" + image);
+
+            // convert threshold to mat
+            Bitmap bmp = PixToBitmapConverter.Convert(threshold);
+            Mat mask = BitmapConverter.ToMat(bmp);
+
+            // invert mask
+            //Cv2.BitwiseNot(mask, mask);
+            Mat filtered = new Mat();
+
+            // load only text colors from original image
+            src.CopyTo(filtered, mask);
 
             // detect background color
             var bgColor = src.At<Vec3b>(0, 0);
@@ -169,7 +189,7 @@ namespace RazorPagesMovie.core
             //var roi = new Mat(src, new Rect(region.X, region.Y, region.Width, region.Height));
 
             // split image into r,g,b parts
-            var split = src.Split();
+            var split = filtered.Split();
 
             // calculate histogram for each channel
             var hist = new[] { new Mat(), new Mat(), new Mat() };
@@ -200,6 +220,13 @@ namespace RazorPagesMovie.core
                     hist[j].Set(maxLoc.X, maxLoc.Y, 0);
                 }
 
+                // ignore black background color (from threshold)
+                if (maxLocs[i, 0] + maxLocs[i, 1] + maxLocs[i, 2] == 0)
+                {
+                    i--;
+                    continue;
+                }
+
                 if (i == 1)
                 {
                     firstBg = maxLocs[0, 0] == bgColor.Item0 && maxLocs[0, 1] == bgColor.Item1 && maxLocs[0, 2] == bgColor.Item2;
@@ -209,7 +236,9 @@ namespace RazorPagesMovie.core
                     int index = firstBg ? 1 : 0;
 
                     // we don't need to calculate other values if we have got clear peak
-                    if (Math.Round(maxValues[index + 1, 0] / maxValues[index, 0], 2) <= 0.7)
+                    if (Math.Round(maxValues[index + 1, 0] / maxValues[index, 0], 2) <= 0.7 &&
+                        Math.Round(maxValues[index + 1, 1] / maxValues[index, 1], 2) <= 0.7 &&
+                        Math.Round(maxValues[index + 1, 2] / maxValues[index, 2], 2) <= 0.7)
                     {
                         //Debug.WriteLine("we got color since we have clear peak");
                         color = new[] { maxLocs[index, 2], maxLocs[index, 1], maxLocs[index, 0] };
@@ -219,10 +248,10 @@ namespace RazorPagesMovie.core
                 }
             }
 
-            // we need to find closest color to mean
+            // we need to find closest color to the mean
             if (color == null)
             {
-                //Debug.WriteLine("we have got a problem.. colors too close");
+                //Debug.WriteLine("we have got a problem.. colors are too close to each other in histogram");
 
                 // we will skip the first color since it's background color
                 var start = firstBg ? 1 : 0;
@@ -232,14 +261,16 @@ namespace RazorPagesMovie.core
                 {
                     for (var j = 0; j < 3; j++)
                     {
-                        average[j] += maxLocs[i, j] * maxLocs[i, j];
+                        //average[j] += maxLocs[i, j] * maxLocs[i, j];
+                        average[j] += maxLocs[i, j];
                     }
                 }
 
                 // calculate average values
                 for (var i = 0; i < 3; i++)
                 {
-                    average[i] = (int)Math.Sqrt(average[i]);
+                    //average[i] = (int)Math.Sqrt(average[i]);
+                    average[i] /= colors;
                 }
 
                 // calculate distances from original colors to the average value

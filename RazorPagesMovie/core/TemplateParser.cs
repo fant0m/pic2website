@@ -59,7 +59,7 @@ namespace RazorPagesMovie.core
         {
             _tess = new TesseractEngine(@"./wwwroot/tessdata", "eng", EngineMode.LstmOnly);
 
-            byte[] imageData = File.ReadAllBytes(@"./wwwroot/images/works31.png");
+            byte[] imageData = File.ReadAllBytes(@"./wwwroot/images/template4.png");
             _image = Mat.FromImageData(imageData);
             _colorAnalyser = new ColorAnalyser(_image);
             //Convert the img1 to grayscale and then filter out the noise

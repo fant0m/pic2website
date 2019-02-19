@@ -59,7 +59,7 @@ namespace RazorPagesMovie.core
         {
             _tess = new TesseractEngine(@"./wwwroot/tessdata", "eng", EngineMode.LstmOnly);
 
-            byte[] imageData = File.ReadAllBytes(@"./wwwroot/images/template4.png");
+            byte[] imageData = File.ReadAllBytes(@"./wwwroot/images/works31.png");
             _image = Mat.FromImageData(imageData);
             _colorAnalyser = new ColorAnalyser(_image);
             //Convert the img1 to grayscale and then filter out the noise
@@ -424,17 +424,20 @@ namespace RazorPagesMovie.core
         {
             var parentEdges = _contours[parent];
             var parentRect = Cv2.BoundingRect(parentEdges);
+            var isText = parentRect.Width * 1.0 / parentRect.Height > 3 && parentRect.Height < 50;
+            if (isText)
+            {
+                return false;
+            }
+
             var isSmall = parentRect.Width < 40 && parentRect.Height < 40;
             if (isSmall)
             {
                 return true;
             }
 
-
             var count = contours.Count;
            
-
-
             //var sectionRects = new Rect[contours.Count];
             //var k = 0;
             var r = new Random();
@@ -455,12 +458,13 @@ namespace RazorPagesMovie.core
             foreach (var rect in rects)
             {
                 Cv2.Rectangle(copy, new Point(rect.X, rect.Y), new Point(rect.X + rect.Width, rect.Y + rect.Height), Scalar.FromRgb(r.Next(0, 255), r.Next(0, 255), r.Next(0, 255)));
+                Debug.WriteLine(rect.ToString());
             }
 
 
             Debug.WriteLine("check is image " + contours.Count() + "," + parentRect.Width + "," + parentRect.Height);
 
-            var checkSmallElements = rects.Where(e => (e.Width < 10 && e.Height < 10) || e.Height < 5 || e.Width < 5).Count();
+            var checkSmallElements = rects.Where(e => (e.Width < 8 && e.Height < 8) || e.Height < 5 || e.Width < 5).Count();
             Debug.WriteLine("počet malých elem " + checkSmallElements);
             if (checkSmallElements * 1.0 / rects.Count() >= 0.7)
             {
@@ -1136,14 +1140,29 @@ namespace RazorPagesMovie.core
                             }
                             else
                             {
-                                // @todo replace with object recognizer
                                 Element result = null;
                                 var text = mergedHorizontal[i];
+
+                                // filter non-text elements
                                 if (rect.Width < 15 || rect.Height < 10 || rect.Height > 100)
                                 {
                                     text = false;
                                 }
+                                // this might be a text even though there wasn't any merge
+                                else if (!text && rect.Width > 30 && rect.Height > 10)
+                                {
+                                    text = true;
+                                }
+
+                                // this is an icon/image inside wrapper
+                                if (text && connectedHorizontal.Count <= 5 && parent.Width == parent.Height && parent.Width < 110)
+                                {
+                                    // @todo would be best to merge all those items
+                                    text = false;
+                                }
+
                                 Debug.WriteLine("text=" + text + "," + rect.ToString());
+
                                 if (text)
                                 {
                                     limit++;
@@ -1176,7 +1195,7 @@ namespace RazorPagesMovie.core
                                     }
                                     else
                                     {
-                                        textElem.Display = "inline";
+                                        textElem.Display = "inline-block";
                                         result = textElem;
                                     }
                                 }
@@ -1191,7 +1210,7 @@ namespace RazorPagesMovie.core
                                     roi2.SaveImage("wwwroot/images/image-" + limit + ".png");
 
                                     var image = new Image("./images/image-" + limit + ".png");
-                                    image.Display = "inline";
+                                    image.Display = "inline-block";
 
                                     //Debug.WriteLine("margin " + (rect.Y - columnRow.Item1) + "," + (columnRow.Item2 - (rect.Y + rect.Height)));
                                     
@@ -1202,6 +1221,10 @@ namespace RazorPagesMovie.core
                                 if (lastX != -1)
                                 {
                                     result.Margin[3] = rect.X - lastX - 1;
+                                }
+                                if (rect.Top > 0)
+                                {
+                                    result.Margin[0] = rect.Top - columnRow.Item1;
                                 }
                                 singleColumn.Elements.Add(result);
 
@@ -1321,6 +1344,19 @@ namespace RazorPagesMovie.core
             {
                 return false;
             }
+
+            if (rect.Width == rect.Height)
+            {
+                return false;
+            }
+
+            var allowedChars = new char[] { ' ', ',', '.', '/', '©', '@', '-', ':' };
+            bool result = textElem.GetText().All(c => char.IsLetterOrDigit(c) || allowedChars.Contains(c));
+            if (!result)
+            {
+                return false;
+            }
+
 
             return true;
         }

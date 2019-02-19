@@ -163,10 +163,10 @@ namespace RazorPagesMovie.core
             {
                 var row = sectionRows[i];
                 var count = row.Columns.Count;
-                if (count == 1)
-                {
-                    continue;
-                }
+                //if (count == 1)
+                //{
+                //    continue;
+                //}
 
                 //Debug.WriteLine("row " + i);
                 if (maxColumnWidth.Count == 0)
@@ -271,42 +271,6 @@ namespace RazorPagesMovie.core
                                 maxColumnWidth[j + 1] += orig - maxLeftPosition[j + 1];
                                 maxContentWidth[j + 1] += orig - maxLeftPosition[j + 1];
                             }
-
-
-                            /*if (maxContentWidth.Count > j && contentWidth[j] > maxContentWidth[j])
-                            {
-                                maxContentWidth[j] = contentWidth[j];
-                            }
-
-                            if (columnWidth[j] > maxColumnWidth[j])
-                            {
-                                maxColumnWidth[j] = columnWidth[j];
-                                maxLeftPosition[j] = leftPosition[j];
-
-                                if (j != 0 && maxLeftPosition[j - 1] + maxColumnWidth[j - 1] > maxLeftPosition[j])
-                                {
-                                    maxColumnWidth[j - 1] = maxLeftPosition[j] - maxLeftPosition[j - 1];
-                                }
-                                if (j != count - 1 && maxLeftPosition[j + 1] != 0 && maxLeftPosition[j] + maxColumnWidth[j] > maxLeftPosition[j + 1])
-                                {
-                                    maxColumnWidth[j] = maxLeftPosition[j + 1] - maxLeftPosition[j];
-                                }
-                            }
-                            else if (columnWidth[j] <= maxColumnWidth[j])
-                            {
-                                if (maxLeftPosition[j] + maxContentWidth[j] < leftPosition[j] + columnWidth[j])
-                                {
-                                    maxColumnWidth[j] = leftPosition[j] + columnWidth[j] - maxLeftPosition[j];
-                                    maxContentWidth[j] = maxColumnWidth[j];
-                                    if (j + 1 < count)
-                                    {
-                                        var orig = maxLeftPosition[j + 1];
-                                        maxLeftPosition[j + 1] = maxLeftPosition[j] + columnWidth[j];
-                                        maxColumnWidth[j + 1] += orig - maxLeftPosition[j + 1];
-                                        maxContentWidth[j + 1] += orig - maxLeftPosition[j + 1];
-                                    }
-                                }
-                            }*/
                         }
                     }
                 }
@@ -315,7 +279,7 @@ namespace RazorPagesMovie.core
                 if (i > 0)
                 {
                     // merge only if we have more than 2 columns && same number of columns
-                    bool merge = columnWidth.Length != 0 && columnWidth.Length == maxColumnWidth.Count;
+                    bool merge = columnWidth.Length > 1 && columnWidth.Length == maxColumnWidth.Count;
 
                     // check if columns fits with previous row(s)
                     if (merge)
@@ -329,8 +293,6 @@ namespace RazorPagesMovie.core
                             )
                             {
                                 merge = false;
-
-                                //Debug.WriteLine("not same widths " + i);
 
                                 break;
                             }
@@ -482,49 +444,6 @@ namespace RazorPagesMovie.core
                         maxColumnWidth[j + 1] += orig - maxLeftPosition[j + 1];
                         maxContentWidth[j + 1] += orig - maxLeftPosition[j + 1];
                     }
-                    /*bool over = false;
-                    if (j != count - 1 && maxLeftPosition[j + 1] != 0 && leftPosition + contentWidth >= maxLeftPosition[j + 1])
-                    {
-                        over = true;
-                    }
-                    if (!over)
-                    {
-                        if (contentWidth > maxContentWidth[j])
-                        {
-                            maxContentWidth[j] = contentWidth;
-                        }
-
-                        if (columnWidth > maxColumnWidth[j])
-                        {
-                            maxColumnWidth[j] = columnWidth;
-                            maxLeftPosition[j] = leftPosition;
-
-                            if (j != 0 && maxLeftPosition[j - 1] + maxColumnWidth[j - 1] > maxLeftPosition[j])
-                            {
-                                maxColumnWidth[j - 1] = maxLeftPosition[j] - maxLeftPosition[j - 1];
-                            }
-                            if (j != count - 1 && maxLeftPosition[j + 1] != 0 && maxLeftPosition[j] + maxColumnWidth[j] > maxLeftPosition[j + 1])
-                            {
-                                maxColumnWidth[j] = maxLeftPosition[j + 1] - maxLeftPosition[j];
-                            }
-                        }
-                        else if (columnWidth < maxColumnWidth[j])
-                        {
-                            if (maxLeftPosition[j] + maxContentWidth[j] < leftPosition + columnWidth)
-                            {
-                                maxColumnWidth[j] = leftPosition + columnWidth - maxLeftPosition[j];
-                                maxContentWidth[j] = maxColumnWidth[j];
-
-                                if (j + 1 < count)
-                                {
-                                    var orig = maxLeftPosition[j + 1];
-                                    maxLeftPosition[j + 1] = maxLeftPosition[j] + columnWidth;
-                                    maxColumnWidth[j + 1] += orig - maxLeftPosition[j + 1];
-                                    maxContentWidth[j + 1] += orig - maxLeftPosition[j + 1];
-                                }
-                            }
-                        }
-                    }*/
                 }
             }
 
@@ -585,193 +504,6 @@ namespace RazorPagesMovie.core
               result.Columns = columns;
 
               return result;
-          }
-
-          /*private static Row SplitRowsIntoColumnsOld(List<Row> rows)
-          {
-              var result = new Row(1);
-              var count = rows[0].Columns.Count;
-              var maxColumnWidths = new int[count];
-              var maxContentWidths = new int[count, 2];
-              var lowestLeftPadding = int.MaxValue;
-
-              // find maximum column and content widths
-              foreach (var row in rows)
-              {
-                  for (var j = 0; j < count; j++)
-                  {
-                      var column = row.Columns[j];
-                      var total = (int)column.Width + column.Margin[1];
-
-                      if (total > maxColumnWidths[j])
-                      {
-                          maxColumnWidths[j] = total;
-                      }
-                      if ((int)column.Width > maxContentWidths[j, 0])
-                      {
-                          maxContentWidths[j, 0] = (int)column.Width;
-                          maxContentWidths[j, 1] = column.Margin[1];
-                      }
-                  }
-
-                  if (row.Padding[3] < lowestLeftPadding)
-                  {
-                      lowestLeftPadding = row.Padding[3];
-                  }
-              }
-
-              result.Padding[2] = rows.Last().Padding[2];
-
-              // create columns
-              var columns = new List<Column>(count);
-              var fluid = rows[0].Columns[0].Fluid;
-              for (var i = 0; i < count; i++)
-              {
-                  var column = new Column(1);
-                  column.Width = maxContentWidths[i, 0];
-                  column.Margin[1] = maxContentWidths[i, 1] - (maxColumnWidths[i] - (maxContentWidths[i, 0] + maxContentWidths[i, 1]));
-                  column.Fluid = fluid;
-
-                  if (i == 0)
-                  {
-                      column.Margin[3] = lowestLeftPadding;
-                  }
-
-                  columns.Add(column);
-              }
-
-              // fill columns
-              foreach (var row in rows)
-              {
-                  for (var i = 0; i < row.Columns.Count; i++)
-                  {
-                      for (var j = 0; j < row.Columns[i].Elements.Count; j++)
-                      {
-                          var element = row.Columns[i].Elements[j];
-                          if (j == 0)
-                          {
-                              element.Padding[0] += row.Padding[0];
-                              element.Margin[3] += row.Columns[i].Margin[3];
-                          }
-
-                          if (i == 0)
-                          {
-                              element.Padding[3] = row.Padding[3] - lowestLeftPadding;
-                          }
-
-                          columns[i].Elements.Add(element);
-
-                          // check if padding + width is not greater than max content width
-                          if (element.Padding[3] + row.Columns[i].Width > maxContentWidths[i, 0])
-                          {
-                              maxContentWidths[i, 0] = element.Padding[3] + (int)row.Columns[i].Width;
-                              columns[i].Width = maxContentWidths[i, 0];
-                              columns[i].Margin[1] = maxContentWidths[i, 1] - (maxColumnWidths[i] - (maxContentWidths[i, 0] - maxContentWidths[i, 1]));
-                          }
-                      }
-                  }
-              }
-
-              // set columns
-              result.Columns = columns;
-
-              return result;
-          }*/
-
-                        /*public static List<Row> SplitIntoColumnsOld(List<Row> sectionRows)
-                        {
-                            var lastColumnWidths = new List<int>();
-                            var startSplitIndex = -1;
-                            var splitRowIndexes = new List<Tuple<int, int>>();
-                            var sectionRowsCopy = new List<Row>(sectionRows);
-
-                            // find pair indexes of rows to be splitted e.g. 0-3, 5-10
-                            for (var i = 0; i < sectionRows.Count; i++)
-                            {
-                                var row = sectionRows[i];
-
-                                //Debug.WriteLine("row " + i);
-
-                                // detect column widths
-                                var columnWidths = new int[row.Columns.Count - 1];
-                                for (var j = 0; j < columnWidths.Length; j++)
-                                {
-                                    var column = row.Columns[j];
-                                    var total = (int)column.Width + column.Margin[1] + column.Margin[3];
-                                    columnWidths[j] = total;
-                                    //Debug.WriteLine("column width " + total);
-                                }
-
-                                // check with previous widths
-                                if (lastColumnWidths.Count != 0)
-                                {
-                                    // merge only if we have more than 2 columns
-                                    bool merge = columnWidths.Length != 0;
-
-                                    // check if we have same number of columns
-                                    if (columnWidths.Length != lastColumnWidths.Count)
-                                    {
-                                        merge = false;
-                                    }
-                                    else
-                                    {
-                                        for (var j = 0; j < columnWidths.Length; j++)
-                                        {
-                                            // dont merge if previous width doesn't match with current width
-                                            if (!Util.AreSame(columnWidths[j], lastColumnWidths[j]))
-                                            {
-                                                merge = false;
-
-                                                //Debug.WriteLine("not same widths " + i);
-
-                                                break;
-                                            }
-                                        }
-                                    }
-
-
-                                    // we have got start of new split from index i - 1
-                                    if (merge && startSplitIndex == -1)
-                                    {
-                                        startSplitIndex = i - 1;
-                                    }
-                                    // we have got end of split to index i - 1
-                                    else if (!merge && startSplitIndex != -1)
-                                    {
-                                        splitRowIndexes.Add(new Tuple<int, int>(startSplitIndex, i - 1));
-                                        startSplitIndex = -1;
-                                    }
-                                }
-
-                                lastColumnWidths.Clear();
-                                lastColumnWidths = columnWidths.ToList();
-                            }
-
-                            // finish last row
-                            if (startSplitIndex != -1)
-                            {
-                                splitRowIndexes.Add(new Tuple<int, int>(startSplitIndex, sectionRows.Count - 1));
-                            }
-
-                            // split index pairs
-                            splitRowIndexes.Reverse();
-                            foreach (var pair in splitRowIndexes)
-                            {
-                                // create list with rows
-                                var split = new List<Row>();
-                                for (var i = pair.Item1; i <= pair.Item2; i++)
-                                {
-                                    split.Add(sectionRowsCopy[i]);
-                                }
-
-                                // remove rows that will be splitted
-                                sectionRows.RemoveRange(pair.Item1 + 1, pair.Item2 - pair.Item1);
-
-                                // replace with splitted content
-                                sectionRows[pair.Item1] = SplitRowsIntoColumns(split);
-                            }
-
-                            return sectionRows;
-                        }*/
-                    }
-                }
+         }
+    }
+}

@@ -25,19 +25,42 @@ namespace RazorPagesMovie.core
 
         public int[] AnalyseRect(OpenCvSharp.Rect rect)
         {
-            if (rect.Width == 0)
+            if (rect.Width == 0 || rect.Height == 0)
             {
                 return null;
             }
-            //Debug.WriteLine("analysing" + rect.X + "," + rect.Y + "," + rect.Width + "," + rect.Height);
-            var outerColor = _image.At<Vec3b>(rect.Y, rect.X - 2);
 
+            //Debug.WriteLine("analysing" + rect.X + "," + rect.Y + "," + rect.Width + "," + rect.Height);
+            
+            // calculate middle coordinates
             var middleX = (int)Math.Round(rect.X + rect.Width / 2.0);
             var middleY = (int)Math.Round(rect.Y + rect.Height / 2.0);
+
+            // check if element is properly erased (might have 1px margin)
+            if (rect.Width > 2 && _image.At<Vec3b>(middleY, rect.Left) != _image.At<Vec3b>(middleY, rect.Left + 1))
+            {
+                rect.Width -= 1;
+                rect.X += 1;
+            }
+            if (rect.Width > 2 && _image.At<Vec3b>(middleY, rect.Right) != _image.At<Vec3b>(middleY, rect.Right - 1))
+            {
+                rect.Width -= 1;
+            }
+            if (rect.Height > 2 && _image.At<Vec3b>(rect.Top, middleX) != _image.At<Vec3b>(rect.Top + 1, middleX))
+            {
+                rect.Height -= 1;
+                rect.Y += 1;
+            }
+            if (rect.Height > 2 && _image.At<Vec3b>(rect.Bottom, middleX) != _image.At<Vec3b>(rect.Bottom - 1, middleX))
+            {
+                rect.Height -= 1;
+            }
+
             var innerLeft = _image.At<Vec3b>(middleY, rect.X + 3);
             var innerRight = _image.At<Vec3b>(middleY, rect.X + rect.Width - 3);
             var innerTop = _image.At<Vec3b>(rect.Y + 3, middleX);
             var innerBottom = _image.At<Vec3b>(rect.Y + rect.Height - 3, middleX);
+            var outerColor = _image.At<Vec3b>(rect.Y, rect.X - 2);
 
             // check if rect contains other color than in outer area
             if (outerColor != innerLeft || outerColor != innerRight || outerColor != innerTop || outerColor != innerBottom)
@@ -178,9 +201,6 @@ namespace RazorPagesMovie.core
             Bitmap bmp = PixToBitmapConverter.Convert(threshold);
             Mat mask = BitmapConverter.ToMat(bmp);
 
-            // invert mask
-            Cv2.BitwiseNot(mask, mask);
-
             // detect background color
             var bgColor = src.At<Vec3b>(0, 0);
 
@@ -220,18 +240,11 @@ namespace RazorPagesMovie.core
                     hist[j].Set(maxLoc.X, maxLoc.Y, 0);
                 }
 
-                // ignore black background color (from threshold)
-                //if (maxLocs[i, 0] + maxLocs[i, 1] + maxLocs[i, 2] == 0)
-                //{
-                //    i--;
-                //    continue;
-                //}
-
-                if (i == 1)
+                if (i == 0)
                 {
                     firstBg = maxLocs[0, 0] == bgColor.Item0 && maxLocs[0, 1] == bgColor.Item1 && maxLocs[0, 2] == bgColor.Item2;
                 }
-                else if (i == 2)
+                else if (i == 1)
                 {
                     int index = firstBg ? 1 : 0;
 

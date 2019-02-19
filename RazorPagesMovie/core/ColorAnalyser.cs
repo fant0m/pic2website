@@ -179,11 +179,7 @@ namespace RazorPagesMovie.core
             Mat mask = BitmapConverter.ToMat(bmp);
 
             // invert mask
-            //Cv2.BitwiseNot(mask, mask);
-            Mat filtered = new Mat();
-
-            // load only text colors from original image
-            src.CopyTo(filtered, mask);
+            Cv2.BitwiseNot(mask, mask);
 
             // detect background color
             var bgColor = src.At<Vec3b>(0, 0);
@@ -193,18 +189,18 @@ namespace RazorPagesMovie.core
             //var roi = new Mat(src, new Rect(region.X, region.Y, region.Width, region.Height));
 
             // split image into r,g,b parts
-            var split = filtered.Split();
+            var split = src.Split();
 
             // calculate histogram for each channel
             var hist = new[] { new Mat(), new Mat(), new Mat() };
             for (var i = 0; i < 3; i++)
             {
-                Cv2.CalcHist(new [] { split[i] }, new[] { 0 }, null, hist[i], 1, new[] { 256 }, new[] { new Rangef(0, 256) });
+                Cv2.CalcHist(new [] { split[i] }, new[] { 0 }, mask, hist[i], 1, new[] { 256 }, new[] { new Rangef(0, 256) });
             }
 
             int[] color = null;
 
-            var colors = 6;
+            var colors = 5;
             var maxLocs = new int[colors, 3];
             var maxValues = new double[colors, 3];
             var firstBg = false;
@@ -225,11 +221,11 @@ namespace RazorPagesMovie.core
                 }
 
                 // ignore black background color (from threshold)
-                if (maxLocs[i, 0] + maxLocs[i, 1] + maxLocs[i, 2] == 0)
-                {
-                    i--;
-                    continue;
-                }
+                //if (maxLocs[i, 0] + maxLocs[i, 1] + maxLocs[i, 2] == 0)
+                //{
+                //    i--;
+                //    continue;
+                //}
 
                 if (i == 1)
                 {

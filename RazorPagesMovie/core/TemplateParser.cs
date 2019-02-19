@@ -59,7 +59,7 @@ namespace RazorPagesMovie.core
         {
             _tess = new TesseractEngine(@"./wwwroot/tessdata", "eng", EngineMode.LstmOnly);
 
-            byte[] imageData = File.ReadAllBytes(@"./wwwroot/images/template.jpg");
+            byte[] imageData = File.ReadAllBytes(@"./wwwroot/images/template4.png");
             _image = Mat.FromImageData(imageData);
             _colorAnalyser = new ColorAnalyser(_image);
             //Convert the img1 to grayscale and then filter out the noise
@@ -417,7 +417,7 @@ namespace RazorPagesMovie.core
             //    roi2.SaveImage("sub-" + DateTime.Now.Ticks + ".png");
             //}
 
-            return contoursAp.Length == 4 && rect.Width >= 10 && rect.Height >= 10;
+            return contoursAp.Length == 4 && rect.Width >= 25 && rect.Height >= 25;
         }
 
         private bool IsImage(int parent, List<int> contours, Mat copy)
@@ -763,6 +763,7 @@ namespace RazorPagesMovie.core
                             latestElem.Rect = new Rect(latest.Item1, row.Item1, latest.Item2 - latest.Item1, row.Item2 - row.Item1);
                             if (latestElem.Rect.Height > 20)
                             {
+                                // @todo možno až na konci toto aplikovať, nakoľko v tomto momente nevieme či je dobrý nápad to aplikovať (vo vnútri môže byť text a na pozadie dá farbu textu)
                                 latestElem.BackgroundColor = _colorAnalyser.AnalyseRect(latestElem.Rect);
                             }
 
@@ -998,6 +999,7 @@ namespace RazorPagesMovie.core
 
                                 // Add current item's width
                                 mergedWidths.Add(merge.Width);
+                                //Debug.WriteLine("gap = " + gap);
 
                                 //while ((distance <= maxTextGap || (currentRect & nextRect).area() > 0) && j + 1 < alignVertical.Length - 1)
                                 // either end position of next element is smaller end position of current element or slightly higher
@@ -1043,6 +1045,7 @@ namespace RazorPagesMovie.core
 
                                         nextRect = alignHorizontal[j + 1];
                                         gap = Math.Abs(nextRect.Left - currentRect.Right - 1);
+                                        //Debug.WriteLine("gap = " + gap);
                                     }
                                     else
                                     {
@@ -1134,9 +1137,9 @@ namespace RazorPagesMovie.core
                             else
                             {
                                 // @todo replace with object recognizer
-
+                                Element result = null;
                                 var text = mergedHorizontal[i];
-                                if (rect.Width < 20 || rect.Height < 10 || rect.Height > 100)
+                                if (rect.Width < 15 || rect.Height < 10 || rect.Height > 100)
                                 {
                                     text = false;
                                 }
@@ -1145,7 +1148,7 @@ namespace RazorPagesMovie.core
                                 {
                                     limit++;
 
-                                    // tesseract needs a margin to read text properly
+                                    // tesseract needs a margin to read the text properly
                                     var margin = 2;
                                     var x = rect.X - margin;
                                     var y = rect.Y - margin;
@@ -1160,22 +1163,21 @@ namespace RazorPagesMovie.core
                                     var tessRect = new Rect(x, y, width, height);
 
                                     // @todo treba to riešiť cez nejaký iný obrázok (aby to nešlo do výstupu užívateľovi), jeden názov iba nefunguje neviem prečo asi sa to hneď neuloží
-                                    var roi2 = _image.Clone(tessRect);
-                                    roi2.SaveImage("wwwroot/images/image-" + limit + ".png");
-
+                                    var roi = _image.Clone(tessRect);
+                                    roi.SaveImage("wwwroot/images/image-" + limit + ".png");
 
                                     // @todo var text, niekde pri spájaní to bude mať ako atribút
-                                    // @todo do getText či sa nepošle rovno roi2 / rect
+                                    // @todo do getText či sa nepošle rovno roi / rect
                                     var textElem = _ocr.GetText("/image-" + limit + ".png");
                                     if (textElem == null || !IsTextValid(textElem, rect))
                                     {
-                                        Debug.WriteLine("textelem = null, create img");
+                                        Debug.WriteLine("textelem = null or !IsTextValid, create img");
                                         text = false;
                                     }
                                     else
                                     {
                                         textElem.Display = "inline";
-                                        singleColumn.Elements.Add(textElem);
+                                        result = textElem;
                                     }
                                 }
 
@@ -1192,23 +1194,19 @@ namespace RazorPagesMovie.core
                                     image.Display = "inline";
 
                                     //Debug.WriteLine("margin " + (rect.Y - columnRow.Item1) + "," + (columnRow.Item2 - (rect.Y + rect.Height)));
-                                    if (lastX != -1)
-                                    {
-                                        image.Margin[3] = rect.X - lastX - 1;
-                                    }
+                                    
 
-                                    singleColumn.Elements.Add(image);
+                                    result = image;
                                 }
 
+                                if (lastX != -1)
+                                {
+                                    result.Margin[3] = rect.X - lastX - 1;
+                                }
+                                singleColumn.Elements.Add(result);
 
                                 lastX = rect.Right;
 
-                                //using (var page = _tess.Process(Pix.LoadFromFile("image-" + limit + ".png"), PageSegMode.SingleBlock))
-                                //{
-                                //    var text = page.GetText();
-
-                                //    Debug.Write("image " + limit + "=" + text);
-                                //}
                                 if (rect.Height > 1)
                                 {
                                     Cv2.Rectangle(copy, new Point(rect.Left, rect.Top + 1), new Point(rect.Right, rect.Bottom - 1), Scalar.Purple);
@@ -1319,7 +1317,7 @@ namespace RazorPagesMovie.core
                 return false;
             }
 
-            if (textElem.FontSize > 30 && textElem.GetText().Length <= 2)
+            if (rect.Width > 150 && textElem.GetText().Length <= 2)
             {
                 return false;
             }
@@ -1371,7 +1369,7 @@ namespace RazorPagesMovie.core
                     return i;
                 }
                 // rect doesn't fit just by a few pixels so we will merge them anyway
-                if (rect.Left > column.Item2 && rect.Left - column.Item2  <= MinColumnGap)
+                if (rect.Left > column.Item2 && rect.Left - column.Item2 - 1 <= MinColumnGap)
                 {
                     column.Item2 += rect.Right - column.Item2;
                     return i;

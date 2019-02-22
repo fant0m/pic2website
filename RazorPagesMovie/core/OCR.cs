@@ -76,6 +76,10 @@ namespace RazorPagesMovie.core
             // @todo maxWidth možno podľa iterator bounds, možno zapojiť aj tú height
             // @todo tá font size nie je dobrá, bol tam všade tiež dáva asi by som to vypol globálne
             var size = DetectFontSize(bold, img.Width, img.Height, fontFamily, text);
+            if (size == -1)
+            {
+                return null;
+            }
             var fontSize = PointsToPixels(size);
 
             // 5. detect font color
@@ -137,7 +141,7 @@ namespace RazorPagesMovie.core
 
         private int DetectFontSize(bool bold, int maxWidth, int maxHeight, string fontFamily, string text)
         {
-            var best = 1;
+            var best = -1;
             for (var i = 1; i < 100; i++)
             {
                 var font = new Font(fontFamily, i, bold ? FontStyle.Bold : FontStyle.Regular);

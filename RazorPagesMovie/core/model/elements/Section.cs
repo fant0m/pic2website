@@ -5,7 +5,6 @@ namespace RazorPagesMovie.core.model.elements
 {
     public class Section : Element
     {
-        // @todo special section type - header, footer
         // @todo background image sa bude riešiť asi tu, ak bude mať sekcia bg img tak len pridám ďalšie elementy do section
         // @todo môže mať section viac containerov vôbec? teoreticky asi nie
         public Layout Layout { get; set; }

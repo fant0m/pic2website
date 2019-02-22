@@ -9,9 +9,15 @@ namespace RazorPagesMovie.core
 {
     public static class StructureOptimiser
     {
-        // @todo metóda na odstraňovanie zbytočných elementov
+        public static void OptimiseColors(List<Row> rows)
+        {
+            foreach (var row in rows)
+            {
 
-        public static List<Row> FixColumnsCount(List<Row> sectionRows, bool fluid)
+            }
+        }
+
+        public static void FixColumnsCount(List<Row> sectionRows, bool fluid)
         {
             for (var i = 1; i < sectionRows.Count; i++)
             {
@@ -25,10 +31,13 @@ namespace RazorPagesMovie.core
                     var maxColumnWidth = new int[length];
                     //var maxContentWidth = new int[length];
                     var leftPositionsPrevious = new int[length];
+                    var bgColorPrevious = new List<int[]>(length);
                     var positionAccumulator = 0;
                     for (var j = 0; j < length; j++)
                     {
                         var column = previousRow.Columns[j];
+                        bgColorPrevious.Add(column.BackgroundColor);
+
                         var total = (int)column.Width + column.Margin[1] + column.Margin[3] + column.Padding[3];
 
                         if (total > maxColumnWidth[j])
@@ -62,11 +71,14 @@ namespace RazorPagesMovie.core
                     // check if columns are aligned the same way
                     var error = false;
                     var leftPositions = new int[currentRow.Columns.Count];
+                    var bgColor = new List<int[]>(currentRow.Columns.Count);
                     var matched = new int[length];
                     positionAccumulator = 0;
                     for (var j = 0; j < currentRow.Columns.Count; j++)
                     {
                         var column = currentRow.Columns[j];
+                        bgColor.Add(column.BackgroundColor);
+
                         var total = (int)column.Width + column.Margin[1] + column.Margin[3];
                         if (j == 0)
                         {
@@ -97,6 +109,13 @@ namespace RazorPagesMovie.core
                                 break;
                             }
                         }
+
+                        // check background color of column
+                        // @todo not sure, nie všetky majú nastavenú farbu a niektoré columny majú takú ako je pozadie..
+                        /*if (match != -1 && bgColor[j] != bgColorPrevious[match])
+                        {
+                            match = -1;
+                        }*/
 
                         // @todo možno tu bude treba podmienku na width pre fluid layout
                         if (match == -1 || ((int)column.Width > maxColumnWidth[match] && match != length - 1 && !column.Fluid))
@@ -133,7 +152,36 @@ namespace RazorPagesMovie.core
                             else
                             {
                                 column.Width = 0;
-                                column.Margin[1] = maxColumnWidth[j];
+                               
+                                if (j + 1 <= length - 1)
+                                {
+                                    // the next column's left position might be smaller than maxColumnWidth
+                                    var nextPosition = 0;
+                                    foreach (var position in leftPositions)
+                                    {
+                                        if (position >= leftPositionsPrevious[j])
+                                        {
+                                            nextPosition = position;
+                                        }
+                                    }
+
+                                    var nextPreviousPosition = leftPositionsPrevious[j + 1];
+
+                                    if (nextPosition < nextPreviousPosition)
+                                    {
+                                        column.Margin[1] = maxColumnWidth[j] - (nextPreviousPosition - nextPosition);
+                                    }
+                                    else
+                                    {
+                                        column.Margin[1] = maxColumnWidth[j];
+                                    }
+                                    
+                                }
+                                else
+                                {
+                                    column.Margin[1] = maxColumnWidth[j];
+                                }
+                                
                             }
 
                             newColumns.Add(column);
@@ -146,10 +194,10 @@ namespace RazorPagesMovie.core
                 }
             }
 
-            return sectionRows;
+            //return sectionRows;
         }
 
-        public static List<Row> SplitIntoColumns(List<Row> sectionRows)
+        public static void SplitIntoColumns(List<Row> sectionRows, bool fluid)
         {
             var startSplitIndex = -1;
             var splitRowIndexes = new List<Tuple<int, int>>();
@@ -348,12 +396,13 @@ namespace RazorPagesMovie.core
                 sectionRows.RemoveRange(pair.Item1 + 1, pair.Item2 - pair.Item1);
 
                 // replace with splitted content
-                sectionRows[pair.Item1] = SplitRowsIntoColumns(split);
+                sectionRows[pair.Item1] = SplitRowsIntoColumns(split, fluid);
             }
 
-            return sectionRows;
+            //return sectionRows;
         }
-        private static Row SplitRowsIntoColumns(List<Row> rows)
+
+        private static Row SplitRowsIntoColumns(List<Row> rows, bool fluid)
         {
             var result = new Row(1);
             var count = rows[0].Columns.Count;
@@ -451,15 +500,34 @@ namespace RazorPagesMovie.core
 
             // create columns
             var columns = new List<Column>(count);
-            var fluid = rows[0].Columns[0].Fluid;
+            var calcMargin = rows[0].Columns[0].MarginCalc[1].Contains("calc");
             for (var i = 0; i < count; i++)
             {
                 var column = new Column(1);
                 column.Width = maxContentWidth[i];
-                column.Margin[1] = maxColumnWidth[i] - (int) column.Width;
+                
                 column.Fluid = fluid;
+                column.Margin[1] = maxColumnWidth[i] - (int)column.Width;
 
                 columns.Add(column);
+            }
+
+            // fluid layout with calc margin needs to adjusted
+            if (calcMargin && fluid)
+            {
+                var total = 0.0;
+                foreach (var column in columns)
+                {
+                    total += (int)column.Width;
+                }
+
+                foreach (var column in columns)
+                {
+                    var percents = Math.Round(column.Width / total * 100);
+                    column.MarginCalc[1] = column.MarginCalc[3] = $"calc(({percents}% - {column.Width}px) / 2)";
+                    column.Fluid = false;
+                }
+                
             }
 
             // fill columns
@@ -477,12 +545,15 @@ namespace RazorPagesMovie.core
                     }
                     positionAccumulator += (int)column.Width + column.Margin[1] + column.Margin[3];
 
+                    var elementsAccumulator = 0;
                     for (var j = 0; j < column.Elements.Count; j++)
                     {
                         var element = column.Elements[j];
-                        if (j == 0)
+                        elementsAccumulator += (int)element.Width + element.Padding[1] + element.Padding[3] + element.Margin[1] + element.Margin[3];
+                        if (j == 0 || element.Width != 0 && elementsAccumulator <= columns[i].Width)
                         {
-                            element.Padding[0] += row.Padding[0];
+                            element.Margin[0] += row.Padding[0] + column.Padding[0];
+                            element.Padding[2] += column.Padding[2];
                         }
 
                         //element.Margin[3] += row.Columns[i].Margin[3];

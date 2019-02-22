@@ -23,7 +23,7 @@ namespace RazorPagesMovie.core
             _image = image;
         }
 
-        public int[] AnalyseRect(OpenCvSharp.Rect rect)
+        public int[] AnalyseRect(OpenCvSharp.Rect rect, int[] color)
         {
             if (rect.Width == 0 || rect.Height == 0)
             {
@@ -93,10 +93,22 @@ namespace RazorPagesMovie.core
 
                 //Debug.WriteLine("its most common color" + mostCommon[2] + "," + mostCommon[1] + "," + mostCommon[0]);
 
+                // we dont want to return color that is already at the background
+                if (color != null && mostCommon[2] == color[0] && mostCommon[1] == color[1] && mostCommon[0] == color[2])
+                {
+                    return null;
+                }
+
                 return new[] { mostCommon[2], mostCommon[1], mostCommon[0] };
             }
 
-            Debug.WriteLine("its outer color");
+            //Debug.WriteLine("its outer color");
+
+            // we dont want to return color that is already at the background
+            if (color != null && outerColor.Item2 == color[0] && outerColor.Item1 == color[1] && outerColor.Item0 == color[2])
+            {
+                return null;
+            }
 
             return new int[] { outerColor.Item2, outerColor.Item1, outerColor.Item0 };
         }
@@ -143,14 +155,18 @@ namespace RazorPagesMovie.core
                 var random = new Random();
                 var num = 5;
                 colors = new Vec3b[num];
-                var found = 0;
+                //var found = 0;
 
                 var xFrom = section.Rect.X;
                 var xTo = section.Rect.X + section.Rect.Width;
                 var yFrom = section.Rect.Y;
                 var yTo = section.Rect.Y + section.Rect.Height;
 
-                while (found != num)
+                colors[0] = image.At<Vec3b>(yFrom, xFrom);
+                colors[1] = image.At<Vec3b>(yTo - 1, xTo - 1);
+                colors[2] = image.At<Vec3b>(yFrom - yTo / 2, xFrom);
+                colors[3] = image.At<Vec3b>(yFrom - yTo / 2, xTo - 1);
+                /*while (found != num)
                 {
                     // generate random coordinates
                     var x = random.Next(xFrom, xTo);
@@ -163,6 +179,7 @@ namespace RazorPagesMovie.core
                         var rect = rects[i];
                         if (rect.Contains(new OpenCvSharp.Rect(x, y, 1, 1)))
                         {
+                            Debug.WriteLine("collides " + rect.ToString() + "," + section.Rect.ToString());
                             collides = true;
                         }
 
@@ -175,7 +192,7 @@ namespace RazorPagesMovie.core
                         colors[found] = image.At<Vec3b>(y, x);
                         found++;
                     }
-                }
+                }*/
             }
 
             var unique = colors.Distinct().Count();

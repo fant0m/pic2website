@@ -3,7 +3,7 @@
     padding: 0;
     line-height: 1;
 }
-section {
+section, header, footer {
     width: 100%;
 }
 .container {

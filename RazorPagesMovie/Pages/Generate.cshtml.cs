@@ -79,7 +79,7 @@ namespace RazorPagesMovie.Pages
             Mat img1 = Mat.FromImageData(imageData, ImreadModes.Color);
             //Convert the img1 to grayscale and then filter out the noise
             Mat gray1 = Mat.FromImageData(imageData, ImreadModes.Grayscale)/*.PyrDown().PyrUp()*/;
-            gray1 = gray1.GaussianBlur(new OpenCvSharp.Size(blur, blur), 0);
+            //gray1 = gray1.GaussianBlur(new OpenCvSharp.Size(blur, blur), 0);
 
             //gray1 = gray1.AdaptiveThreshold(255, AdaptiveThresholdTypes.MeanC, ThresholdTypes.BinaryInv, (int)canny1, canny2); // 11,2 ; 75,10 ; 60,255
 

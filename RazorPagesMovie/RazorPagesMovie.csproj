@@ -24,7 +24,6 @@
 
 
   <ItemGroup>
-    <Folder Include="core\model\elements\table\" />
     <Folder Include="wwwroot\tessdata\" />
   </ItemGroup>
 

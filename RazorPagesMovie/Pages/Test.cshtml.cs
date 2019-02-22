@@ -30,7 +30,7 @@ namespace RazorPagesMovie.Pages
         public void OnGet()
         {
             //var ocr = new Ocr();
-            //var text = ocr.GetText("image-1.png");
+            //var text = ocr.GetText("image-70.png");
             //Debug.WriteLine("texttt " + text.GetText());
 
             //var tess = new TesseractEngine(@"./wwwroot/tessdata", "eng", EngineMode.LstmOnly);

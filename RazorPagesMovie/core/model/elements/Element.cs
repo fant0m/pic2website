@@ -8,6 +8,7 @@ namespace RazorPagesMovie.core.model.elements
         public int Id;
         public int[] Padding;
         public int[] Margin;
+        public string[] MarginCalc;
         public double Width;
         public int MinWidth;
         public int Height;
@@ -34,7 +35,7 @@ namespace RazorPagesMovie.core.model.elements
             Color = null;
             Margin = new[] { 0, 0, 0, 0 };
             Padding = new[] { 0, 0, 0, 0 };
-            Padding = new[] { 0, 0, 0, 0 };
+            MarginCalc = new[] { "", "", "", "" };
         }
 
         public string GetId()
@@ -75,6 +76,10 @@ namespace RazorPagesMovie.core.model.elements
             if (Fluid)
             {
                 styles += $"margin:{Margin[0]}px {Margin[1]}% {Margin[2]}px {Margin[3]}%;";
+            }
+            else if (!MarginCalc[1].Equals(""))
+            {
+                styles += $"margin:{Margin[0]}px {MarginCalc[1]} {Margin[2]}px {MarginCalc[3]};";
             }
             else
             {

@@ -3,13 +3,20 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using OpenCvSharp;
+using RazorPagesMovie.core.model.elements;
+using RazorPagesMovie.core.model.elements.basic;
 using RazorPagesMovie.core.model.elements.grid;
 
 namespace RazorPagesMovie.core
 {
     public static class StructureOptimiser
     {
-        public static void OptimiseColors(List<Row> rows)
+        /// <summary>
+        ///  Merge text elements, rows and unify colors
+        /// </summary>
+        /// <param name="rows"></param>
+        public static void OptimiseText(List<Row> rows)
         {
             foreach (var row in rows)
             {
@@ -17,6 +24,196 @@ namespace RazorPagesMovie.core
             }
         }
 
+        /// <summary>
+        /// Merge columns that have same spacing in between
+        /// </summary>
+        /// <param name="sectionRows"></param>
+        /// <param name="fluid"></param>
+        public static void MergeIntoLogicalColumns(List<Row> sectionRows, bool fluid)
+        {
+            foreach (var row in sectionRows)
+            {
+                var mergedColumns = new List<Column>();
+                var columns = row.Columns;
+
+                if (columns.Count > 2 && !fluid)
+                {
+                    var mergePairs = new List<Tuple<int, int>>();
+                    var index = 0;
+                    var previousGap = 0;
+                    while (index + 2 < columns.Count)
+                    {
+                        var currentColumn = columns[index];
+                        var firstColumn = columns[index + 1];
+                        var secondColumn = columns[index + 2];
+
+                        if (currentColumn.Elements.Count != 1 || firstColumn.Elements.Count != 1)
+                        {
+                            index++;
+                            continue;
+                        }
+
+                        var firstGap = firstColumn.Rect.Left - currentColumn.Rect.Right;
+                        var secondGap = secondColumn.Rect.Left - firstColumn.Rect.Right;
+
+                        // Compare first and second gap between columns
+                        if (Util.AreSame(firstGap, secondGap) || Util.AreSame(firstGap, previousGap))
+                        {
+                            //Debug.WriteLine("merge A " + index + "-" + (index + 1));
+
+                            mergePairs.Add(new Tuple<int, int>(index, index + 1));
+
+                            index++;
+                            previousGap = firstGap;
+
+                            if (index + 2 == columns.Count && Util.AreSame(firstGap, secondGap))
+                            {
+                                mergePairs.Add(new Tuple<int, int>(index, index + 1));
+                            }
+
+                            continue;
+                        }
+
+                        previousGap = firstGap;
+
+                        // Compare first and third gap between columns
+                        if (index + 3 < columns.Count)
+                        {
+                            var thirdColumn = columns[index + 3];
+                            var thirdGap = thirdColumn.Rect.Left - secondColumn.Rect.Right;
+
+                            if (Util.AreSame(firstGap, thirdGap))
+                            {
+                                //Debug.WriteLine("merge B" + index + "-" + (index + 1));
+                                mergePairs.Add(new Tuple<int, int>(index, index + 1));
+                                previousGap = secondGap;
+
+                                index++;
+                            }
+                            // Might not be connected but other columns are further
+                            else if (thirdGap > firstGap * 2.5 || secondGap > firstGap * 2.5)
+                            {
+                                //Debug.WriteLine("merge C" + index + "-" + (index + 1));
+                                mergePairs.Add(new Tuple<int, int>(index, index + 1));
+                                previousGap = secondGap;
+
+                                index++;
+                            }
+                        }
+
+                        index++;
+                    }
+
+                    // we don't want to merge column that are already merged
+                    if (mergePairs.Count > 1)
+                    {
+                        // connect pairs
+                        var pairs = new List<Tuple<int, int>>();
+                        for (var i = 0; i < columns.Count; i++)
+                        {
+                            if (mergePairs.Contains(new Tuple<int, int>(i, i + 1)))
+                            {
+                                var start = i;
+                                var end = i + 1;
+                                i++;
+                                while (mergePairs.Contains(new Tuple<int, int>(i, i + 1)) && i < columns.Count - 1)
+                                {
+                                    i++;
+                                    end = i;
+                                }
+
+                                pairs.Add(new Tuple<int, int>(start, end));
+                            }
+                            else
+                            {
+                                pairs.Add(new Tuple<int, int>(i, i));
+                            }
+                        }
+
+                        if (pairs.Count > 1)
+                        {
+                            foreach (var pair in pairs)
+                            {
+                                if (pair.Item1 == pair.Item2)
+                                {
+                                    mergedColumns.Add(columns.ElementAt(pair.Item1));
+                                }
+                                else
+                                {
+                                    var columnWidth = 0;
+                                    var columnElements = new List<Element>();
+                                    var isList = pair.Item2 - pair.Item1 + 1 >= 4 && (row.Rect.Height - row.Padding[0] - row.Padding[2]) <= 100;
+                                    var newColumn = new Column(1);
+
+                                    for (var i = pair.Item1; i <= pair.Item2; i++)
+                                    {
+                                        var column = columns.ElementAt(i);
+                                        columnWidth += (int)column.Width;
+
+                                        if (i != pair.Item2)
+                                        {
+                                            columnWidth += column.Margin[1];
+                                        }
+                                        else
+                                        {
+                                            newColumn.Margin[1] = column.Margin[1];
+                                        }
+
+                                        if (column.Elements.Count > 1)
+                                        {
+                                            throw new Exception("column elements should be 1!");
+                                        }
+
+                                        var element = column.Elements.First();
+                                        element.Width = column.Width;
+                                        element.Padding = element.Padding.Zip(column.Padding, (a, b) => a + b).ToArray();
+                                        element.Display = "inline-block";
+                                        if (i != pair.Item2)
+                                        {
+                                            element.Margin[1] += column.Margin[1];
+                                        }
+
+                                        columnElements.Add(element);
+                                    }
+
+                                    newColumn.Width = columnWidth;
+
+                                    if (isList)
+                                    {
+                                        var elements = new List<Element>(1);
+                                        var list = new List();
+                                        foreach (var element in columnElements)
+                                        {
+                                            var item = new ListItem(element, "https://www.google.com", "blank");
+                                            list.Items.Add(item);
+                                        }
+
+                                        elements.Add(list);
+
+                                        newColumn.Elements = elements;
+                                    }
+                                    else
+                                    {
+                                        newColumn.Elements = columnElements;
+                                    }
+                                    
+
+                                    mergedColumns.Add(newColumn);
+                                }
+                            }
+
+                            row.Columns = mergedColumns;
+                        }
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        ///  Fix last row in sequence which has different number of columns than rows before e.g. 3 text columns, 1. column has 5 rows, 2. column has 4 rows, 3. column has 5 rows => each column has 5 rows
+        /// </summary>
+        /// <param name="sectionRows"></param>
+        /// <param name="fluid"></param>
         public static void FixColumnsCount(List<Row> sectionRows, bool fluid)
         {
             for (var i = 1; i < sectionRows.Count; i++)
@@ -117,6 +314,12 @@ namespace RazorPagesMovie.core
                             match = -1;
                         }*/
 
+                        // it has other background
+                        if (match != -1 && fluid && column.MarginCalc[1].Contains("calc"))
+                        {
+                            match = -1;
+                        }
+
                         // @todo možno tu bude treba podmienku na width pre fluid layout
                         if (match == -1 || ((int)column.Width > maxColumnWidth[match] && match != length - 1 && !column.Fluid))
                         {
@@ -156,7 +359,7 @@ namespace RazorPagesMovie.core
                                 if (j + 1 <= length - 1)
                                 {
                                     // the next column's left position might be smaller than maxColumnWidth
-                                    var nextPosition = 0;
+                                    var nextPosition = leftPositionsPrevious[j + 1];
                                     foreach (var position in leftPositions)
                                     {
                                         if (position >= leftPositionsPrevious[j])
@@ -197,6 +400,11 @@ namespace RazorPagesMovie.core
             //return sectionRows;
         }
 
+        /// <summary>
+        /// Find identical columns inside rows into one parent column e.g. Row 1 - column 6, column 6, Row 2 - column 6, column 6 => Row 1 - column 1 (which has 2 rows), column 2 (which has 2 rows)
+        /// </summary>
+        /// <param name="sectionRows"></param>
+        /// <param name="fluid"></param>
         public static void SplitIntoColumns(List<Row> sectionRows, bool fluid)
         {
             var startSplitIndex = -1;
@@ -402,6 +610,12 @@ namespace RazorPagesMovie.core
             //return sectionRows;
         }
 
+        /// <summary>
+        /// Split found identical columns
+        /// </summary>
+        /// <param name="rows"></param>
+        /// <param name="fluid"></param>
+        /// <returns></returns>
         private static Row SplitRowsIntoColumns(List<Row> rows, bool fluid)
         {
             var result = new Row(1);
@@ -426,8 +640,12 @@ namespace RazorPagesMovie.core
 
                     if (j == 0)
                     {
-                        columnWidth[j] += row.Padding[3];
-                        contentWidth[j] += row.Padding[3];
+                        if (!fluid)
+                        {
+                            columnWidth[j] += row.Padding[3];
+                            contentWidth[j] += row.Padding[3];
+                        }
+                    
                         leftPosition[j] = 0;
                     }
                     else
@@ -509,6 +727,12 @@ namespace RazorPagesMovie.core
                 column.Fluid = fluid;
                 column.Margin[1] = maxColumnWidth[i] - (int)column.Width;
 
+                if (fluid && i == 0)
+                {
+                    column.Margin[3] = rows.First().Padding[3];
+                    column.Margin[1] -= rows.First().Padding[3];
+                }
+
                 columns.Add(column);
             }
 
@@ -557,13 +781,17 @@ namespace RazorPagesMovie.core
                         }
 
                         //element.Margin[3] += row.Columns[i].Margin[3];
-                        if (i == 0)
+
+                        if (!fluid)
                         {
-                            element.Padding[3] += leftPosition;
-                        }
-                        else
-                        {
-                            element.Padding[3] += leftPosition - maxLeftPosition[i];
+                            if (i == 0)
+                            {
+                                element.Padding[3] += leftPosition;
+                            }
+                            else
+                            {
+                                element.Padding[3] += leftPosition - maxLeftPosition[i];
+                            }
                         }
 
                         columns[i].Elements.Add(element);

@@ -163,9 +163,9 @@ namespace RazorPagesMovie.core
                 var yTo = section.Rect.Y + section.Rect.Height;
 
                 colors[0] = image.At<Vec3b>(yFrom, xFrom);
+                colors[3] = image.At<Vec3b>(yFrom, xTo - 1);
+                colors[2] = image.At<Vec3b>(yTo - 1, xFrom);
                 colors[1] = image.At<Vec3b>(yTo - 1, xTo - 1);
-                colors[2] = image.At<Vec3b>(yFrom - yTo / 2, xFrom);
-                colors[3] = image.At<Vec3b>(yFrom - yTo / 2, xTo - 1);
                 /*while (found != num)
                 {
                     // generate random coordinates

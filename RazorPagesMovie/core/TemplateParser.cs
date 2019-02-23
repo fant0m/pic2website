@@ -59,7 +59,7 @@ namespace RazorPagesMovie.core
         {
             _tess = new TesseractEngine(@"./wwwroot/tessdata", "eng", EngineMode.LstmOnly);
 
-            byte[] imageData = File.ReadAllBytes(@"./wwwroot/images/template6.png");
+            byte[] imageData = File.ReadAllBytes(@"./wwwroot/images/template4.png");
             _image = Mat.FromImageData(imageData);
             _colorAnalyser = new ColorAnalyser(_image);
             //Convert the img1 to grayscale and then filter out the noise
@@ -694,6 +694,17 @@ namespace RazorPagesMovie.core
                         // apply paddings for last row
                         latest.Element.Padding[1] = parent.Right - sortedRight.Right;
                         latest.Element.Padding[3] = sortedLeft.X - parent.X;
+
+                        // we need to change paddings from pixels to percents in fluid layout
+                        if (fluid)
+                        {
+                            var rightPadding = (int)Math.Floor((latest.Element.Padding[1] * 1.0 / parent.Width * 100) / 3);
+
+                            latest.Element.Padding[3] = (int)Math.Floor(latest.Element.Padding[3] * 1.0 / parent.Width * 100);
+                            latest.Element.Padding[1] = latest.Element.Padding[3];
+
+                            latest.Element.Fluid = true;
+                        }
                     }
 
                     // create section row
@@ -745,6 +756,17 @@ namespace RazorPagesMovie.core
                 last.Element.Padding[1] = parent.Right - sortedRight.Right;
                 last.Element.Padding[2] = parent.Bottom - last.Item2;
                 last.Element.Padding[3] = sortedLeft.X - parent.X;
+
+                // we need to change paddings from pixels to percents in fluid layout
+                if (fluid)
+                {
+                    var rightPadding = (int)Math.Floor((last.Element.Padding[1] * 1.0 / parent.Width * 100) / 3);
+
+                    last.Element.Padding[3] = (int)Math.Floor(last.Element.Padding[3] * 1.0 / parent.Width * 100);
+                    last.Element.Padding[1] = last.Element.Padding[3];
+
+                    last.Element.Fluid = true;
+                }
             }
 
             // proceed rows
@@ -789,22 +811,28 @@ namespace RazorPagesMovie.core
 
                             if (fluid)
                             {
+                                var padding = (parent.Width / 100 * sectionRow.Padding[1]) * 2;
+
                                 // replace width with percentage value
                                 if (latestElem.BackgroundColor != null)
                                 {
-                                    var percents = Math.Round(latestElem.Width / (parent.Width - row.Element.Padding[1] - row.Element.Padding[3]) * 100);
-                                    percents += (int)Math.Round((100.0 * latestElem.Margin[1] / (parent.Width - row.Element.Padding[1] - row.Element.Padding[3])));
+                                    var percents = Math.Ceiling(latestElem.Width / (parent.Width - padding) * 100);
+                                    percents += (int)Math.Floor(100.0 * latestElem.Margin[1] / (parent.Width - padding));
                                     latestElem.MarginCalc[1] = latestElem.MarginCalc[3] = $"calc(({percents}% - {latestElem.Width}px) / 2)";
 
                                     fluidPercents += percents;
                                 }
                                 else
                                 {
-                                    latestElem.Width = Math.Round(latestElem.Width / (parent.Width - row.Element.Padding[1] - row.Element.Padding[3]) * 100);
-                                    // in fluid layout it's not necessary to have right margin so we will extend the width
-                                    latestElem.Width += (int)Math.Round((100.0 * latestElem.Margin[1] / (parent.Width - row.Element.Padding[1] - row.Element.Padding[3])));
-                                    latestElem.Margin[1] = 0;
-                                    fluidPercents += latestElem.Width;
+                                    latestElem.Width = Math.Ceiling(latestElem.Width / (parent.Width - padding) * 100);
+                                    latestElem.Margin[1] = (int)Math.Floor(100.0 * latestElem.Margin[1] / (parent.Width - padding));
+                                    if (latestElem.Margin[1] > 0)
+                                    {
+                                        latestElem.Width++;
+                                        latestElem.Margin[1]--;
+                                    }
+
+                                    fluidPercents += latestElem.Width + latestElem.Margin[1];
                                     latestElem.Fluid = true;
                                 }
                             }
@@ -843,6 +871,7 @@ namespace RazorPagesMovie.core
 
                     if (fluid)
                     {
+                        var padding = (parent.Width / 100 * sectionRow.Padding[1]) * 2;
                         if (latestElem.BackgroundColor != null)
                         {
                             var percents = 100 - fluidPercents;
@@ -862,7 +891,8 @@ namespace RazorPagesMovie.core
                     }
 
                     // normalize widths for fluid layout
-                    if (fluid)
+                    // @todo probably can be removed, split into columns is replacing it, it's not working correctly aswell
+                    if (false && fluid)
                     {
                         if (fluidWidths.Count == 0)
                         {
@@ -880,7 +910,7 @@ namespace RazorPagesMovie.core
                                 var sameWidths = true;
                                 for (var i = 0; i < columns.Count; i++)
                                 {
-                                    if (!Util.AreSame(columns[i].Element.Width, fluidWidths[i]))
+                                    if (!Util.AreSame(columns[i].Element.Width, fluidWidths[i], 2))
                                     {
                                         sameWidths = false;
                                     }
@@ -925,7 +955,7 @@ namespace RazorPagesMovie.core
                 /* Columns end */
 
 
-                // process columns into rows
+                // Process columns into rows
                 foreach (var column in columns)
                 {
                     // @todo refactor rows, columns do metód
@@ -1110,8 +1140,6 @@ namespace RazorPagesMovie.core
                         
                         /* Column row letters merging end */
 
-                        // Create single column inside row
-                        //var singleColumn = new Column(1);
 
                         /*var intersect = false;
                         var connectedCopy = connectedHorizontal;
@@ -1325,9 +1353,6 @@ namespace RazorPagesMovie.core
                                 }
                             }
                         }
-
-                        // Add single column into row
-                        //((Row)columnRow.Element).Columns.Add(singleColumn);
                     }
 
                     /* Column row rects end */
@@ -1382,68 +1407,10 @@ namespace RazorPagesMovie.core
                     }
                 }
 
-                /* Merge columns into logical parts start */
-                // @todo keď bude normálna štruktúra v inštanciách
-
-                /*Debug.WriteLine("row has " + columns.Count + " columns");
-                if (columns.Count > 2)
-                {
-                    var index = 0;
-                    while (index + 2 < columns.Count)
-                    {
-                        var currentColumn = columns[index];
-                        var firstColumn = columns[index + 1];
-                        var secondColumn = columns[index + 2];
-
-                        var firstGap = firstColumn.Item1 - currentColumn.Item2;
-                        var secondGap = secondColumn.Item1 - firstColumn.Item2;
-
-                        // Compare first and second gap between columns
-                        //Debug.WriteLine("gap 1. - 2. " + firstGap + "," + secondGap);
-                        if (Util.AreSame(firstGap, secondGap))
-                        {
-                            // @todo merge 1 2 into one logical parent
-                            // @todo bude ten merge ako nejaký atribút id merge a pri generovaní sa len hodia vedľa seba pod 1 element?
-                            Debug.WriteLine("merge A");
-
-                            index++;
-                            continue;
-                        }
-
-                        // Compare first and third gap between columns
-                        if (index + 3 < columns.Count)
-                        {
-                            var thirdColumn = columns[index + 3];
-                            var thirdGap = thirdColumn.Item1 - secondColumn.Item2;
-
-                            //Debug.WriteLine("gap 1. - 3. " + firstGap + "," + secondGap);
-                            if (Util.AreSame(firstGap, thirdGap))
-                            {
-                                // @todo merge 1 2 into one logical parent
-                                Debug.WriteLine("merge B");
-
-                                index++;
-                            }
-                            // Might be not connected but other columns are further
-                            else if (thirdGap > firstGap * 2)
-                            {
-                                // @todo merge 1 2  into one logical parent
-                                Debug.WriteLine("merge C");
-
-                                index++;
-                            }
-                        }
-
-                        index++;
-                    }
-                }*/
-
-                /* Merge columns into logical parts end */
-
-
                 /* Adjust column widths start */
 
                 // @todo asi width ostanú a len marginy sa nastavia, alebo všetky riadky budú musieť vedieť že majú fixnú width
+                // @todo neviem čo to malo robiť :-D
 
                 /* Adjust column widths end */
 
@@ -1452,16 +1419,17 @@ namespace RazorPagesMovie.core
                 c++;
             }
 
-            // Remove useless elements
-            StructureOptimiser.OptimiseColors(sectionRows);
+            // Optimiser text elements
+            StructureOptimiser.OptimiseText(sectionRows);
 
-            // Fix last row in sequence which has different number of columns than rows before e.g. 3 text columns, 1. column has 5 rows, 2. column has 4 rows, 3. column has 5 rows => each column has 5 rows
+            // Fix columns count
             StructureOptimiser.FixColumnsCount(sectionRows, fluid);
 
-            // Split identical columns inside rows into one parent column e.g. Row 1 - column 6, column 6, Row 2 - column 6, column 6 => Row 1 - column 1 (which has 2 rows), column 2 (which has 2 rows)
+            // Split into columns
             StructureOptimiser.SplitIntoColumns(sectionRows, fluid);
 
-
+            // Merge columns into logical parts
+            StructureOptimiser.MergeIntoLogicalColumns(sectionRows, fluid);
 
             // Draw rows
             foreach (var row in rows)

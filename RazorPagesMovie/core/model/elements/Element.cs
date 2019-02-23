@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using OpenCvSharp;
 
 namespace RazorPagesMovie.core.model.elements
@@ -81,11 +82,19 @@ namespace RazorPagesMovie.core.model.elements
             {
                 styles += $"margin:{Margin[0]}px {MarginCalc[1]} {Margin[2]}px {MarginCalc[3]};";
             }
-            else
+            else if (Margin.Sum() != 0)
             {
                 styles += $"margin:{Margin[0]}px {Margin[1]}px {Margin[2]}px {Margin[3]}px;";
             }
-            styles += $"padding:{Padding[0]}px {Padding[1]}px {Padding[2]}px {Padding[3]}px;";
+
+            if (Fluid)
+            {
+                styles += $"padding:{Padding[0]}px {Padding[1]}% {Padding[2]}px {Padding[3]}%;";
+            }
+            else if (Padding.Sum() != 0)
+            {
+                styles += $"padding:{Padding[0]}px {Padding[1]}px {Padding[2]}px {Padding[3]}px;";
+            }
 
             if (TextAlign != null)
             {

@@ -30,6 +30,9 @@ section, header, footer {
     /* @todo column width sa možno budú potom nejak normalizovať, že sa to replacne ako col-3 col-3 col-6 a pod.*/
     width: 100%;
 }
+.col > * {
+    vertical-align: top;
+}
 * {
     -webkit-box-sizing: border-box;
     -moz-box-sizing: border-box;
@@ -37,4 +40,16 @@ section, header, footer {
 }
 img {
     vertical-align: top;
+}
+ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+ul > li {
+    display: inline-block;
+    vertical-align: top;
+}
+ul > li > a {
+    display: block;
 }

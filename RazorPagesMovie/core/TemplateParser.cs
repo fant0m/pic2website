@@ -350,7 +350,7 @@ namespace RazorPagesMovie.core
         /**
          * Check if contour doesn't have more blocks inside it
          */
-        private Tuple<bool, List<Row>> CheckSubBlocks(int contour, Mat copy, int[] color)
+        private Tuple<bool, List<Element>> CheckSubBlocks(int contour, Mat copy, int[] color)
         {
             // Find current item
             var item = _hierarchy[contour];
@@ -386,7 +386,7 @@ namespace RazorPagesMovie.core
                 // We have found inner elements
                 if (inner.Count > 0)
                 {
-                    List<Row> rows;
+                    List<Element> rows;
 
                     //Check if inner elements doesn't form an image
                     var isImage = IsImage(contour, inner, copy);
@@ -394,7 +394,7 @@ namespace RazorPagesMovie.core
                     Debug.WriteLine(rect.X + "," + rect.Y + "," + rect.Width + "," + rect.Height);
                     if (isImage)
                     {
-                        return new Tuple<bool, List<Row>>(true, null);
+                        return new Tuple<bool, List<Element>>(true, null);
                     }
                     else
                     {
@@ -402,11 +402,11 @@ namespace RazorPagesMovie.core
                         rows = ProcessInnerBlocks(inner, copy, rect, color);
                     }
 
-                    return new Tuple<bool, List<Row>>(false, rows);
+                    return new Tuple<bool, List<Element>>(false, rows);
                 }
             }
 
-            return new Tuple<bool, List<Row>>(false, null);
+            return new Tuple<bool, List<Element>>(false, null);
         }
 
         /**
@@ -524,11 +524,11 @@ namespace RazorPagesMovie.core
 
         
 
-        private List<Row> ProcessInnerBlocks(List<int> contours, Mat copy, Rect parent, int[] color, bool fluid = false)
+        private List<Element> ProcessInnerBlocks(List<int> contours, Mat copy, Rect parent, int[] color, bool fluid = false)
         {
             Debug.WriteLine("process inner blocks count " + contours.Count + "=rect " + parent.X + "," + parent.Y + "," + parent.Width + "," + parent.Height);
             var r = new Random();
-            var sectionRows = new List<Row>();
+            var sectionRows = new List<Element>();
             var sectionRects = new Rect[contours.Count];
             
             var k = 0;
@@ -564,7 +564,7 @@ namespace RazorPagesMovie.core
             }
 
             // process sub blocks of contours
-            var sectionRecursiveRows = new List<Row>[sectionRects.Length];
+            var sectionRecursiveRows = new List<Element>[sectionRects.Length];
             var sectionRectsImages = new bool[sectionRects.Length];
             var img = 0;
             k = 0;
@@ -1184,14 +1184,15 @@ namespace RazorPagesMovie.core
                                 var index = Array.IndexOf(sectionRectsUnsorted, rect);
 
                                 // There's just one row and one column so we dont need these elements
-                                if (sectionRecursiveRows[index].Count == 1 && sectionRecursiveRows[index].First().Columns.Count == 1 && sectionRecursiveRows[index].First().Columns.First().Elements.Count == 1)
+                                if (sectionRecursiveRows[index].Count == 1 && sectionRecursiveRows[index].First().GetType() == typeof(Row) && 
+                                    ((Row)sectionRecursiveRows[index].First()).Columns.Count == 1 && ((Row)sectionRecursiveRows[index].First()).Columns.First().Elements.Count == 1)
                                 {
                                     //foreach (var element in sectionRecursiveRows[index].First().Columns.First().Elements)
                                     //{
                                     //    block.Elements.Add(element);
                                     //}
                                     var firstRow = sectionRecursiveRows[index].First();
-                                    var firstColumn = firstRow.Columns.First();
+                                    var firstColumn = ((Row)firstRow).Columns.First();
                                     var element = firstColumn.Elements.First();
                                     element.Margin = element.Margin.Zip(firstRow.Margin, (a, b) => a + b).ToArray();
                                     element.Padding = element.Padding.Zip(firstRow.Padding, (a, b) => a + b).ToArray();
@@ -1220,7 +1221,14 @@ namespace RazorPagesMovie.core
                                         // check if items are is in the same row
                                         if (lastRect == null || recursiveRow.Rect.Y >= ((Rect)lastRect).Y && recursiveRow.Rect.Y <= ((Rect)lastRect).Bottom)
                                         {
-                                            recursiveRow.ActAsColumn = true;
+                                            if (recursiveRow.GetType() == typeof(Row))
+                                            {
+                                                ((Row)recursiveRow).ActAsColumn = true;
+                                            }
+                                            else
+                                            {
+                                                recursiveRow.Display = "inline-block";
+                                            }
                                         }
 
                                         if (lastX != -1)
@@ -1363,12 +1371,29 @@ namespace RazorPagesMovie.core
                         // there are multiple rows (blocks)
                         foreach (var columnRow in columnRows)
                         {
-                            ((Column)column.Element).Elements.Add(columnRow.Element);
+                            var block = (Block)columnRow.Element;
+                            var columnElement = ((Column)column.Element);
+
+                            // check if there's not just one element
+                            if (block.Elements.Count == 1)
+                            {
+                                var firstElement = block.Elements.First();
+
+                                // copy styles
+                                firstElement.Margin = firstElement.Margin.Zip(block.Padding, (a, b) => a + b).ToArray();
+
+                                columnElement.Elements.Add(firstElement);
+                            }
+                            else
+                            {
+                                columnElement.Elements.Add(block);
+                            }
+
+                            //((Column)column.Element).Elements.Add(columnRow.Element);
                         }
                     }
                     else
                     {
-                        
                         // there's just one row (block) so this element is useless and we can merge it with column
                         var block = ((Block)columnRows.First().Element);
                         var columnElement = ((Column)column.Element);
@@ -1378,14 +1403,11 @@ namespace RazorPagesMovie.core
                         // check if there's not just one element
                         if (block.Elements.Count == 1)
                         {
-                            
-
                             columnElement.Elements = block.Elements;
 
                             // copy styles
                             columnElement.Padding[0] += block.Padding[0];
                             columnElement.Padding[2] += block.Padding[2];
-
 
                             // access that element
                             var element = columnElement.Elements.First();
@@ -1419,9 +1441,6 @@ namespace RazorPagesMovie.core
                 c++;
             }
 
-            // Optimiser text elements
-            StructureOptimiser.OptimiseText(sectionRows);
-
             // Fix columns count
             StructureOptimiser.FixColumnsCount(sectionRows, fluid);
 
@@ -1430,6 +1449,9 @@ namespace RazorPagesMovie.core
 
             // Merge columns into logical parts
             StructureOptimiser.MergeIntoLogicalColumns(sectionRows, fluid);
+
+            // Optimiser text elements
+            StructureOptimiser.OptimiseText(sectionRows);
 
             // Draw rows
             foreach (var row in rows)
@@ -1442,12 +1464,12 @@ namespace RazorPagesMovie.core
 
         private bool IsTextValid(Text textElem, Rect rect)
         {
-            if (textElem.GetText().Length == 1)
+            if (textElem.GetText()[0].Length == 1)
             {
                 return false;
             }
 
-            if (rect.Width > 150 && textElem.GetText().Length <= 2)
+            if (rect.Width > 150 && textElem.GetText()[0].Length <= 2)
             {
                 return false;
             }
@@ -1458,12 +1480,11 @@ namespace RazorPagesMovie.core
             }
 
             var allowedChars = new char[] { ' ', ',', '.', '/', '©', '@', '-', ':', '+', '(', ')', '\'', '|', '#', '&', '"', '?', '=', '‘', '’', '$', '€' };
-            bool result = textElem.GetText().All(c => char.IsLetterOrDigit(c) || allowedChars.Contains(c));
+            bool result = textElem.GetText()[0].All(c => char.IsLetterOrDigit(c) || allowedChars.Contains(c));
             if (!result)
             {
                 return false;
             }
-
 
             return true;
         }

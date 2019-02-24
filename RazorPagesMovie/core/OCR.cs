@@ -88,7 +88,7 @@ namespace RazorPagesMovie.core
             //Debug.WriteLine("text=" + text);
 
             // 6. return new text instance
-            return new Text(text, fontFamily, fontColor, fontSize, bold, italic);
+            return new Text(new[] { text }, fontFamily, fontColor, fontSize, bold, italic);
         }
 
         public static IEnumerable<Color> GetPixels(Bitmap bitmap)

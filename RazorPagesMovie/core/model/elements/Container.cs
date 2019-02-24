@@ -11,11 +11,11 @@ namespace RazorPagesMovie.core.model.elements
         //public Layout.LayoutType LayoutType { get; set; }
         // @todo určite to nebude duplicitne aj tu aj v section
         public Layout Layout { get; set; }
-        public List<Row> Rows { get; set; }
+        public List<Element> Rows { get; set; }
         public Container(int id, Layout layout)
         {
             Id = id;
-            Rows = new List<Row>();
+            Rows = new List<Element>();
             Layout = layout;
         }
 

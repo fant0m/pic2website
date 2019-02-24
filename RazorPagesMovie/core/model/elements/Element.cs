@@ -24,6 +24,7 @@ namespace RazorPagesMovie.core.model.elements
         public int FontSize;
         public int FontWeight;
         public string FontStyle;
+        public double LineHeight;
         // @todo display by nebolo zlé dať aj ako enum
         public string Display;
         public Rect Rect;
@@ -128,7 +129,12 @@ namespace RazorPagesMovie.core.model.elements
 
             if (Display != null)
             {
-                styles += $"display:{Display}";
+                styles += $"display:{Display};";
+            }
+
+            if (LineHeight != 0)
+            {
+                styles += $"line-height:{LineHeight.ToString().Replace(",", ".")}px;";
             }
 
             return styles;

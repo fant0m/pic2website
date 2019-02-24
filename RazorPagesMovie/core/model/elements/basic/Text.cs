@@ -2,9 +2,9 @@
 {
     public class Text : Element
     {
-        private string _text;
+        private string[] _text;
 
-        public Text(string text, string fontFamily, int[] fontColor, int fontSize, bool bold, bool italic)
+        public Text(string[] text, string fontFamily, int[] fontColor, int fontSize, bool bold, bool italic)
         {
             _text = text;
             FontFamily = fontFamily;
@@ -22,24 +22,24 @@
             }
         }
 
-        public string GetText()
+        public string[] GetText()
         {
             return _text;
         }
 
         public override string StartTag()
         {
-            return $"<div style=\"{GetStyles()}\">";
+            return $"<p style=\"{GetStyles()}\">";
         }
 
         public override string Content()
         {
-            return _text;
+            return string.Join("<br>", _text);
         }
 
         public override string EndTag()
         {
-            return "</div>";
+            return "</p>";
         }
     }
 }

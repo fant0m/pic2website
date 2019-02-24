@@ -13,15 +13,271 @@ namespace RazorPagesMovie.core
     public static class StructureOptimiser
     {
         /// <summary>
-        ///  Merge text elements, rows and unify colors
+        ///  Merge text elements, rows and unify font attributes
         /// </summary>
         /// <param name="rows"></param>
-        public static void OptimiseText(List<Row> rows)
+        public static void OptimiseText(List<Element> rows)
         {
-            foreach (var row in rows)
+            for (var i = 0; i < rows.Count; i++)
             {
+                var row = (Row)rows.ElementAt(i);
+                var columnsCount = row.Columns.Count();
 
+                // check if there's not just one column and one element inside row
+                if (columnsCount == 1)
+                {
+                    var firstColumn = row.Columns.First();
+                    var elementsCount = firstColumn.Elements.Count();
+                    if (elementsCount == 1)
+                    {
+                        // we can remove useless row and column
+                        var element = firstColumn.Elements.First();
+
+                        if (Util.AreSame(row.Padding[1], row.Padding[3], 15) && element.GetType() == typeof(Text) && firstColumn.BackgroundColor == null)
+                        {
+                            element.Padding[0] += row.Padding[0];
+                            element.Padding[2] += row.Padding[2];
+                            element.Padding[1] += row.Padding[1];
+                            element.Padding[3] += row.Padding[3];
+                            //element.Padding[1] = element.Padding[3] = 0;
+                            element.TextAlign = "center";
+                        }
+                        else
+                        {
+                            element.Margin = element.Margin.Zip(row.Padding, (a, b) => a + b).ToArray();
+                            if (firstColumn.BackgroundColor != null)
+                            {
+                                element.BackgroundColor = firstColumn.BackgroundColor;
+                            }
+                            element.Width = firstColumn.Width;
+                        }
+
+                        rows[i] = element;
+                    }
+                }
+                // check if there aren't text rows inside columns
+                else if (columnsCount > 1)
+                {
+                    for (var j = 0; j < row.Columns.Count; j++)
+                    {
+                        var column = row.Columns[j];
+                        // we don't want to merge just two lines
+                        if (column.Elements.Count > 2)
+                        {
+                            MergeTextRows(column.Elements);
+                        }
+                    }
+                }
+
+                // check if there are not unmerged text elements
+                if (row.Columns.Count > 1)
+                {
+                    var oneTextElement = true;
+
+                    foreach (var column in row.Columns)
+                    {
+                        if (column.Elements.Count != 1 || column.Margin[1] > 20 || column.Elements[0].GetType() != typeof(Text) || column.BackgroundColor != null)
+                        {
+                            oneTextElement = false;
+                            break;
+                        }
+                    }
+
+                    if (oneTextElement)
+                    {
+                        var texts = new Text[row.Columns.Count];
+                        for (var j = 0; j < texts.Length; j++)
+                        {
+                            texts[j] = (Text)row.Columns[j].Elements[0];
+                        }
+
+                        var textElement = MergeTexts(texts, false);
+
+                        if (Util.AreSame(row.Padding[1], row.Padding[3], 15))
+                        {
+                            textElement.Padding[0] = row.Padding[0];
+                            textElement.Padding[2] = row.Padding[2];
+                            textElement.TextAlign = "center";
+                        }
+                        else
+                        {
+                            textElement.Padding = row.Padding;
+                        }
+
+                        rows[i] = textElement;
+                    }
+                }
             }
+
+            if (rows.Count > 2)
+            {
+                MergeTextRows(rows);
+            }
+        }
+
+        private static void MergeTextRows(List<Element> rows)
+        {
+            var mergePairs = new List<Tuple<int, int>>();
+            var startMergeIndex = -1;
+            var previousGap = 0;
+            for (var i = 0; i < rows.Count - 1; i++)
+            {
+                var merge = false;
+                var firstRow = rows[i];
+                var secondRow = rows[i + 1];
+                var firstGap = secondRow.Margin[0] + secondRow.Padding[0] + firstRow.Padding[2] + firstRow.Margin[2];
+
+                if (i < rows.Count - 2)
+                {
+                    var thirdRow = rows[i + 2];
+                    var secondGap = thirdRow.Margin[0] + thirdRow.Padding[0] + secondRow.Padding[2] + secondRow.Margin[2];
+
+                    if (firstRow.GetType() == typeof(Text) && secondRow.GetType() == typeof(Text) && firstGap <= 15 &&
+                        (
+                            (Util.AreSame(firstGap, secondGap, 3) && Util.AreSame(firstRow.FontSize, secondRow.FontSize, 3)) ||
+                            (Util.AreSame(firstGap, previousGap, 3)) ||
+                            (secondGap > firstGap && firstGap <= 15 && Util.AreSame(firstRow.FontSize, secondRow.FontSize, 3))
+                        )
+                    )
+                    {
+                        merge = true;
+                    }
+
+                    previousGap = firstGap;
+                }
+                else
+                {
+                    if (firstRow.GetType() == typeof(Text) && secondRow.GetType() == typeof(Text) && firstGap <= 15 && 
+                        (
+                            Util.AreSame(firstGap, previousGap, 3) ||
+                            (previousGap > firstGap && Util.AreSame(firstRow.FontSize, secondRow.FontSize, 3))
+                        )
+                    )
+                    {
+                        merge = true;
+                    }
+                }
+
+                if (startMergeIndex == -1 && merge)
+                {
+                    startMergeIndex = i;
+                }
+                else if (startMergeIndex != -1 && !merge)
+                {
+                    mergePairs.Add(new Tuple<int, int>(startMergeIndex, i));
+                    startMergeIndex = -1;
+                }
+            }
+
+            // finish last row
+            if (startMergeIndex != -1)
+            {
+                mergePairs.Add(new Tuple<int, int>(startMergeIndex, rows.Count - 1));
+            }
+
+            // check if there are some rows thats needs to be merged
+            if (mergePairs.Count > 0)
+            {
+                // start from the end
+                mergePairs.Reverse();
+
+                foreach (var pair in mergePairs)
+                {
+                    // fill texts array
+                    var texts = new Text[pair.Item2 - pair.Item1 + 1];
+                    var j = 0;
+                    for (var i = pair.Item1; i <= pair.Item2; i++)
+                    {
+                        texts[j] = (Text)rows[i];
+                        j++;
+                    }
+
+                    // crate text element
+                    var textElement = MergeTexts(texts);
+
+                    // apply margins
+                    var firstRow = rows[pair.Item1];
+                    var lastRow = rows[pair.Item2];
+                    textElement.Margin[0] = firstRow.Margin[0] + firstRow.Padding[0];
+                    textElement.Margin[2] = lastRow.Margin[2] + lastRow.Padding[2];
+
+                    // remove rows that will be merged
+                    rows.RemoveRange(pair.Item1 + 1, pair.Item2 - pair.Item1);
+
+                    // replace with merged content
+                    rows[pair.Item1] = textElement;
+                }
+            }
+        }
+
+
+        private static Text MergeTexts(Text[] textElements, bool lineBreaks = true)
+        {
+            var length = textElements.Length;
+            var text = new string[lineBreaks ? length : 1];
+            var fontColors = new List<int[]>(length);
+            var fontSizes = new int[length];
+            var fontWeights = new int[length];
+            var fontFamilies = new string[length];
+            var fontStyles = new string[length];
+            var margins = new int[length - 1];
+            var merge = "";
+            for (var i = 0; i < length; i++)
+            {
+                var textElem = textElements[i];
+
+                // text
+                if (lineBreaks)
+                {
+                    // set i text
+                    text[i] = textElem.GetText()[0];
+
+                    if (i != 0)
+                    {
+                        margins[i - 1] = textElem.Margin[0] + textElem.Padding[0];
+                    }
+                }
+                else
+                {
+                    // add space
+                    if (i != 0)
+                    {
+                        merge += " ";
+                    }
+
+                    // append text
+                    merge += textElem.GetText()[0];
+
+                    // set text in last element
+                    if (i == length - 1)
+                    {
+                        text[0] = merge;
+                    }
+                }
+
+                // text attributes
+                fontColors.Add(textElem.Color);
+                fontSizes[i] = textElem.FontSize;
+                fontWeights[i] = textElem.FontWeight != 0 ? textElem.FontWeight : 400;
+                fontFamilies[i] = textElem.FontFamily;
+                fontStyles[i] = textElem.FontStyle;
+            }
+
+            var fontColor = fontColors.MostCommon();
+            var fontSizeMostCommon = fontSizes.MostCommon();
+            var fontSize = fontSizes.Where(s => s == fontSizeMostCommon).Count() > 1 ? fontSizeMostCommon : (int)fontSizes.Average();
+            var fontFamily = fontFamilies.MostCommon();
+            var fontWeight = fontWeights.MostCommon();
+            var fontStyle = fontStyles.MostCommon();
+
+            var textElement = new Text(text, fontFamily, fontColor, fontSize, fontWeight == 700, fontStyle == "italic");
+            textElement.TextAlign = textElements[0].TextAlign;
+            if (lineBreaks)
+            {
+                textElement.LineHeight = fontSize + margins.Average();
+            }
+
+            return textElement;
         }
 
         /// <summary>
@@ -29,9 +285,9 @@ namespace RazorPagesMovie.core
         /// </summary>
         /// <param name="sectionRows"></param>
         /// <param name="fluid"></param>
-        public static void MergeIntoLogicalColumns(List<Row> sectionRows, bool fluid)
+        public static void MergeIntoLogicalColumns(List<Element> sectionRows, bool fluid)
         {
-            foreach (var row in sectionRows)
+            foreach (Row row in sectionRows)
             {
                 var mergedColumns = new List<Column>();
                 var columns = row.Columns;
@@ -214,12 +470,12 @@ namespace RazorPagesMovie.core
         /// </summary>
         /// <param name="sectionRows"></param>
         /// <param name="fluid"></param>
-        public static void FixColumnsCount(List<Row> sectionRows, bool fluid)
+        public static void FixColumnsCount(List<Element> sectionRows, bool fluid)
         {
             for (var i = 1; i < sectionRows.Count; i++)
             {
-                var previousRow = sectionRows[i - 1];
-                var currentRow = sectionRows[i];
+                var previousRow = (Row)sectionRows[i - 1];
+                var currentRow = (Row)sectionRows[i];
 
                 if (currentRow.Columns.Count < previousRow.Columns.Count && currentRow.Columns.Count > 0)
                 {
@@ -405,11 +661,11 @@ namespace RazorPagesMovie.core
         /// </summary>
         /// <param name="sectionRows"></param>
         /// <param name="fluid"></param>
-        public static void SplitIntoColumns(List<Row> sectionRows, bool fluid)
+        public static void SplitIntoColumns(List<Element> sectionRows, bool fluid)
         {
             var startSplitIndex = -1;
             var splitRowIndexes = new List<Tuple<int, int>>();
-            var sectionRowsCopy = new List<Row>(sectionRows);
+            var sectionRowsCopy = new List<Element>(sectionRows);
 
             var maxColumnWidth = new List<int>();
             var maxContentWidth = new List<int>();
@@ -417,7 +673,7 @@ namespace RazorPagesMovie.core
             // find pair indexes of rows to be splitted e.g. 0-3, 5-10
             for (var i = 0; i < sectionRows.Count; i++)
             {
-                var row = sectionRows[i];
+                var row = (Row)sectionRows[i];
                 var count = row.Columns.Count;
                 //if (count == 1)
                 //{
@@ -594,7 +850,7 @@ namespace RazorPagesMovie.core
             foreach (var pair in splitRowIndexes)
             {
                 // create list with rows
-                var split = new List<Row>();
+                var split = new List<Element>();
                 for (var i = pair.Item1; i <= pair.Item2; i++)
                 {
                     split.Add(sectionRowsCopy[i]);
@@ -616,16 +872,16 @@ namespace RazorPagesMovie.core
         /// <param name="rows"></param>
         /// <param name="fluid"></param>
         /// <returns></returns>
-        private static Row SplitRowsIntoColumns(List<Row> rows, bool fluid)
+        private static Row SplitRowsIntoColumns(List<Element> rows, bool fluid)
         {
             var result = new Row(1);
-            var count = rows[0].Columns.Count;
+            var count = ((Row)rows[0]).Columns.Count;
             var maxColumnWidth = new int[count];
             var maxContentWidth = new int[count];
             var maxLeftPosition = new int[count];
 
             // find maximum column and content widths
-            foreach (var row in rows)
+            foreach (Row row in rows)
             {
                 var columnWidth = new int[count];
                 var contentWidth = new int[count];
@@ -718,7 +974,7 @@ namespace RazorPagesMovie.core
 
             // create columns
             var columns = new List<Column>(count);
-            var calcMargin = rows[0].Columns[0].MarginCalc[1].Contains("calc");
+            var calcMargin = ((Row)rows[0]).Columns[0].MarginCalc[1].Contains("calc");
             for (var i = 0; i < count; i++)
             {
                 var column = new Column(1);
@@ -755,7 +1011,7 @@ namespace RazorPagesMovie.core
             }
 
             // fill columns
-            foreach (var row in rows)
+            foreach (Row row in rows)
             {
                 var positionAccumulator = 0;
                 for (var i = 0; i < row.Columns.Count; i++)

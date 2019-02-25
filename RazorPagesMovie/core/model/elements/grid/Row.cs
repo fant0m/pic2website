@@ -6,11 +6,13 @@ namespace RazorPagesMovie.core.model.elements.grid
     {
         public List<Column> Columns { get; set; }
         public bool ActAsColumn { get; set; }
+        public bool MergedColumns { get; set; }
 
         public Row(int id)
         {
             Id = id;
             Columns = new List<Column>();
+            MergedColumns = false;
         }
 
         public override string StartTag()

@@ -5,13 +5,17 @@
 }
 section, header, footer {
     width: 100%;
+    height: auto!important;
 }
 .container {
     position: relative;
     margin: 0 auto;
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 .row {
-    width: 100%;
+    /*width: 100%;*/
+    width: auto;
 }
 .row:before {
     display: table;

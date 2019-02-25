@@ -691,17 +691,19 @@ namespace RazorPagesMovie.core
                         var sortedLeft = latest.Item3.OrderBy(rec => rec.Left).ToList().First();
                         var sortedRight = latest.Item3.OrderByDescending(rec => rec.Right).ToList().First();
 
-                        // apply paddings for last row
-                        latest.Element.Padding[1] = parent.Right - sortedRight.Right;
-                        latest.Element.Padding[3] = sortedLeft.X - parent.X;
+                        // apply margins for last row
+                        latest.Element.Margin[1] = parent.Right - sortedRight.Right;
+                        latest.Element.Margin[3] = sortedLeft.X - parent.X;
+
+                        // adjust rect
+                        //latest.Element.Rect.X += latest.Element.Margin[3];
+                        //latest.Element.Rect.Width -= latest.Element.Margin[1] + latest.Element.Margin[3];
 
                         // we need to change paddings from pixels to percents in fluid layout
                         if (fluid)
                         {
-                            var rightPadding = (int)Math.Floor((latest.Element.Padding[1] * 1.0 / parent.Width * 100) / 3);
-
-                            latest.Element.Padding[3] = (int)Math.Floor(latest.Element.Padding[3] * 1.0 / parent.Width * 100);
-                            latest.Element.Padding[1] = latest.Element.Padding[3];
+                            latest.Element.Margin[3] = (int)Math.Floor(latest.Element.Margin[3] * 1.0 / parent.Width * 100);
+                            latest.Element.Margin[1] = latest.Element.Margin[3];
 
                             latest.Element.Fluid = true;
                         }
@@ -717,14 +719,14 @@ namespace RazorPagesMovie.core
                     var latestBottom = rows.Count == 0 ? parent.Bottom : parent.Bottom;
                     var latestLeft = parent.X;
 
-                    // apply paddings for row
+                    // apply styles for row
                     sectionRow.Padding[0] = rect.Y - latestTop;
 
-                    if (sectionRects.Length == 1)
-                    {
-                        sectionRow.Padding[3] = rect.X - latestLeft;
-                        sectionRow.Padding[2] = latestBottom - rect.Bottom;
-                    }
+                    //if (sectionRects.Length == 1)
+                    //{
+                    //    sectionRow.Margin[3] = rect.X - latestLeft;
+                    //    sectionRow.Padding[2] = latestBottom - rect.Bottom;
+                    //}
 
                     // @todo test
                     //sectionRow.BackgroundColor = new[] { r.Next(0, 255), r.Next(0, 255), r.Next(0, 255) };
@@ -752,18 +754,20 @@ namespace RazorPagesMovie.core
                 var sortedLeft = last.Item3.OrderBy(rec => rec.Left).ToList().First();
                 var sortedRight = last.Item3.OrderByDescending(rec => rec.Right).ToList().First();
 
-                // apply paddings for row
-                last.Element.Padding[1] = parent.Right - sortedRight.Right;
+                // apply styles for row
+                last.Element.Margin[1] = parent.Right - sortedRight.Right;
                 last.Element.Padding[2] = parent.Bottom - last.Item2;
-                last.Element.Padding[3] = sortedLeft.X - parent.X;
+                last.Element.Margin[3] = sortedLeft.X - parent.X;
+
+                // adjust rect
+                //last.Element.Rect.X += last.Element.Margin[3];
+                //last.Element.Rect.Width -= last.Element.Margin[1] + last.Element.Margin[3];
 
                 // we need to change paddings from pixels to percents in fluid layout
                 if (fluid)
                 {
-                    var rightPadding = (int)Math.Floor((last.Element.Padding[1] * 1.0 / parent.Width * 100) / 3);
-
-                    last.Element.Padding[3] = (int)Math.Floor(last.Element.Padding[3] * 1.0 / parent.Width * 100);
-                    last.Element.Padding[1] = last.Element.Padding[3];
+                    last.Element.Margin[3] = (int)Math.Floor(last.Element.Margin[3] * 1.0 / parent.Width * 100);
+                    last.Element.Margin[1] = last.Element.Margin[3];
 
                     last.Element.Fluid = true;
                 }
@@ -811,21 +815,21 @@ namespace RazorPagesMovie.core
 
                             if (fluid)
                             {
-                                var padding = (parent.Width / 100 * sectionRow.Padding[1]) * 2;
+                                var margin = (parent.Width / 100 * sectionRow.Margin[1]) * 2;
 
                                 // replace width with percentage value
                                 if (latestElem.BackgroundColor != null)
                                 {
-                                    var percents = Math.Ceiling(latestElem.Width / (parent.Width - padding) * 100);
-                                    percents += (int)Math.Floor(100.0 * latestElem.Margin[1] / (parent.Width - padding));
+                                    var percents = Math.Ceiling(latestElem.Width / (parent.Width - margin) * 100);
+                                    percents += (int)Math.Floor(100.0 * latestElem.Margin[1] / (parent.Width - margin));
                                     latestElem.MarginCalc[1] = latestElem.MarginCalc[3] = $"calc(({percents}% - {latestElem.Width}px) / 2)";
 
                                     fluidPercents += percents;
                                 }
                                 else
                                 {
-                                    latestElem.Width = Math.Ceiling(latestElem.Width / (parent.Width - padding) * 100);
-                                    latestElem.Margin[1] = (int)Math.Floor(100.0 * latestElem.Margin[1] / (parent.Width - padding));
+                                    latestElem.Width = Math.Ceiling(latestElem.Width / (parent.Width - margin) * 100);
+                                    latestElem.Margin[1] = (int)Math.Floor(100.0 * latestElem.Margin[1] / (parent.Width - margin));
                                     if (latestElem.Margin[1] > 0)
                                     {
                                         latestElem.Width++;
@@ -840,6 +844,10 @@ namespace RazorPagesMovie.core
 
                         // create new column
                         var column = new Column(1);
+                        if (columns.Count == 0)
+                        {
+                            //column.Margin[3] = rect.Left - sectionRow.Rect.Left;
+                        }
 
                         var triple = new TripleExt<int, int, List<Rect>, Element>
                         {
@@ -871,7 +879,6 @@ namespace RazorPagesMovie.core
 
                     if (fluid)
                     {
-                        var padding = (parent.Width / 100 * sectionRow.Padding[1]) * 2;
                         if (latestElem.BackgroundColor != null)
                         {
                             var percents = 100 - fluidPercents;
@@ -985,7 +992,7 @@ namespace RazorPagesMovie.core
 
                             // apply styles
                             var latestTop = columnRows.Count == 0 ? row.Item1 : columnRows.Last().Item2;
-                            columnRow.Padding[0] = rect.Y - latestTop;
+                            columnRow.Margin[0] = rect.Y - latestTop;
 
                             
                             columnRows.Add(triple);
@@ -1000,7 +1007,7 @@ namespace RazorPagesMovie.core
                     var lastColumnRow = columnRows.Last();
                     if (lastColumnRow != null)
                     {
-                        lastColumnRow.Element.Padding[2] = row.Item2 - lastColumnRow.Item2;
+                        lastColumnRow.Element.Margin[2] = row.Item2 - lastColumnRow.Item2;
                     }
 
 
@@ -1184,7 +1191,8 @@ namespace RazorPagesMovie.core
                                 var index = Array.IndexOf(sectionRectsUnsorted, rect);
 
                                 // There's just one row and one column so we dont need these elements
-                                if (sectionRecursiveRows[index].Count == 1 && sectionRecursiveRows[index].First().GetType() == typeof(Row) && 
+                                // @todo toto už asi rieši optimiser
+                                if (false && sectionRecursiveRows[index].Count == 1 && sectionRecursiveRows[index].First().GetType() == typeof(Row) && 
                                     ((Row)sectionRecursiveRows[index].First()).Columns.Count == 1 && ((Row)sectionRecursiveRows[index].First()).Columns.First().Elements.Count == 1)
                                 {
                                     //foreach (var element in sectionRecursiveRows[index].First().Columns.First().Elements)
@@ -1213,7 +1221,6 @@ namespace RazorPagesMovie.core
                                 // Append all recursive rows
                                 else
                                 {
-
                                     Rect? lastRect = null;
 
                                     foreach (var recursiveRow in sectionRecursiveRows[index])
@@ -1221,7 +1228,7 @@ namespace RazorPagesMovie.core
                                         // check if items are is in the same row
                                         if (lastRect == null || recursiveRow.Rect.Y >= ((Rect)lastRect).Y && recursiveRow.Rect.Y <= ((Rect)lastRect).Bottom)
                                         {
-                                            if (recursiveRow.GetType() == typeof(Row))
+                                            if (recursiveRow.GetType() == typeof(Row) && sectionRecursiveRows[index].Count > 1)
                                             {
                                                 ((Row)recursiveRow).ActAsColumn = true;
                                             }
@@ -1237,8 +1244,9 @@ namespace RazorPagesMovie.core
                                         }
                                         else
                                         {
-                                            recursiveRow.Margin[3] = rect.X - column.Item1;
+                                            //recursiveRow.Margin[3] = rect.X - column.Item1;
                                         }
+
                                         // Add result into block
                                         block.Elements.Add(recursiveRow);
 
@@ -1366,7 +1374,7 @@ namespace RazorPagesMovie.core
                     /* Column row rects end */
 
                     // add column rows (blocks) into column
-                    if (columnRows.Count > 1)
+                    /*if (columnRows.Count > 1)
                     {
                         // there are multiple rows (blocks)
                         foreach (var columnRow in columnRows)
@@ -1380,7 +1388,8 @@ namespace RazorPagesMovie.core
                                 var firstElement = block.Elements.First();
 
                                 // copy styles
-                                firstElement.Margin = firstElement.Margin.Zip(block.Padding, (a, b) => a + b).ToArray();
+                                firstElement.Margin = firstElement.Margin.Zip(block.Margin, (a, b) => a + b).ToArray();
+                                firstElement.Padding = firstElement.Padding.Zip(block.Padding, (a, b) => a + b).ToArray();
 
                                 columnElement.Elements.Add(firstElement);
                             }
@@ -1426,6 +1435,37 @@ namespace RazorPagesMovie.core
                         {
                             columnElement.Elements.Add(block);
                         }
+                    }*/
+
+                    foreach (var columnRow in columnRows)
+                    {
+                        var block = (Block)columnRow.Element;
+                        var columnElement = ((Column)column.Element);
+
+                        // check if there's not just one element
+                        if (block.Elements.Count == 1)
+                        {
+                            var firstElement = block.Elements.First();
+
+                            // copy styles
+                            if (firstElement.GetType() == typeof(Text))
+                            {
+                                firstElement.Padding = firstElement.Padding.Zip(block.Margin, (a, b) => a + b).ToArray();
+                                firstElement.Padding = firstElement.Padding.Zip(block.Padding, (a, b) => a + b).ToArray();
+                            }
+                            else
+                            {
+                                firstElement.Margin = firstElement.Margin.Zip(block.Margin, (a, b) => a + b).ToArray();
+                                firstElement.Padding = firstElement.Padding.Zip(block.Padding, (a, b) => a + b).ToArray();
+                            }
+                          
+                            columnElement.Elements.Add(firstElement);
+                        }
+                        else
+                        {
+                            columnElement.Elements.Add(block);
+                        }
+                        //((Column)column.Element).Elements.Add(columnRow.Element);
                     }
                 }
 

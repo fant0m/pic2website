@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 
 namespace RazorPagesMovie.core.model.elements.grid
 {
@@ -7,42 +8,29 @@ namespace RazorPagesMovie.core.model.elements.grid
         public List<Column> Columns { get; set; }
         public bool ActAsColumn { get; set; }
         public bool MergedColumns { get; set; }
+        public override string Tag { get; set; } = "div";
+        public override bool PairTag { get; set; } = true;
 
         public Row(int id)
         {
             Id = id;
             Columns = new List<Column>();
             MergedColumns = false;
+
+            ClassNames.Add("row");
         }
 
-        public override string StartTag()
+        public void AcsAsColumn()
         {
-            // @todo actascolumn
-            if (ActAsColumn)
-            {
-                return $"<div class=\"row\" style=\"{GetStyles()}display:inline-block!important;width:auto!important;\">";
-            }
-            else
-            {
-                return $"<div class=\"row\" style=\"{GetStyles()}\">";
-            }
+            ActAsColumn = true;
+
+            ClassNames.Remove("row");
+            ClassNames.Add("inline-block");
         }
 
-        public override string Content()
+        public override List<Element> GetSubElements()
         {
-            var output = "";
-            foreach (var column in Columns)
-            {
-                output += column.StartTag();
-                output += column.Content();
-                output += column.EndTag();
-            }
-            return output;
-        }
-
-        public override string EndTag()
-        {
-            return "</div>";
+            return Columns.Cast<Element>().ToList();
         }
     }
 }

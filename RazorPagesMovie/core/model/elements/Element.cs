@@ -1,12 +1,37 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using OpenCvSharp;
+using RazorPagesMovie.core.model.elements.basic;
 
 namespace RazorPagesMovie.core.model.elements
 {
     public abstract class Element : IWebElement
     {
-        public int Id;
+        private int id;
+        public int Id
+        {
+            get
+            {
+                return id;
+            }
+            set
+            {
+                if (ClassNames.Contains(GetId()))
+                {
+                    ClassNames.Remove(GetId());
+                }
+                id = value;
+                if (value != 0)
+                {
+                    ClassNames.Add(GetId());
+                }
+            }
+        }
+        public List<string> ClassNames { get; set; }
+        public Dictionary<string, string> Attributes { get; set; }
+
         public int[] Padding;
         public int[] Margin;
         public string[] MarginCalc;
@@ -19,7 +44,6 @@ namespace RazorPagesMovie.core.model.elements
         public int[] BackgroundColor;
         public string BackgroundImage;
         public string TextAlign;
-        // @todo neviem či to nedať iba elementu text alebo to budú aj iné využívať (aby to nemusel mať každý text)
         public string FontFamily;
         public int FontSize;
         public int FontWeight;
@@ -30,119 +54,243 @@ namespace RazorPagesMovie.core.model.elements
         public Rect Rect;
         public bool Fluid;
 
-        // @todo tu asi bude musieť byť list sub elementov
-
         protected Element()
         {
             Color = null;
             Margin = new[] { 0, 0, 0, 0 };
             Padding = new[] { 0, 0, 0, 0 };
             MarginCalc = new[] { "", "", "", "" };
+            ClassNames = new List<string>();
+            Attributes = new Dictionary<string, string>();
         }
 
         public string GetId()
         {
-            return (GetType().Name + "-" + Id).ToLower();
+            return id != 0 ? (GetType().Name + "-" + id).ToLower() : GetType().Name.ToLower();
         }
 
-        // @todo refactor
         public string GetStyles()
         {
             var styles = "";
             if (Width > 0)
             {
-                styles += $"width:{Width}";
+                styles += $"width: {Width}";
                 styles += Fluid ? "%" : "px";
                 styles += ";";
             }
 
             if (MinWidth > 0)
             {
-                styles += $"min-width:{MinWidth}px;";
+                styles += $"min-width: {MinWidth}px;";
             }
 
             if (Height > 0)
             {
-                styles += $"height:{Height}px;";
+                styles += $"height: {Height}px;";
             }
 
             if (BackgroundImage != null)
             {
-                styles += $"background:url({BackgroundImage});";
+                styles += $"background: url({BackgroundImage});";
             }
             else if (BackgroundColor != null)
             {
-                styles += $"background:rgb({BackgroundColor[0]},{BackgroundColor[1]},{BackgroundColor[2]});";
+                styles += $"background: rgb({BackgroundColor[0]}, {BackgroundColor[1]}, {BackgroundColor[2]});";
             }
 
             if (Fluid)
             {
-                styles += $"margin:{Margin[0]}px {Margin[1]}% {Margin[2]}px {Margin[3]}%;";
+                styles += $"margin: {Margin[0]}px {Margin[1]}% {Margin[2]}px {Margin[3]}%;";
             }
             else if (!MarginCalc[1].Equals(""))
             {
-                styles += $"margin:{Margin[0]}px {MarginCalc[1]} {Margin[2]}px {MarginCalc[3]};";
+                styles += $"margin: {Margin[0]}px {MarginCalc[1]} {Margin[2]}px {MarginCalc[3]};";
             }
             else if (Margin.Sum() != 0)
             {
-                styles += $"margin:{Margin[0]}px {Margin[1]}px {Margin[2]}px {Margin[3]}px;";
+                styles += $"margin: {Margin[0]}px {Margin[1]}px {Margin[2]}px {Margin[3]}px;";
             }
 
-            if (Fluid)
+            if (Fluid && GetType() != typeof(Container))
             {
-                styles += $"padding:{Padding[0]}px {Padding[1]}% {Padding[2]}px {Padding[3]}%;";
+                styles += $"padding: {Padding[0]}px {Padding[1]}% {Padding[2]}px {Padding[3]}%;";
             }
             else if (Padding.Sum() != 0)
             {
-                styles += $"padding:{Padding[0]}px {Padding[1]}px {Padding[2]}px {Padding[3]}px;";
+                styles += $"padding: {Padding[0]}px {Padding[1]}px {Padding[2]}px {Padding[3]}px;";
             }
 
             if (TextAlign != null)
             {
-                styles += $"text-align:{TextAlign};";
+                styles += $"text-align: {TextAlign};";
             }
 
             if (!string.IsNullOrEmpty(FontFamily))
             {
-                styles += $"font-family:{FontFamily};";
+                styles += $"font-family: {FontFamily};";
             }
 
             if (!string.IsNullOrEmpty(FontStyle))
             {
-                styles += $"font-style:{FontStyle};";
+                styles += $"font-style: {FontStyle};";
             }
 
             if (FontSize > 0)
             {
-                styles += $"font-size:{FontSize}px;";
+                styles += $"font-size: {FontSize}px;";
             }
 
             if (FontWeight > 0)
             {
-                styles += $"font-weight:{FontWeight};";
+                styles += $"font-weight: {FontWeight};";
             }
 
             if (Color != null)
             {
-                styles += $"color:rgb({Color[0]},{Color[1]},{Color[2]});";
+                styles += $"color: rgb({Color[0]}, {Color[1]}, {Color[2]});";
             }
 
             if (Display != null)
             {
-                styles += $"display:{Display};";
+                styles += $"display: {Display};";
             }
 
             if (LineHeight != 0)
             {
-                styles += $"line-height:{LineHeight.ToString().Replace(",", ".")}px;";
+                styles += $"line-height: {LineHeight.ToString().Replace(",", ".")}px;";
+            }
+
+            // remove last semicolon
+            if (styles != "")
+            {
+                styles = styles.Remove(styles.Length - 1);
             }
 
             return styles;
         }
 
-        public abstract string StartTag();
+        public string GetStyleSheet(string parent, int subId = 0)
+        {
+            var singleElements = new[] { "header", "footer" };
+            var prefix = parent == "" ? "" : parent + " > ";
+            var sheet = "";
+            string selector;
 
-        public abstract string Content();
-        public abstract string EndTag();
+            var styles = GetStyles();
+            if (styles != "")
+            {
+                if (subId != 0)
+                {
+                    Id = subId;
+                }
+
+                var currentSelector = singleElements.Contains(Tag) ? Tag : (Id != 0 ? "." + GetId() : Tag);
+                selector = prefix + currentSelector;
+                var separate = styles.Split(";");
+
+                sheet += selector + " {\n";
+
+                for (var i = 0; i < separate.Length; i++)
+                {
+                    sheet += "\t" + separate[i] + ";";
+                    if (i != separate.Length - 1)
+                    {
+                        sheet += "\n";
+                    }
+                }
+
+                sheet += "\n}\n";
+            }
+            else
+            {
+                var currentSelector = Id != 0 ? "." + GetId() : Tag;
+                selector = prefix + currentSelector;
+            }
+
+            var subElements = GetSubElements();
+            if (subElements != null)
+            {
+                for (var i = 0; i < subElements.Count; i++)
+                {
+                    subId++;
+                    sheet += subElements[i].GetStyleSheet(selector, subId);
+                }
+            }
+
+            return sheet;
+        }
+        
+        public string GetClassAttribute()
+        {
+            if (ClassNames.Count != 0)
+            {
+                var names = string.Join(" ", ClassNames);
+                return $" class=\"{names}\"";
+            }
+            else
+            {
+                return "";
+            }
+        }
+
+        public string GetAttributes()
+        {
+            if (Attributes.Count != 0)
+            {
+                var output = "";
+                foreach (var attr in Attributes)
+                {
+                    output += $" {attr.Key}=\"{attr.Value}\"";
+                }
+                return output;
+            }
+            else
+            {
+                return "";
+            }
+        }
+
+        public string StartTag()
+        {
+            var startTag = "<" + Tag;
+            startTag += GetClassAttribute();
+            startTag += GetAttributes();
+            //startTag += $" style=\"{GetStyles()}\"";
+            startTag += PairTag ? ">" : "/>";
+
+            return startTag;
+        }
+
+        public string Content()
+        {
+            var output = "";
+            var subElements = GetSubElements();
+            if (subElements != null)
+            {
+                foreach (var element in GetSubElements())
+                {
+                    output += element.StartTag();
+                    output += element.Content();
+                    output += element.EndTag();
+                }
+            }
+         
+            if (GetType() == typeof(Text))
+            {
+                var self = (Text)this;
+                output += string.Join("<br>", self.GetText());
+            }
+
+            return output;
+        }
+
+        public string EndTag()
+        {
+            return PairTag ? $"</{Tag}>" : "";
+        }
+
+        public abstract List<Element> GetSubElements();
+        public abstract string Tag { get; set; }
+        public abstract bool PairTag { get; set; }
     }
 }

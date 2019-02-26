@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using RazorPagesMovie.core.model;
@@ -8,11 +9,22 @@ namespace RazorPagesMovie.core.convertor
 {
     public class WebConvertor : IConvertor
     {
-        public string Convert(TemplateStructure templateStructure)
+        private readonly TemplateStructure templateStructure;
+
+        public WebConvertor(TemplateStructure templateStructure)
         {
-            string htmlStart = "<!DOCTYPE html><html><head><link href=\"./style.css\" rel=\"stylesheet\"><meta charset=\"UTF-8\"><title>Test</title></head><body>";
+            this.templateStructure = templateStructure;
+        }
+
+        public string Convert()
+        {
+            //long timestamp = new DateTimeOffset(DateTime.UtcNow).ToUnixTimeSeconds();
+            long timestamp = 0;
+
+            string htmlStart = $"<!DOCTYPE html>\n<html>\n<head>\n\t<link href=\"./style.css\" rel=\"stylesheet\">\n\t<link href=\"./custom-{timestamp}.css\" rel=\"stylesheet\">\n\t<meta charset=\"UTF-8\">\n\t<title>Test</title>\n</head>\n<body>\n";
             string htmlBody = "";
-            string htmlEnd = "</body></html>";
+            string htmlEnd = "</body>\n</html>";
+            string styles = "";
 
             int header = -1;
             int footer = -1;
@@ -40,23 +52,28 @@ namespace RazorPagesMovie.core.convertor
             for (var i = 0; i < templateStructure.Sections.Count; i++)
             {
                 var section = templateStructure.Sections[i];
-                var startTag = section.StartTag();
-                var endTag = section.EndTag();
 
                 if (i == header)
                 {
-                    startTag = startTag.Replace("section", "header");
-                    endTag = endTag.Replace("section", "header");
+                    section.Tag = "header";
                 }
                 else if (i == footer)
                 {
-                    startTag = startTag.Replace("section", "footer");
-                    endTag = endTag.Replace("section", "footer");
+                    section.Tag = "footer";
                 }
 
-                htmlBody += startTag;
+                styles += section.GetStyleSheet("");
+
+                htmlBody += section.StartTag();
                 htmlBody += section.Content();
-                htmlBody += endTag;
+                htmlBody += section.EndTag();
+            }
+
+            // save custom styles
+            using (var tw = new StreamWriter("wwwroot/custom-" + timestamp + ".css"))
+            {
+                tw.Write(styles);
+                tw.Close();
             }
 
             return htmlStart + htmlBody + htmlEnd;

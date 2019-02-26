@@ -93,8 +93,8 @@ namespace RazorPagesMovie.core
             Debug.WriteLine("počet " + _contours.Length);
 
 
-            var convertor = new WebConvertor();
-            var output = convertor.Convert(_templateStructure);
+            var convertor = new WebConvertor(_templateStructure);
+            var output = convertor.Convert();
             var fileOutpout = output.Replace("src=\".", "src=\"C:/Users/tomsh/source/repos/RazorPagesMovie/RazorPagesMovie/wwwroot");
             fileOutpout = fileOutpout.Replace("href=\".", "href=\"C:/Users/tomsh/source/repos/RazorPagesMovie/RazorPagesMovie/wwwroot");
 
@@ -266,7 +266,7 @@ namespace RazorPagesMovie.core
 
                 // Create a container
                 // @todo globálny counter na containery a ostatné veci ale asi až potom ako budú normalizované elementy takže teraz je to fuk čo tam je
-                var container = new Container(1, section.Layout);
+                var container = new Container(section.Layout);
                 Rect containerRect;
 
                 // Center content in container and create container rect
@@ -275,9 +275,8 @@ namespace RazorPagesMovie.core
                     // left container padding
                     container.Padding[3] = (int) Math.Floor(((int) section.Layout.Width - (mostRightSections.FirstOrDefault() - mostLeftSections.FirstOrDefault() + 1)) / 2);
 
-                    // right container padding is not neccessary but calculated for completeness; it's substracted by 3 for rounding error (to not break the layout)
-                    // @todo should not be necessary to substract it
-                    container.Padding[1] = container.Padding[3] /* - 3*/;
+                    // right container padding should be same as left
+                    container.Padding[1] = container.Padding[3];
 
                     // create container rect
                     var mostLeft = (int) mostLeftSections.FirstOrDefault();
@@ -291,17 +290,12 @@ namespace RazorPagesMovie.core
                 }
 
                 // Process inner blocks
-                // @todo ocr 4 font size doriešiť
                 // @todo hm7.png nezoberie dobre text button ako sublement, algoritmu určite vadia rohy, to by chcelo nejak zisťovať a rovno aplikovať border-radius len pozor aby si to nemýlilo s inými tvarmi potom, kontrolovať sa musia iba rohy
                 // @todo pozadie elementov bude treba ešte tuning, niekedy treba aby row mal farbu; taktiež optimiser bude asi musieť prejsť a nechať farbu len v poslednej úrovni
                 // @todo text gap merging - space podľa fontu + info že je to text
                 // @todo replace element width with right padding
-                // @todo text veci čo sú pri sebe, v 1 riadku nech majú rovnaké font family, veľkosť, farbu
                 // @todo acsascolumn treba inak vyriešiť, actascolumn - ak je true dať elementu inú triedu (nie row ale napr. inline-block)
-                // @todo samotné obrázky keď sú iba vedľa seba už nemajú padding/margin
-                // @todo spájanie riadkov ak sú moc blízko / ak je to text
                 // @todo spájanie do zvlášť containera ak majú rovnaký štýl - rovnaká výška, medzery, ..
-                // @todo text bude nejaký text class/p class a vo vnútri bude list texts = v prípade že text má viac riadkov, potom sa dá join <br>
                 container.Rows = ProcessInnerBlocks(contours, copy, containerRect, section.BackgroundColor, section.Layout.Type == Layout.LayoutType.Fluid);
 
                 // Append container to section
@@ -1228,9 +1222,10 @@ namespace RazorPagesMovie.core
                                         // check if items are is in the same row
                                         if (lastRect == null || recursiveRow.Rect.Y >= ((Rect)lastRect).Y && recursiveRow.Rect.Y <= ((Rect)lastRect).Bottom)
                                         {
+                                            // @todo 2019-02-26 v oboch prípadoch má display inline-block a width auto takže sa to už bude môcť komplet odstrániť (AcsAsColumn & podmienky)
                                             if (recursiveRow.GetType() == typeof(Row) && sectionRecursiveRows[index].Count > 1)
                                             {
-                                                ((Row)recursiveRow).ActAsColumn = true;
+                                                ((Row)recursiveRow).AcsAsColumn();
                                             }
                                             else
                                             {

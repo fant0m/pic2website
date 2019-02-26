@@ -8,32 +8,17 @@ namespace RazorPagesMovie.core.model.elements
     public class Block : Element
     {
         public List<Element> Elements { get; set; }
+        public override string Tag { get; set; } = "div";
+        public override bool PairTag { get; set; } = true;
 
         public Block()
         {
             Elements = new List <Element>();
         }
 
-        public override string StartTag()
+        public override List<Element> GetSubElements()
         {
-            return $"<div style=\"{GetStyles()}\">";
-        }
-
-        public override string Content()
-        {
-            var output = "";
-            foreach (var element in Elements)
-            {
-                output += element.StartTag();
-                output += element.Content();
-                output += element.EndTag();
-            }
-            return output;
-        }
-
-        public override string EndTag()
-        {
-            return "</div>";
+            return Elements;
         }
     }
 }

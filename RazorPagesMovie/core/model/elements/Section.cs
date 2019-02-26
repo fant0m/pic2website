@@ -1,15 +1,17 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using OpenCvSharp;
 
 namespace RazorPagesMovie.core.model.elements
 {
     public class Section : Element
     {
-        // @todo background image sa bude riešiť asi tu, ak bude mať sekcia bg img tak len pridám ďalšie elementy do section
         // @todo môže mať section viac containerov vôbec? teoreticky asi nie
         public Layout Layout { get; set; }
         public List<Container> Containers { get; set; }
         public int Top { get; set; }
+        public override string Tag { get; set; } = "section";
+        public override bool PairTag { get; set; } = true;
 
         public Section(int id)
         {
@@ -17,26 +19,9 @@ namespace RazorPagesMovie.core.model.elements
             Containers = new List<Container>();
         }
 
-        public override string StartTag()
+        public override List<Element> GetSubElements()
         {
-            return $"<section style=\"{GetStyles()}\">";
-        }
-
-        public override string Content()
-        {
-            var output = "";
-            foreach (var element in Containers)
-            {
-                output += element.StartTag();
-                output += element.Content();
-                output += element.EndTag();
-            }
-            return output;
-        }
-
-        public override string EndTag()
-        {
-            return "</section>";
+            return Containers.Cast<Element>().ToList();
         }
     }
 }

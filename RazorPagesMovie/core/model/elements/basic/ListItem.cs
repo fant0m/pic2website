@@ -9,6 +9,8 @@ namespace RazorPagesMovie.core.model.elements.basic
     {
         public Element Element;
         public Link Link;
+        public override string Tag { get; set; } = "li";
+        public override bool PairTag { get; set; } = true;
 
         public ListItem(Element element)
         {
@@ -27,34 +29,20 @@ namespace RazorPagesMovie.core.model.elements.basic
             Link = new Link(link, element, target);
         }
 
-        public override string StartTag()
+        public override List<Element> GetSubElements()
         {
-            return "<li>";
-        }
-
-        public override string Content()
-        {
-            var output = "";
+            var elements = new List<Element>(1);
 
             if (Link != null)
             {
-                output += Link.StartTag();
-                output += Link.Content();
-                output += Link.EndTag();
+                elements.Add(Link);
             }
             else
             {
-                output += Element.StartTag();
-                output += Element.Content();
-                output += Element.EndTag();
+                elements.Add(Element);
             }
 
-            return output;
-        }
-
-        public override string EndTag()
-        {
-            return "</li>";
+            return elements;
         }
     }
 }

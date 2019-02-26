@@ -123,12 +123,12 @@ namespace RazorPagesMovie.Pages
 
         private string TestConvertor()
         {
-            /*var layout = new Layout(Layout.LayoutType.Centered, 750, 500);
-            var structure = new TemplateStructure(layout);
+            var layout = new Layout(Layout.LayoutType.Centered, 750, 500, 0, 750);
+            var structure = new TemplateStructure();
 
             var section = new Section(1);
-            var container = new Container(1);
-            var text = new Text("test");
+            var container = new Container(layout);
+            var text = new Text(new[] { "test" }, "arial", new int[] { 0, 0, 0 }, 30, false, false);
             var image = new Image("https://www.freeiconspng.com/uploads/format-png-image-resolution-3580x3402-size-1759-kb-star-png-image-star--6.png");
             var row = new Row(1);
             var col = new Column(1);
@@ -139,9 +139,8 @@ namespace RazorPagesMovie.Pages
             section.Containers.Add(container);
             structure.Sections.Add(section);
 
-            var convertor = new WebConvertor();
-            return convertor.Convert(structure);*/
-            return "";
+            var convertor = new WebConvertor(structure);
+            return convertor.Convert();
         }
 
         private string Test()

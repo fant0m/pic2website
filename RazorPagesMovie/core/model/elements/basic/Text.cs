@@ -1,8 +1,12 @@
-﻿namespace RazorPagesMovie.core.model.elements.basic
+﻿using System.Collections.Generic;
+
+namespace RazorPagesMovie.core.model.elements.basic
 {
     public class Text : Element
     {
         private string[] _text;
+        public override string Tag { get; set; } = "p";
+        public override bool PairTag { get; set; } = true;
 
         public Text(string[] text, string fontFamily, int[] fontColor, int fontSize, bool bold, bool italic)
         {
@@ -27,19 +31,9 @@
             return _text;
         }
 
-        public override string StartTag()
+        public override List<Element> GetSubElements()
         {
-            return $"<p style=\"{GetStyles()}\">";
-        }
-
-        public override string Content()
-        {
-            return string.Join("<br>", _text);
-        }
-
-        public override string EndTag()
-        {
-            return "</p>";
+            return null;
         }
     }
 }

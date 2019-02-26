@@ -79,7 +79,7 @@ namespace RazorPagesMovie.Pages
             Mat img1 = Mat.FromImageData(imageData, ImreadModes.Color);
             //Convert the img1 to grayscale and then filter out the noise
             Mat gray1 = Mat.FromImageData(imageData, ImreadModes.Grayscale)/*.PyrDown().PyrUp()*/;
-            //gray1 = gray1.GaussianBlur(new OpenCvSharp.Size(blur, blur), 0);
+            gray1 = gray1.GaussianBlur(new OpenCvSharp.Size(blur, blur), 0);
 
             //gray1 = gray1.AdaptiveThreshold(255, AdaptiveThresholdTypes.MeanC, ThresholdTypes.BinaryInv, (int)canny1, canny2); // 11,2 ; 75,10 ; 60,255
 
@@ -91,6 +91,9 @@ namespace RazorPagesMovie.Pages
             //Image<Gray, Byte> cannyGray = gray1.Canny(20, 50);
             //Image<Bgr, Byte> imageResult = img1.Copy();
             Mat cannyGray = gray1.Canny(canny1, canny2);
+
+            cannyGray.SaveImage("wwwroot/images/output.png");
+            return;
             //var cannyGray = gray1;
 
             // treba aj GaussianBlur, adaptiveThreshold
@@ -108,9 +111,9 @@ namespace RazorPagesMovie.Pages
             Debug.WriteLine("poèet - " + contours.Length);
 
             Mat copy = img1.Clone();
-            Cv2.DrawContours(copy, contours, -1, Scalar.Orange);
+            //Cv2.DrawContours(copy, contours, -1, Scalar.Orange);
             var j = 0;
-            while (j != -1)
+            while (false && j != -1)
             {
                 var index = hierarchy[j];
                 if (index.Parent != -1)
@@ -137,10 +140,12 @@ namespace RazorPagesMovie.Pages
             var m = 0;
             foreach (var c in contours)
             {
-                //var rect = Cv2.BoundingRect(c);
+                var rect = Cv2.BoundingRect(c);
+                Scalar scalar = Scalar.FromRgb(r.Next(0, 255), r.Next(0, 255), r.Next(0, 255));
+                copy.Rectangle(rect, scalar);
                 //var roi2 = img1.Clone(rect);
                 //roi2.SaveImage("pozri-" + m + ".png");
-                m++;
+                //m++;
             }
 
 

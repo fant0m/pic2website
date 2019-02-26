@@ -9,37 +9,20 @@ namespace RazorPagesMovie.core.model.elements.basic
     {
         public List<ListItem> Items;
         public string Type;
+        public override string Tag { get; set; }
+        public override bool PairTag { get; set; } = true;
 
         public List()
         {
             Items = new List<ListItem>();
             Type = "unordered";
+
+            Tag = Type == "unordered" ? "ul" : "ol";
         }
 
-        public override string StartTag()
+        public override List<Element> GetSubElements()
         {
-            var tag = Type == "unordered" ? "ul" : "ol";
-            return $"<{tag} style=\"{GetStyles()}\">";
+            return Items.Cast<Element>().ToList();
         }
-
-        public override string Content()
-        {
-            var output = "";
-            foreach (var item in Items)
-            {
-                output += item.StartTag();
-                output += item.Content();
-                output += item.EndTag();
-            }
-            return output;
-        }
-
-        public override string EndTag()
-        {
-            var tag = Type == "unordered" ? "ul" : "ol";
-            return $"</{tag}>";
-        }
-
-        
     }
 }

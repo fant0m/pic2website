@@ -7,8 +7,18 @@ namespace RazorPagesMovie.core.model.elements
 {
     interface IWebElement
     {
-        String StartTag();
-        String Content();
-        String EndTag();
+        int Id { get; set; }
+        string Tag { get; set; }
+        bool PairTag { get; set; }
+        List<string> ClassNames { get; set; }
+        Dictionary<string, string> Attributes { get; set; }
+        List<Element> GetSubElements();
+        string GetClassAttribute();
+        string GetAttributes();
+        string GetStyles();
+        string GetStyleSheet(string parent, int subId);
+        string StartTag();
+        string Content();
+        string EndTag();
     }
 }

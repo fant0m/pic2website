@@ -10,11 +10,15 @@ namespace RazorPagesMovie.core.model.elements.basic
         public string Url;
         public string Target;
         public Element Element;
+        public override string Tag { get; set; } = "a";
+        public override bool PairTag { get; set; } = true;
 
         public Link(string url, Element element)
         {
             Url = url;
             Element = element;
+
+            Attributes.Add("href", Url);
         }
 
         public Link(string url, Element element, string target)
@@ -22,34 +26,16 @@ namespace RazorPagesMovie.core.model.elements.basic
             Url = url;
             Element = element;
             Target = target;
+
+            Attributes.Add("href", Url);
+            Attributes.Add("target", "_" + target);
         }
 
-        public override string StartTag()
+        public override List<Element> GetSubElements()
         {
-            if (Target == null)
-            {
-                return $"<a href=\"{Url}\" style=\"{GetStyles()}\">";
-            }
-            else
-            {
-                return $"<a href=\"{Url}\" target=\"_{Target}\" style=\"{GetStyles()}\">";
-            }
-        }
-
-        public override string Content()
-        {
-            var output = "";
-
-            output += Element.StartTag();
-            output += Element.Content();
-            output += Element.EndTag();
-
-            return output;
-        }
-
-        public override string EndTag()
-        {
-            return "</a>";
+            var elements = new List<Element>(1);
+            elements.Add(Element);
+            return elements;
         }
     }
 }

@@ -8,55 +8,36 @@ namespace RazorPagesMovie.core.model.elements
 {
     public class Container : Element
     {
-        //public Layout.LayoutType LayoutType { get; set; }
-        // @todo určite to nebude duplicitne aj tu aj v section
-        public Layout Layout { get; set; }
         public List<Element> Rows { get; set; }
-        public Container(int id, Layout layout)
+        public override string Tag { get; set; } = "div";
+        public override bool PairTag { get; set; } = true;
+
+        public Container(Layout layout)
         {
-            Id = id;
             Rows = new List<Element>();
-            Layout = layout;
+
+            ClassNames.Add("container");
+            InitAttributes(layout);
         }
 
-        public override string StartTag()
+        private void InitAttributes(Layout layout)
         {
-            string type;
-            string width;
-            var styles = "";
-
-            if (Layout.Type == Layout.LayoutType.Centered)
+            if (layout.Type == Layout.LayoutType.Centered)
             {
-                type = "container";
-                width = (int) Layout.Width + "px";
+                ClassNames.Add("container");
+                Width = (int)layout.Width;
             }
             else
             {
-                type = "container-fluid";
-                width = "100%";
+                ClassNames.Add("container-fluid");
+                Width = 100;
+                Fluid = true;
             }
-
-            styles += $"width:{width};";
-            styles += $"padding:{Padding[0]}px {Padding[1]}px {Padding[2]}px {Padding[3]}px;";
-
-            return $"<div class=\"{type}\" style=\"{styles}\">";
         }
 
-        public override string Content()
+        public override List<Element> GetSubElements()
         {
-            var output = "";
-            foreach (var row in Rows)
-            {
-                output += row.StartTag();
-                output += row.Content();
-                output += row.EndTag();
-            }
-            return output;
-        }
-
-        public override string EndTag()
-        {
-            return "</div>";
+            return Rows.Cast<Element>().ToList();
         }
     }
 }

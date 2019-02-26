@@ -5,33 +5,20 @@ namespace RazorPagesMovie.core.model.elements.grid
     public class Column : Element
     {
         public List<Element> Elements { get; set; }
+        public override string Tag { get; set; } = "div";
+        public override bool PairTag { get; set; } = true;
 
         public Column(int id)
         {
             Id = id;
             Elements = new List<Element>();
+
+            ClassNames.Add("col");
         }
 
-        public override string StartTag()
+        public override List<Element> GetSubElements()
         {
-            return $"<div class=\"col\" style=\"{GetStyles()}\">";
-        }
-
-        public override string Content()
-        {
-            var output = "";
-            foreach (var element in Elements)
-            {
-                output += element.StartTag();
-                output += element.Content();
-                output += element.EndTag();
-            }
-            return output;
-        }
-
-        public override string EndTag()
-        {
-            return "</div>";
+            return Elements;
         }
     }
 }

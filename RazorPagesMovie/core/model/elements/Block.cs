@@ -14,6 +14,8 @@ namespace RazorPagesMovie.core.model.elements
         public Block()
         {
             Elements = new List <Element>();
+
+            ClassNames.Add("block");
         }
 
         public override List<Element> GetSubElements()

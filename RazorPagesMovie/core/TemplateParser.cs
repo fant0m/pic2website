@@ -26,6 +26,7 @@ namespace RazorPagesMovie.core
         private Ocr _ocr;
         private ColorAnalyser _colorAnalyser;
         private int limit = 0;
+        private int test = 0;
 
         public const int MaxSeparatorHeight = 10;
         public const int MinSeparatorWidth = 400;
@@ -41,7 +42,7 @@ namespace RazorPagesMovie.core
         public string Analyse()
         {
             // @todo imagePath pôjde sem
-            byte[] imageData = File.ReadAllBytes(@"./wwwroot/images/template4.png");
+            byte[] imageData = File.ReadAllBytes(@"./wwwroot/images/template_1.jpg");
             _image = Mat.FromImageData(imageData);
             _colorAnalyser = new ColorAnalyser(_image);
 
@@ -695,7 +696,7 @@ namespace RazorPagesMovie.core
                     var latestLeft = parent.X;
 
                     // apply styles for row
-                    sectionRow.Padding[0] = rect.Y - latestTop;
+                    sectionRow.Margin[0] = rect.Y - latestTop;
 
                     //if (sectionRects.Length == 1)
                     //{
@@ -730,7 +731,7 @@ namespace RazorPagesMovie.core
 
                 // apply styles for row
                 last.Element.Margin[1] = parent.Right - sortedRight.Right;
-                last.Element.Padding[2] = parent.Bottom - last.Item2;
+                last.Element.Margin[2] = parent.Bottom - last.Item2;
                 last.Element.Margin[3] = sortedLeft.X - parent.X;
 
                 // adjust rect
@@ -787,6 +788,7 @@ namespace RazorPagesMovie.core
                                 var margin = (parent.Width / 100 * sectionRow.Margin[1]) * 2;
 
                                 // replace width with percentage value
+                                // @todo možno pozrieť aká je tam medzera a ak nie dosť veľká tak to tu nedávať
                                 if (latestElem.BackgroundColor != null)
                                 {
                                     var percents = Math.Ceiling(latestElem.Width / (parent.Width - margin) * 100);
@@ -813,11 +815,6 @@ namespace RazorPagesMovie.core
 
                         // create new column
                         var column = new Column();
-                        if (columns.Count == 0)
-                        {
-                            //column.Margin[3] = rect.Left - sectionRow.Rect.Left;
-                        }
-
                         var triple = new TemplateBlock<int, int, List<Rect>, Element>
                         {
                             Item1 = rect.Left,
@@ -1002,13 +999,16 @@ namespace RazorPagesMovie.core
                         //var l = 0;
                         //foreach (var contour in alignHorizontal)
                         //{
-                            ////var roi2 = _image.Clone(contour);
-                            //var roi2 = _image.Clone();
-                            //Cv2.Rectangle(roi2, new Point(contour.X, contour.Y), new Point(contour.X + contour.Width, contour.Y + contour.Height), Scalar.FromRgb(r.Next(0, 255), r.Next(0, 255), r.Next(0, 255)));
-                            //roi2.SaveImage("image2-" + test + ".png");
-                            //l++;
-                            //Cv2.Rectangle(copy, new Point(contour.X, contour.Y), new Point(contour.X + contour.Width, contour.Y + contour.Height), Scalar.FromRgb(r.Next(0, 255), r.Next(0, 255), r.Next(0, 255)));
+                        //    //var roi2 = _image.Clone(contour);
+                        //    var roi2 = _image.Clone();
+                        //    Cv2.Rectangle(roi2, new Point(contour.X, contour.Y), new Point(contour.X + contour.Width, contour.Y + contour.Height), Scalar.FromRgb(r.Next(0, 255), r.Next(0, 255), r.Next(0, 255)));
+                        //    roi2.SaveImage("image2-" + test + ".png");
+                        //    l++;
+                        //    test++;
+                        //    Cv2.Rectangle(copy, new Point(contour.X, contour.Y), new Point(contour.X + contour.Width, contour.Y + contour.Height), Scalar.FromRgb(r.Next(0, 255), r.Next(0, 255), r.Next(0, 255)));
                         //}
+
+                        //Debug.WriteLine("počet " + alignHorizontal.Length);
 
                         /* Column row letters merging start */
 
@@ -1160,6 +1160,7 @@ namespace RazorPagesMovie.core
                                 if (false && sectionRecursiveRows[index].Count == 1 && sectionRecursiveRows[index].First().GetType() == typeof(Row) && 
                                     ((Row)sectionRecursiveRows[index].First()).Columns.Count == 1 && ((Row)sectionRecursiveRows[index].First()).Columns.First().Elements.Count == 1)
                                 {
+                                    throw new Exception("kidding me?");
                                     //foreach (var element in sectionRecursiveRows[index].First().Columns.First().Elements)
                                     //{
                                     //    block.Elements.Add(element);
@@ -1178,7 +1179,7 @@ namespace RazorPagesMovie.core
 
                                     if (lastX != -1)
                                     {
-                                        element.Margin[3] += rect.X - lastX - 1;
+                                        //element.Margin[3] += rect.X - lastX - 1;
                                     }
 
                                     block.Elements.Add(element);
@@ -1204,13 +1205,16 @@ namespace RazorPagesMovie.core
                                             }
                                         }
 
-                                        if (lastX != -1)
+                                        if (recursiveRow.Margin[3] == 0)
                                         {
-                                            recursiveRow.Margin[3] = rect.X - lastX - 1;
-                                        }
-                                        else
-                                        {
-                                            //recursiveRow.Margin[3] = rect.X - column.Item1;
+                                            if (lastX != -1)
+                                            {
+                                                recursiveRow.Margin[3] = rect.X - lastX - 1;
+                                            }
+                                            else
+                                            {
+                                                recursiveRow.Margin[3] = rect.X - column.Item1;
+                                            }
                                         }
 
                                         // Add result into block
@@ -1233,7 +1237,7 @@ namespace RazorPagesMovie.core
                                     text = false;
                                 }
                                 // this might be a text even though there wasn't any merge
-                                else if (!text && rect.Width > 30 && rect.Height >= 10 && rect.Width * 1.0 / rect.Height >= 1.3)
+                                else if (!text && rect.Width > 20 && rect.Height >= 10 && rect.Width * 1.0 / rect.Height >= 1.4)
                                 {
                                     text = true;
                                 }
@@ -1267,7 +1271,7 @@ namespace RazorPagesMovie.core
                                     Bitmap bitmap = new Bitmap(roi.ToMemoryStream());
 
                                     var textElem = _ocr.GetText(bitmap);
-                                    if (textElem == null || !IsTextValid(textElem, rect))
+                                    if (textElem == null || !IsTextValid(textElem, rect, connectedHorizontal.Count))
                                     {
                                         Debug.WriteLine("textelem = null or !IsTextValid, create img");
                                         text = false;
@@ -1282,10 +1286,10 @@ namespace RazorPagesMovie.core
                                 {
                                     limit++;
 
-                                    var roi2 = _image.Clone(rect);
-                                    Debug.WriteLine(rect.X + "," + rect.Y + "," + rect.Width + "," + rect.Height);
-                                    Debug.WriteLine(roi2.Width + "," + roi2.Height);
-                                    roi2.SaveImage("wwwroot/images/image-" + limit + ".png");
+                                    var roi = _image.Clone(rect);
+                                    //Debug.WriteLine(rect.X + "," + rect.Y + "," + rect.Width + "," + rect.Height);
+                                    //Debug.WriteLine(roi2.Width + "," + roi2.Height);
+                                    roi.SaveImage("wwwroot/images/image-" + limit + ".png");
 
                                     var image = new Image("./images/image-" + limit + ".png");
                                     // align elements next each other
@@ -1401,6 +1405,10 @@ namespace RazorPagesMovie.core
                     foreach (var columnRow in columnRows)
                     {
                         var block = (Block)columnRow.Element;
+
+                        // Check if result are not unmerged texts
+                        StructureOptimiser.CheckForUnmergedTexts(block);
+
                         var columnElement = ((Column)column.Element);
 
                         // check if there's not just one element
@@ -1409,16 +1417,16 @@ namespace RazorPagesMovie.core
                             var firstElement = block.Elements.First();
 
                             // copy styles
-                            if (firstElement.GetType() == typeof(Text))
+                            /*if (firstElement.GetType() == typeof(Text) && columnElement.BackgroundColor == null)
                             {
                                 firstElement.Padding = firstElement.Padding.Zip(block.Margin, (a, b) => a + b).ToArray();
                                 firstElement.Padding = firstElement.Padding.Zip(block.Padding, (a, b) => a + b).ToArray();
                             }
                             else
-                            {
+                            {*/
                                 firstElement.Margin = firstElement.Margin.Zip(block.Margin, (a, b) => a + b).ToArray();
                                 firstElement.Padding = firstElement.Padding.Zip(block.Padding, (a, b) => a + b).ToArray();
-                            }
+                            //}
                           
                             columnElement.Elements.Add(firstElement);
                         }
@@ -1463,7 +1471,7 @@ namespace RazorPagesMovie.core
             return sectionRows;
         }
 
-        private bool IsTextValid(Text textElem, Rect rect)
+        private bool IsTextValid(Text textElem, Rect rect, int numberOfElements)
         {
             if (textElem.GetText()[0].Length == 1)
             {
@@ -1471,6 +1479,11 @@ namespace RazorPagesMovie.core
             }
 
             if (rect.Width > 150 && textElem.GetText()[0].Length <= 2)
+            {
+                return false;
+            }
+
+            if (numberOfElements == 1 && textElem.GetText()[0].Length <= 2)
             {
                 return false;
             }

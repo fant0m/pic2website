@@ -10,7 +10,11 @@ section, header, footer {
 .container {
     position: relative;
     margin: 0 auto;
-    overflow-y: auto;
+    overflow-y: hidden;
+    overflow-x: hidden;
+}
+.container-fluid {
+    overflow-y: hidden;
     overflow-x: hidden;
 }
 .row {

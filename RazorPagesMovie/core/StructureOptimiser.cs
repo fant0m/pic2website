@@ -12,6 +12,40 @@ namespace RazorPagesMovie.core
 {
     public static class StructureOptimiser
     {
+        public static void CheckForUnmergedTexts(Block block)
+        {
+            var elements = block.Elements;
+            var onlyTexts = true;
+
+            if (elements.Count <= 1)
+            {
+                return;
+            }
+
+            foreach (var element in elements)
+            {
+                if (element.GetType() != typeof(Text) || (element.GetType() == typeof(Text) && element.Display != "inline-block"))
+                {
+                    onlyTexts = false;
+                }
+            }
+
+            if (onlyTexts)
+            {
+                var texts = new Text[elements.Count];
+                for (var i = 0; i < texts.Length; i++)
+                {
+                    var text = (Text)elements[i];
+                    texts[i] = text;
+                }
+
+                var unify = MergeTexts(texts, false);
+
+                block.Elements.Clear();
+                block.Elements.Add(unify);
+            }
+        }
+
         /// <summary>
         ///  Merge text elements, rows and unify font attributes
         /// </summary>
@@ -28,26 +62,41 @@ namespace RazorPagesMovie.core
                 {
                     var firstColumn = row.Columns.First();
                     var elementsCount = firstColumn.Elements.Count();
-                    if (elementsCount == 1)
+                    if (elementsCount == 1 && firstColumn.MarginCalc[1] == "")
                     {
-                        // @todo
                         // we can remove useless row and column
                         var element = firstColumn.Elements.First();
+
+                        if (firstColumn.BackgroundColor != null)
+                        {
+                            element.Padding[1] += element.Margin[1];
+                            element.Padding[3] += element.Margin[3];
+                            element.Padding[2] += element.Margin[2];
+                            element.Padding[0] += element.Margin[0];
+                            element.Margin[1] = 0;
+                            element.Margin[3] = 0;
+                            element.Margin[2] = 0;
+                            element.Margin[0] = 0;
+                        }
+
                         element.Margin = element.Margin.Zip(firstColumn.Margin, (a, b) => a + b).ToArray();
 
-                        if (element.GetType() == typeof(Block) || element.GetType() == typeof(Row))
-                        {
-                            //element.Padding = element.Padding.Zip(element.Margin, (a, b) => a + b).ToArray();
-                            //element.Margin = new[] { 0, 0, 0, 0 };
-                            element.Margin = element.Margin.Zip(row.Padding, (a, b) => a + b).ToArray();
-                            element.Margin = element.Margin.Zip(row.Margin, (a, b) => a + b).ToArray();
-                        }
-                        else
-                        {
+
+                        //if (element.GetType() == typeof(Block) || element.GetType() == typeof(Row))
+                        //{
+                            //element.Margin = element.Margin.Zip(row.Padding, (a, b) => a + b).ToArray();
+                            //element.Margin = element.Margin.Zip(row.Margin, (a, b) => a + b).ToArray();
+                        //}
+                        //else
+                        //{
                             element.Padding = element.Padding.Zip(row.Padding, (a, b) => a + b).ToArray();
                             element.Margin = element.Margin.Zip(row.Margin, (a, b) => a + b).ToArray();
-                        }
+
+                          
+                        //}
+
                      
+
                         //Debug.WriteLine("sub = " + sub);
                         /*if (row.ActAsColumn)
                         {
@@ -93,11 +142,12 @@ namespace RazorPagesMovie.core
                         {
                             if (firstColumn.BackgroundColor != null)
                             {
-                                if (element.GetType() != typeof(Image))
-                                {
+                                // @todo not sure, môže byť situácia button ale vo vnútri zoberie text ako obrázok takže chceme mať aj bg color
+                                //if (element.GetType() != typeof(Image))
+                                //{
                                     element.BackgroundColor = firstColumn.BackgroundColor;
 
-                                }
+                                //}
                                 
                                 if (element.GetType() != typeof(Text))
                                 {
@@ -164,7 +214,7 @@ namespace RazorPagesMovie.core
                     }
                 }
 
-                // check if there are not unmerged text elements
+                // check if there aren't an unmerged text elements
                 if (row.Columns.Count > 1)
                 {
                     var oneTextElement = true;
@@ -190,8 +240,8 @@ namespace RazorPagesMovie.core
 
                         if (Util.AreSame(row.Margin[1], row.Margin[3], 15))
                         {
-                            textElement.Padding[0] = row.Padding[0];
-                            textElement.Padding[2] = row.Padding[2];
+                            textElement.Padding[0] = row.Margin[0];
+                            textElement.Padding[2] = row.Margin[2];
                             textElement.TextAlign = "center";
                         }
                         else
@@ -231,7 +281,7 @@ namespace RazorPagesMovie.core
                     if (firstRow.GetType() == typeof(Text) && secondRow.GetType() == typeof(Text) && firstGap <= 15 &&
                         (
                             (Util.AreSame(firstGap, secondGap, 3) && Util.AreSame(firstRow.FontSize, secondRow.FontSize, 3)) ||
-                            (Util.AreSame(firstGap, previousGap, 3)) ||
+                            (Util.AreSame(firstGap, previousGap, 3) && startMergeIndex != -1) ||
                             (secondGap > firstGap && firstGap <= 15 && Util.AreSame(firstRow.FontSize, secondRow.FontSize, 3))
                         )
                     )
@@ -245,9 +295,9 @@ namespace RazorPagesMovie.core
                 {
                     if (firstRow.GetType() == typeof(Text) && secondRow.GetType() == typeof(Text) && firstGap <= 15 && 
                         (
-                            Util.AreSame(firstGap, previousGap, 3) ||
-                            (previousGap > firstGap && Util.AreSame(firstRow.FontSize, secondRow.FontSize, 3)) ||
-                            previousGap == 0
+                            (Util.AreSame(firstGap, previousGap, 3) && startMergeIndex != -1) ||
+                            (previousGap > firstGap && Util.AreSame(firstRow.FontSize, secondRow.FontSize, 3) && startMergeIndex != -1) ||
+                            (previousGap == 0 && Util.AreSame(firstRow.FontSize, secondRow.FontSize, 3))
                         )
                     )
                     {
@@ -296,7 +346,7 @@ namespace RazorPagesMovie.core
                     var firstRow = rows[pair.Item1];
                     var lastRow = rows[pair.Item2];
                     textElement.Margin[0] = firstRow.Margin[0] + firstRow.Padding[0];
-                    if (firstRow.TextAlign != "center")
+                    if (textElement.TextAlign != "center")
                     {
                         textElement.Margin[3] = firstRow.Margin[3] + firstRow.Padding[3];
                     }
@@ -371,7 +421,11 @@ namespace RazorPagesMovie.core
             var fontStyle = fontStyles.MostCommon();
 
             var textElement = new Text(text, fontFamily, fontColor, fontSize, fontWeight == 700, fontStyle == "italic");
-            textElement.TextAlign = textElements[0].TextAlign;
+            if (textElements[0].TextAlign == "center" && textElements[length - 1].TextAlign == "center")
+            {
+                textElement.TextAlign = "center";
+            }
+            
             if (lineBreaks)
             {
                 textElement.LineHeight = fontSize + margins.Average();
@@ -413,7 +467,7 @@ namespace RazorPagesMovie.core
                         var secondGap = secondColumn.Rect.Left - firstColumn.Rect.Right;
 
                         // Compare first and second gap between columns
-                        if (Util.AreSame(firstGap, secondGap) || Util.AreSame(firstGap, previousGap))
+                        if (Util.AreSame(firstGap, secondGap, 4) || Util.AreSame(firstGap, previousGap, 4))
                         {
                             //Debug.WriteLine("merge A " + index + "-" + (index + 1));
 
@@ -422,7 +476,7 @@ namespace RazorPagesMovie.core
                             index++;
                             previousGap = firstGap;
 
-                            if (index + 2 == columns.Count && Util.AreSame(firstGap, secondGap))
+                            if (index + 2 == columns.Count && Util.AreSame(firstGap, secondGap, 4))
                             {
                                 mergePairs.Add(new Tuple<int, int>(index, index + 1));
                             }
@@ -438,9 +492,9 @@ namespace RazorPagesMovie.core
                             var thirdColumn = columns[index + 3];
                             var thirdGap = thirdColumn.Rect.Left - secondColumn.Rect.Right;
 
-                            if (Util.AreSame(firstGap, thirdGap))
+                            if (Util.AreSame(firstGap, thirdGap, 4))
                             {
-                                //Debug.WriteLine("merge B" + index + "-" + (index + 1));
+                                //Debug.WriteLine("merge B " + index + "-" + (index + 1));
                                 mergePairs.Add(new Tuple<int, int>(index, index + 1));
                                 previousGap = secondGap;
 
@@ -449,7 +503,7 @@ namespace RazorPagesMovie.core
                             // Might not be connected but other columns are further
                             else if (thirdGap > firstGap * 2.5 || secondGap > firstGap * 2.5)
                             {
-                                //Debug.WriteLine("merge C" + index + "-" + (index + 1));
+                                //Debug.WriteLine("merge C " + index + "-" + (index + 1));
                                 mergePairs.Add(new Tuple<int, int>(index, index + 1));
                                 previousGap = secondGap;
 
@@ -498,7 +552,7 @@ namespace RazorPagesMovie.core
                                 {
                                     var columnWidth = 0;
                                     var columnElements = new List<Element>();
-                                    var isList = pair.Item2 - pair.Item1 + 1 >= 4 && (row.Rect.Height - row.Padding[0] - row.Padding[2]) <= 100;
+                                    var isList = pair.Item2 - pair.Item1 + 1 >= 4 && (row.Rect.Height - row.Margin[0] - row.Margin[2]) <= 100;
                                     var newColumn = new Column();
 
                                     for (var i = pair.Item1; i <= pair.Item2; i++)
@@ -1118,8 +1172,8 @@ namespace RazorPagesMovie.core
                 }
             }
 
-            result.Padding[2] = rows.Last().Padding[2];
-            //result.Padding[0] = rows.First().Padding[0];
+            result.Margin[0] = rows.First().Margin[0];
+            result.Margin[2] = rows.Last().Margin[2];
 
             // create columns
             var columns = new List<Column>(count);
@@ -1134,8 +1188,8 @@ namespace RazorPagesMovie.core
 
                 if (fluid && i == 0)
                 {
-                    column.Margin[3] = rows.First().Padding[3];
-                    column.Margin[1] -= rows.First().Padding[3];
+                    column.Margin[3] = rows.First().Margin[3];
+                    column.Margin[1] -= rows.First().Margin[3];
                 }
 
                 columns.Add(column);
@@ -1160,8 +1214,9 @@ namespace RazorPagesMovie.core
             }
 
             // fill columns
-            foreach (Row row in rows)
+            for (var k = 0; k < rows.Count; k++)
             {
+                var row = (Row)rows[k];
                 var positionAccumulator = 0;
                 for (var i = 0; i < row.Columns.Count; i++)
                 {
@@ -1181,8 +1236,45 @@ namespace RazorPagesMovie.core
                         elementsAccumulator += (int)element.Width + element.Padding[1] + element.Padding[3] + element.Margin[1] + element.Margin[3];
                         if (j == 0 || element.Width != 0 && elementsAccumulator <= columns[i].Width)
                         {
-                            element.Padding[0] += row.Padding[0] + column.Padding[0];
-                            element.Padding[2] += column.Padding[2];
+                            // texts need only padding (because of margin collapsing)
+                            if (element.GetType() == typeof(Text))
+                            {
+                                element.Padding = element.Padding.Zip(element.Margin, (a, b) => a + b).ToArray();
+                                element.Margin = new int[] { 0, 0, 0, 0 };
+
+                                element.Padding[2] += column.Padding[2];
+
+                                // first row has already row margin
+                                if (k != 0)
+                                {
+                                    element.Padding[0] += column.Padding[0];
+                                    element.Padding[0] += row.Margin[0];
+                                }
+                                else
+                                {
+                                    element.Padding[0] += column.Padding[0];
+                                }
+                            }
+                            else
+                            {
+                                element.Margin[2] += column.Padding[2];
+
+                                // first row has already row margin
+                                if (k != 0)
+                                {
+                                    element.Padding[0] += column.Padding[0];
+                                    element.Margin[0] += row.Margin[0];
+                                }
+                                else
+                                {
+                                    element.Padding[0] += column.Padding[0];
+                                }
+                            }
+                        }
+
+                        if (column.BackgroundColor != null)
+                        {
+                            element.BackgroundColor = column.BackgroundColor;
                         }
 
                         //element.Margin[3] += row.Columns[i].Margin[3];

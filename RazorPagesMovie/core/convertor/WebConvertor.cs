@@ -21,7 +21,7 @@ namespace RazorPagesMovie.core.convertor
             //long timestamp = new DateTimeOffset(DateTime.UtcNow).ToUnixTimeSeconds();
             long timestamp = 0;
 
-            string htmlStart = $"<!DOCTYPE html>\n<html>\n<head>\n\t<link href=\"./style.css\" rel=\"stylesheet\">\n\t<link href=\"./custom-{timestamp}.css\" rel=\"stylesheet\">\n\t<meta charset=\"UTF-8\">\n\t<title>Test</title>\n</head>\n<body>\n";
+            string htmlStart = $"<!DOCTYPE html>\n<html>\n<head>\n\t<link href=\"./style.css\" rel=\"stylesheet\">\n\t<link href=\"./custom-{timestamp}.css\" rel=\"stylesheet\">\n\t<meta charset=\"utf-8\" />\n\t<title>Test</title>\n</head>\n<body>\n";
             string htmlBody = "";
             string htmlEnd = "</body>\n</html>";
             string styles = "";
@@ -56,17 +56,19 @@ namespace RazorPagesMovie.core.convertor
                 if (i == header)
                 {
                     section.Tag = "header";
+                    section.Id = 0;
                 }
                 else if (i == footer)
                 {
                     section.Tag = "footer";
+                    section.Id = 0;
                 }
 
                 styles += section.GetStyleSheet("");
 
-                htmlBody += section.StartTag();
-                htmlBody += section.Content();
-                htmlBody += section.EndTag();
+                htmlBody += section.StartTag(1);
+                htmlBody += section.Content(2);
+                htmlBody += section.EndTag(1);
             }
 
             // save custom styles

@@ -17,8 +17,8 @@ namespace RazorPagesMovie.core.model.elements
         string GetAttributes();
         string GetStyles();
         string GetStyleSheet(string parent, int subId);
-        string StartTag();
-        string Content();
-        string EndTag();
+        string StartTag(int level);
+        string Content(int level);
+        string EndTag(int level);
     }
 }

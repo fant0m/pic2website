@@ -16,7 +16,6 @@ namespace RazorPagesMovie.core.model.elements
         {
             Rows = new List<Element>();
 
-            ClassNames.Add("container");
             InitAttributes(layout);
         }
 

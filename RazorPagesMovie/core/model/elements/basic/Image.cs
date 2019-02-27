@@ -14,6 +14,7 @@ namespace RazorPagesMovie.core.model.elements.basic
             _path = path;
 
             Attributes.Add("src", _path);
+            Attributes.Add("alt", "");
         }
 
         public override List<Element> GetSubElements()

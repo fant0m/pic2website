@@ -11,9 +11,8 @@ namespace RazorPagesMovie.core.model.elements.grid
         public override string Tag { get; set; } = "div";
         public override bool PairTag { get; set; } = true;
 
-        public Row(int id)
+        public Row()
         {
-            Id = id;
             Columns = new List<Column>();
             MergedColumns = false;
 

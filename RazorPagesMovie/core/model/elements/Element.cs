@@ -18,7 +18,7 @@ namespace RazorPagesMovie.core.model.elements
             }
             set
             {
-                if (ClassNames.Contains(GetId()))
+                if (id != 0 && ClassNames.Contains(GetId()))
                 {
                     ClassNames.Remove(GetId());
                 }
@@ -72,6 +72,13 @@ namespace RazorPagesMovie.core.model.elements
         public string GetStyles()
         {
             var styles = "";
+
+            // element doesn't have a tag so we don't need to check for styles
+            if (Tag == "")
+            {
+                return styles;
+            }
+
             if (Width > 0)
             {
                 styles += $"width: {Width}";
@@ -127,7 +134,7 @@ namespace RazorPagesMovie.core.model.elements
 
             if (!string.IsNullOrEmpty(FontFamily))
             {
-                styles += $"font-family: {FontFamily};";
+                styles += $"font-family: \"{FontFamily}\";";
             }
 
             if (!string.IsNullOrEmpty(FontStyle))
@@ -171,21 +178,20 @@ namespace RazorPagesMovie.core.model.elements
 
         public string GetStyleSheet(string parent, int subId = 0)
         {
-            var singleElements = new[] { "header", "footer" };
             var prefix = parent == "" ? "" : parent + " > ";
             var sheet = "";
-            string selector;
+
+            if (subId != 0)
+            {
+                Id = subId;
+            }
+            var currentSelector = Id != 0 ? "." + GetId() : Tag;
+            var selector = prefix + currentSelector;
 
             var styles = GetStyles();
+            
             if (styles != "")
             {
-                if (subId != 0)
-                {
-                    Id = subId;
-                }
-
-                var currentSelector = singleElements.Contains(Tag) ? Tag : (Id != 0 ? "." + GetId() : Tag);
-                selector = prefix + currentSelector;
                 var separate = styles.Split(";");
 
                 sheet += selector + " {\n";
@@ -201,20 +207,27 @@ namespace RazorPagesMovie.core.model.elements
 
                 sheet += "\n}\n";
             }
-            else
-            {
-                var currentSelector = Id != 0 ? "." + GetId() : Tag;
-                selector = prefix + currentSelector;
-            }
 
             var subElements = GetSubElements();
             if (subElements != null)
             {
+                if (subElements.Count == 1 && styles == "")
+                {
+                    Id = 0;
+                }
+
+                currentSelector = Id != 0 ? "." + GetId() : Tag;
+                selector = prefix + currentSelector;
+
                 for (var i = 0; i < subElements.Count; i++)
                 {
                     subId++;
                     sheet += subElements[i].GetStyleSheet(selector, subId);
                 }
+            }
+            else if (subElements == null && styles == "")
+            {
+                Id = 0;
             }
 
             return sheet;
@@ -250,18 +263,25 @@ namespace RazorPagesMovie.core.model.elements
             }
         }
 
-        public string StartTag()
+        public string StartTag(int level)
         {
-            var startTag = "<" + Tag;
-            startTag += GetClassAttribute();
-            startTag += GetAttributes();
-            //startTag += $" style=\"{GetStyles()}\"";
-            startTag += PairTag ? ">" : "/>";
+            if (Tag != "")
+            {
+                var startTag = "<" + Tag;
+                startTag += GetClassAttribute();
+                startTag += GetAttributes();
+                //startTag += $" style=\"{GetStyles()}\"";
+                startTag += PairTag ? ">" : "/>";
 
-            return startTag;
+                return Util.Repeat('\t', level) + startTag + "\n";
+            }
+            else
+            {
+                return "";
+            }
         }
 
-        public string Content()
+        public string Content(int level)
         {
             var output = "";
             var subElements = GetSubElements();
@@ -269,24 +289,28 @@ namespace RazorPagesMovie.core.model.elements
             {
                 foreach (var element in GetSubElements())
                 {
-                    output += element.StartTag();
-                    output += element.Content();
-                    output += element.EndTag();
+                    output += element.StartTag(level);
+                    output += element.Content(level + 1);
+                    output += element.EndTag(level);
                 }
             }
          
             if (GetType() == typeof(Text))
             {
+                if (((Text)this).Tag == "")
+                {
+                    level--;
+                }
                 var self = (Text)this;
-                output += string.Join("<br>", self.GetText());
+                output += Util.Repeat('\t', level) + string.Join("<br>", self.GetText()) + "\n";
             }
 
             return output;
         }
 
-        public string EndTag()
+        public string EndTag(int level)
         {
-            return PairTag ? $"</{Tag}>" : "";
+            return PairTag ? $"{Util.Repeat('\t', level)}</{Tag}>\n" : "";
         }
 
         public abstract List<Element> GetSubElements();

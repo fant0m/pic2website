@@ -21,5 +21,10 @@ namespace RazorPagesMovie.core
         {
             return Math.Abs(value2 - value1) <= diff;
         }
+
+        public static string Repeat(char repeat, int length)
+        {
+            return new string(repeat, length);
+        }
     }
 }

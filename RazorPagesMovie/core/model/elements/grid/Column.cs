@@ -8,9 +8,8 @@ namespace RazorPagesMovie.core.model.elements.grid
         public override string Tag { get; set; } = "div";
         public override bool PairTag { get; set; } = true;
 
-        public Column(int id)
+        public Column()
         {
-            Id = id;
             Elements = new List<Element>();
 
             ClassNames.Add("col");

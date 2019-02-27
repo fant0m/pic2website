@@ -25,7 +25,7 @@
 }
 .section-1 > .container-1 > .row-2 > .column-3 > .block-4 > .text-6 {
 	margin: 1px 0px 0px 7px;
-	font-family: Verdana;
+	font-family: "Verdana";
 	font-size: 8px;
 	font-weight: 700;
 	color: rgb(132, 148, 166);
@@ -40,7 +40,7 @@
 }
 .section-1 > .container-1 > .row-2 > .column-3 > .block-5 > .text-7 {
 	margin: 3px 0px 0px 10px;
-	font-family: Verdana;
+	font-family: "Verdana";
 	font-size: 7px;
 	font-weight: 700;
 	color: rgb(107, 128, 150);
@@ -49,40 +49,34 @@
 .section-1 > .container-1 > .row-2 > .column-4 {
 	width: 160px;
 }
-.section-1 > .container-1 > .row-2 > .column-4 > ul > li > a > .image-8 {
+.section-1 > .container-1 > .row-2 > .column-4 > .list-5 > li > .link-7 {
 	width: 7px;
 	margin: 2px 20px 0px 0px;
-	display: inline-block;
 }
-.section-1 > .container-1 > .row-2 > .column-4 > ul > li > a > .image-9 {
+.section-1 > .container-1 > .row-2 > .column-4 > .list-5 > li > .link-8 {
 	width: 12px;
 	margin: 2px 19px 0px 0px;
-	display: inline-block;
 }
-.section-1 > .container-1 > .row-2 > .column-4 > ul > li > a > .image-10 {
+.section-1 > .container-1 > .row-2 > .column-4 > .list-5 > li > .link-9 {
 	width: 11px;
 	margin: 4px 19px 2px 0px;
-	display: inline-block;
 }
-.section-1 > .container-1 > .row-2 > .column-4 > ul > li > a > .image-11 {
+.section-1 > .container-1 > .row-2 > .column-4 > .list-5 > li > .link-10 {
 	width: 11px;
 	margin: 2px 17px 1px 0px;
-	display: inline-block;
 }
-.section-1 > .container-1 > .row-2 > .column-4 > ul > li > a > .text-12 {
+.section-1 > .container-1 > .row-2 > .column-4 > .list-5 > li > .link-11 {
 	width: 15px;
 	margin: 0px 15px 0px 0px;
 	padding: 4px 0px 1px 0px;
-	font-family: Verdana;
+	font-family: "Verdana";
 	font-size: 9px;
 	font-weight: 700;
 	color: rgb(80, 106, 133);
-	display: inline-block;
 }
-.section-1 > .container-1 > .row-2 > .column-4 > ul > li > a > .image-13 {
+.section-1 > .container-1 > .row-2 > .column-4 > .list-5 > li > .link-12 {
 	width: 14px;
 	margin: 2px 0px 0px 0px;
-	display: inline-block;
 }
 header {
 	min-width: 1200px;
@@ -103,7 +97,7 @@ header > .container-1 > .row-2 > .column-3 {
 	margin: 0px 89px 0px 0px;
 }
 header > .container-1 > .row-2 > .column-3 > .text-4 {
-	font-family: Verdana;
+	font-family: "Verdana";
 	font-size: 37px;
 	font-weight: 700;
 	color: rgb(178, 190, 201);
@@ -112,74 +106,67 @@ header > .container-1 > .row-2 > .column-4 {
 	width: 659px;
 	margin: 0px 225px 0px 0px;
 }
-header > .container-1 > .row-2 > .column-4 > ul > li > a > .text-8 {
+header > .container-1 > .row-2 > .column-4 > .list-5 > li > .link-7 {
 	width: 39px;
 	margin: 0px 43px 0px 0px;
 	padding: 17px 0px 13px 0px;
-	font-family: Verdana;
+	font-family: "Verdana";
 	font-size: 11px;
 	font-weight: 700;
 	color: rgb(80, 106, 133);
-	display: inline-block;
 }
-header > .container-1 > .row-2 > .column-4 > ul > li > a > .text-9 {
+header > .container-1 > .row-2 > .column-4 > .list-5 > li > .link-8 {
 	width: 77px;
 	margin: 0px 42px 0px 0px;
 	padding: 17px 0px 13px 0px;
-	font-family: Verdana;
+	font-family: "Verdana";
 	font-size: 11px;
 	font-weight: 700;
 	color: rgb(80, 106, 133);
-	display: inline-block;
 }
-header > .container-1 > .row-2 > .column-4 > ul > li > a > .text-10 {
+header > .container-1 > .row-2 > .column-4 > .list-5 > li > .link-9 {
 	width: 35px;
 	margin: 0px 43px 0px 0px;
 	padding: 17px 0px 13px 0px;
-	font-family: Verdana;
+	font-family: "Verdana";
 	font-size: 11px;
 	font-weight: 700;
 	color: rgb(80, 106, 133);
-	display: inline-block;
 }
-header > .container-1 > .row-2 > .column-4 > ul > li > a > .text-11 {
+header > .container-1 > .row-2 > .column-4 > .list-5 > li > .link-10 {
 	width: 43px;
 	margin: 0px 42px 0px 0px;
 	padding: 17px 0px 13px 0px;
-	font-family: Verdana;
+	font-family: "Verdana";
 	font-size: 11px;
 	font-weight: 700;
 	color: rgb(80, 106, 133);
-	display: inline-block;
 }
-header > .container-1 > .row-2 > .column-4 > ul > li > a > .text-12 {
+header > .container-1 > .row-2 > .column-4 > .list-5 > li > .link-11 {
 	width: 68px;
 	margin: 0px 43px 0px 0px;
 	padding: 17px 0px 13px 0px;
-	font-family: Verdana;
+	font-family: "Verdana";
 	font-size: 11px;
 	font-weight: 700;
 	color: rgb(80, 106, 133);
-	display: inline-block;
 }
-header > .container-1 > .row-2 > .column-4 > ul > li > a > .text-13 {
+header > .container-1 > .row-2 > .column-4 > .list-5 > li > .link-12 {
 	width: 79px;
 	margin: 0px 43px 0px 0px;
 	padding: 17px 0px 13px 0px;
-	font-family: Verdana;
+	font-family: "Verdana";
 	font-size: 11px;
 	font-weight: 700;
 	color: rgb(80, 106, 133);
-	display: inline-block;
 }
-header > .container-1 > .row-2 > .column-4 > ul > li > a > .text-14 {
+header > .container-1 > .row-2 > .column-4 > .list-5 > li > .link-13 {
 	width: 62px;
 	padding: 17px 0px 13px 0px;
-	font-family: Verdana;
+	font-family: "Verdana";
 	font-size: 11px;
 	font-weight: 700;
 	color: rgb(80, 106, 133);
-	display: inline-block;
 }
 header > .container-1 > .row-2 > .column-5 {
 	width: 13px;
@@ -211,14 +198,14 @@ header > .container-1 > .row-2 > .column-5 > .image-6 {
 .section-4 > .container-1 > .text-2 {
 	padding: 129px 0px 0px 0px;
 	text-align: center;
-	font-family: Trebuchet MS;
+	font-family: "Trebuchet MS";
 	font-size: 38px;
 	color: rgb(80, 106, 133);
 }
 .section-4 > .container-1 > .text-3 {
 	margin: 35px 0px 0px 0px;
 	text-align: center;
-	font-family: Trebuchet MS;
+	font-family: "Trebuchet MS";
 	font-size: 19px;
 	color: rgb(115, 135, 156);
 	line-height: 31.5px;
@@ -240,13 +227,13 @@ header > .container-1 > .row-2 > .column-5 > .image-6 {
 }
 .section-4 > .container-1 > .row-4 > .column-6 > .text-7 {
 	padding: 81px 0px 31px 0px;
-	font-family: Trebuchet MS;
+	font-family: "Trebuchet MS";
 	font-size: 25px;
 	color: rgb(80, 106, 133);
 }
 .section-4 > .container-1 > .row-4 > .column-6 > .text-8 {
 	margin: 2px 0px 0px 1px;
-	font-family: Trebuchet MS;
+	font-family: "Trebuchet MS";
 	font-size: 15px;
 	color: rgb(115, 135, 156);
 	line-height: 24.5px;
@@ -269,13 +256,13 @@ header > .container-1 > .row-2 > .column-5 > .image-6 {
 }
 .section-4 > .container-1 > .row-4 > .column-8 > .text-9 {
 	padding: 81px 0px 27px 0px;
-	font-family: Trebuchet MS;
+	font-family: "Trebuchet MS";
 	font-size: 25px;
 	color: rgb(80, 106, 133);
 }
 .section-4 > .container-1 > .row-4 > .column-8 > .text-10 {
 	margin: 2px 0px 0px 0px;
-	font-family: Trebuchet MS;
+	font-family: "Trebuchet MS";
 	font-size: 15px;
 	color: rgb(115, 135, 156);
 	line-height: 24.5px;
@@ -293,13 +280,13 @@ header > .container-1 > .row-2 > .column-5 > .image-6 {
 }
 .section-4 > .container-1 > .row-4 > .column-10 > .text-11 {
 	padding: 80px 0px 27px 0px;
-	font-family: Trebuchet MS;
+	font-family: "Trebuchet MS";
 	font-size: 25px;
 	color: rgb(80, 106, 133);
 }
 .section-4 > .container-1 > .row-4 > .column-10 > .text-12 {
 	margin: 2px 0px 0px 0px;
-	font-family: Trebuchet MS;
+	font-family: "Trebuchet MS";
 	font-size: 15px;
 	color: rgb(115, 135, 156);
 	line-height: 24.5px;
@@ -316,7 +303,7 @@ header > .container-1 > .row-2 > .column-5 > .image-6 {
 .section-5 > .container-1 > .text-2 {
 	padding: 130px 0px 0px 0px;
 	text-align: center;
-	font-family: Trebuchet MS;
+	font-family: "Trebuchet MS";
 	font-size: 40px;
 	color: rgb(80, 106, 133);
 }
@@ -324,59 +311,59 @@ header > .container-1 > .row-2 > .column-5 > .image-6 {
 	margin: 0px 212px 0px 212px;
 	padding: 42px 0px 0px 0px;
 	text-align: center;
-	font-family: Trebuchet MS;
+	font-family: "Trebuchet MS";
 	font-size: 20px;
 	color: rgb(115, 135, 156);
 }
-.section-5 > .container-1 > .row-1 > .column-5 {
+.section-5 > .container-1 > .row-4 > .column-5 {
 	width: 572px;
 	margin: 0px 28px 0px 0px;
 }
-.section-5 > .container-1 > .row-1 > .column-5 > .image-6 {
+.section-5 > .container-1 > .row-4 > .column-5 > .image-6 {
 	padding: 77px 0px 0px 0px;
 }
-.section-5 > .container-1 > .row-1 > .column-5 > .text-7 {
+.section-5 > .container-1 > .row-4 > .column-5 > .text-7 {
 	margin: 0px 0px 0px 113px;
 	padding: 34px 0px 0px 0px;
-	font-family: Trebuchet MS;
+	font-family: "Trebuchet MS";
 	font-size: 20px;
 	color: rgb(80, 106, 133);
 }
-.section-5 > .container-1 > .row-1 > .column-5 > .text-8 {
+.section-5 > .container-1 > .row-4 > .column-5 > .text-8 {
 	margin: 0px 0px 0px 262px;
 	padding: 13px 0px 0px 0px;
-	font-family: Trebuchet MS;
+	font-family: "Trebuchet MS";
 	font-size: 12px;
 	color: rgb(115, 135, 156);
 }
-.section-5 > .container-1 > .row-1 > .column-5 > .image-9 {
+.section-5 > .container-1 > .row-4 > .column-5 > .image-9 {
 	padding: 30px 0px 0px 0px;
 }
-.section-5 > .container-1 > .row-1 > .column-6 {
+.section-5 > .container-1 > .row-4 > .column-6 {
 	width: 572px;
 }
-.section-5 > .container-1 > .row-1 > .column-6 > .row-7 {
+.section-5 > .container-1 > .row-4 > .column-6 > .row-7 {
 	padding: 77px 0px 0px 0px;
 	display: inline-block;
 }
-.section-5 > .container-1 > .row-1 > .column-6 > .row-7 > .column-1 > .image-9 {
+.section-5 > .container-1 > .row-4 > .column-6 > .row-7 > div > .image-9 {
 	display: inline;
 }
-.section-5 > .container-1 > .row-1 > .column-6 > .text-8 {
+.section-5 > .container-1 > .row-4 > .column-6 > .text-8 {
 	margin: 0px 0px 0px 117px;
 	padding: 34px 0px 0px 0px;
-	font-family: Trebuchet MS;
+	font-family: "Trebuchet MS";
 	font-size: 19px;
 	color: rgb(80, 106, 133);
 }
-.section-5 > .container-1 > .row-1 > .column-6 > .text-9 {
+.section-5 > .container-1 > .row-4 > .column-6 > .text-9 {
 	margin: 0px 0px 0px 262px;
 	padding: 13px 0px 0px 0px;
-	font-family: Trebuchet MS;
+	font-family: "Trebuchet MS";
 	font-size: 12px;
 	color: rgb(115, 135, 156);
 }
-.section-5 > .container-1 > .row-1 > .column-6 > .image-10 {
+.section-5 > .container-1 > .row-4 > .column-6 > .image-10 {
 	padding: 30px 0px 0px 0px;
 }
 .section-5 > .container-1 > .row-5 {
@@ -390,7 +377,7 @@ header > .container-1 > .row-2 > .column-5 > .image-6 {
 .section-5 > .container-1 > .row-5 > .column-6 > .row-7 {
 	display: inline-block;
 }
-.section-5 > .container-1 > .row-5 > .column-6 > .row-7 > .column-1 > .image-9 {
+.section-5 > .container-1 > .row-5 > .column-6 > .row-7 > div > .image-9 {
 	display: inline;
 }
 .section-5 > .container-1 > .row-5 > .column-7 {
@@ -433,14 +420,14 @@ header > .container-1 > .row-2 > .column-5 > .image-6 {
 .section-6 > .container-1 > .text-2 {
 	padding: 130px 0px 0px 0px;
 	text-align: center;
-	font-family: Trebuchet MS;
+	font-family: "Trebuchet MS";
 	font-size: 39px;
 	color: rgb(80, 106, 133);
 }
 .section-6 > .container-1 > .text-3 {
 	margin: 42px 0px 0px 0px;
 	text-align: center;
-	font-family: Trebuchet MS;
+	font-family: "Trebuchet MS";
 	font-size: 20px;
 	color: rgb(115, 135, 156);
 	line-height: 33px;
@@ -455,7 +442,7 @@ header > .container-1 > .row-2 > .column-5 > .image-6 {
 	margin: 0px 25px 0px 27px;
 	padding: 20px 0px 0px 0px;
 	text-align: center;
-	font-family: Trebuchet MS;
+	font-family: "Trebuchet MS";
 	font-size: 15px;
 	color: rgb(255, 255, 255);
 	display: inline-block;
@@ -483,21 +470,21 @@ header > .container-1 > .row-2 > .column-5 > .image-6 {
 .section-7 > .container-1 > .row-2 > .column-3 > .text-4 {
 	margin: 0px 0px 0px 1px;
 	padding: 73px 0px 0px 0px;
-	font-family: Verdana;
+	font-family: "Verdana";
 	font-size: 15px;
 	font-weight: 700;
 	color: rgb(255, 255, 255);
 }
 .section-7 > .container-1 > .row-2 > .column-3 > .text-5 {
 	padding: 26px 0px 0px 0px;
-	font-family: Verdana;
+	font-family: "Verdana";
 	font-size: 31px;
 	font-weight: 700;
 	color: rgb(255, 255, 255);
 }
 .section-7 > .container-1 > .row-2 > .column-3 > .text-6 {
 	margin: 24px 0px 0px 1px;
-	font-family: Trebuchet MS;
+	font-family: "Trebuchet MS";
 	font-size: 12px;
 	color: rgb(163, 177, 191);
 	line-height: 20.6666666666667px;
@@ -505,7 +492,7 @@ header > .container-1 > .row-2 > .column-5 > .image-6 {
 .section-7 > .container-1 > .row-2 > .column-3 > .text-7 {
 	margin: 0px 0px 0px 1px;
 	padding: 24px 0px 5px 0px;
-	font-family: Trebuchet MS;
+	font-family: "Trebuchet MS";
 	font-size: 25px;
 	color: rgb(163, 177, 191);
 }
@@ -516,7 +503,7 @@ header > .container-1 > .row-2 > .column-5 > .image-6 {
 .section-7 > .container-1 > .row-2 > .column-4 > .text-5 {
 	margin: 0px 0px 0px 1px;
 	padding: 73px 0px 0px 0px;
-	font-family: Verdana;
+	font-family: "Verdana";
 	font-size: 15px;
 	font-weight: 700;
 	color: rgb(255, 255, 255);
@@ -527,14 +514,14 @@ header > .container-1 > .row-2 > .column-5 > .image-6 {
 .section-7 > .container-1 > .row-2 > .column-4 > .block-6 > .row-7 {
 	display: inline-block;
 }
-.section-7 > .container-1 > .row-2 > .column-4 > .block-6 > .row-7 > .column-1 > .image-9 {
+.section-7 > .container-1 > .row-2 > .column-4 > .block-6 > .row-7 > div > .image-9 {
 	display: inline;
 }
 .section-7 > .container-1 > .row-2 > .column-4 > .block-6 > .row-8 {
 	margin: 0px 0px 0px 4px;
 	display: inline-block;
 }
-.section-7 > .container-1 > .row-2 > .column-4 > .block-6 > .row-8 > .column-1 > .image-10 {
+.section-7 > .container-1 > .row-2 > .column-4 > .block-6 > .row-8 > div > .image-10 {
 	display: inline;
 }
 .section-7 > .container-1 > .row-2 > .column-4 > .block-7 {
@@ -543,7 +530,7 @@ header > .container-1 > .row-2 > .column-5 > .image-6 {
 .section-7 > .container-1 > .row-2 > .column-4 > .block-7 > .row-8 {
 	display: inline-block;
 }
-.section-7 > .container-1 > .row-2 > .column-4 > .block-7 > .row-8 > .column-1 > .image-10 {
+.section-7 > .container-1 > .row-2 > .column-4 > .block-7 > .row-8 > div > .image-10 {
 	display: inline;
 }
 .section-7 > .container-1 > .row-2 > .column-4 > .block-7 > .image-9 {
@@ -557,14 +544,14 @@ header > .container-1 > .row-2 > .column-5 > .image-6 {
 .section-7 > .container-1 > .row-2 > .column-5 > .text-6 {
 	margin: 0px 0px 0px 1px;
 	padding: 73px 0px 0px 0px;
-	font-family: Verdana;
+	font-family: "Verdana";
 	font-size: 15px;
 	font-weight: 700;
 	color: rgb(255, 255, 255);
 }
 .section-7 > .container-1 > .row-2 > .column-5 > .text-7 {
 	margin: 26px 0px 0px 1px;
-	font-family: Trebuchet MS;
+	font-family: "Trebuchet MS";
 	font-size: 12px;
 	color: rgb(163, 177, 191);
 	line-height: 21px;
@@ -578,7 +565,7 @@ header > .container-1 > .row-2 > .column-5 > .image-6 {
 }
 .section-7 > .container-1 > .row-2 > .column-5 > .block-8 > .text-10 {
 	margin: 1px 0px 0px 9px;
-	font-family: Trebuchet MS;
+	font-family: "Trebuchet MS";
 	font-size: 12px;
 	color: rgb(163, 177, 191);
 	display: inline-block;
@@ -592,7 +579,7 @@ header > .container-1 > .row-2 > .column-5 > .image-6 {
 }
 .section-7 > .container-1 > .row-2 > .column-5 > .block-9 > .text-11 {
 	margin: 1px 0px 0px 10px;
-	font-family: Trebuchet MS;
+	font-family: "Trebuchet MS";
 	font-size: 12px;
 	color: rgb(163, 177, 191);
 	display: inline-block;
@@ -606,7 +593,7 @@ header > .container-1 > .row-2 > .column-5 > .image-6 {
 }
 .section-7 > .container-1 > .row-2 > .column-5 > .block-10 > .text-12 {
 	margin: 0px 0px 0px 8px;
-	font-family: Trebuchet MS;
+	font-family: "Trebuchet MS";
 	font-size: 12px;
 	color: rgb(163, 177, 191);
 	display: inline-block;
@@ -617,14 +604,14 @@ header > .container-1 > .row-2 > .column-5 > .image-6 {
 .section-7 > .container-1 > .row-2 > .column-6 > .text-7 {
 	margin: 0px 0px 0px 1px;
 	padding: 73px 0px 0px 0px;
-	font-family: Verdana;
+	font-family: "Verdana";
 	font-size: 15px;
 	font-weight: 700;
 	color: rgb(255, 255, 255);
 }
 .section-7 > .container-1 > .row-2 > .column-6 > .text-8 {
 	margin: 26px 0px 0px 0px;
-	font-family: Trebuchet MS;
+	font-family: "Trebuchet MS";
 	font-size: 12px;
 	color: rgb(163, 177, 191);
 	line-height: 21px;
@@ -642,7 +629,7 @@ header > .container-1 > .row-2 > .column-5 > .image-6 {
 }
 .section-7 > .container-1 > .row-2 > .column-6 > .row-9 > .column-10 > .text-11 {
 	padding: 10px 0px 7px 0px;
-	font-family: Trebuchet MS;
+	font-family: "Trebuchet MS";
 	font-size: 12px;
 	color: rgb(118, 131, 143);
 }
@@ -655,7 +642,7 @@ header > .container-1 > .row-2 > .column-5 > .image-6 {
 	margin: 0px 10px 0px 11px;
 	padding: 10px 0px 10px 0px;
 	text-align: center;
-	font-family: Trebuchet MS;
+	font-family: "Trebuchet MS";
 	font-size: 13px;
 	color: rgb(255, 255, 255);
 	display: inline-block;
@@ -678,27 +665,27 @@ footer > .container-1 > .row-2 > .column-3 {
 	margin: 0px 606px 0px 0px;
 }
 footer > .container-1 > .row-2 > .column-3 > .text-4 {
-	font-family: Trebuchet MS;
+	font-family: "Trebuchet MS";
 	font-size: 12px;
 	color: rgb(112, 126, 140);
 }
 footer > .container-1 > .row-2 > .column-4 {
 	width: 365px;
 }
-footer > .container-1 > .row-2 > .column-4 > div > .text-6 {
+footer > .container-1 > .row-2 > .column-4 > .block-5 > .text-6 {
 	margin: 1px 0px 0px 0px;
-	font-family: Trebuchet MS;
+	font-family: "Trebuchet MS";
 	font-size: 13px;
 	color: rgb(112, 126, 140);
 	display: inline-block;
 }
-footer > .container-1 > .row-2 > .column-4 > div > .image-7 {
+footer > .container-1 > .row-2 > .column-4 > .block-5 > .image-7 {
 	margin: 5px 0px 0px 9px;
 	display: inline-block;
 }
-footer > .container-1 > .row-2 > .column-4 > div > .text-8 {
+footer > .container-1 > .row-2 > .column-4 > .block-5 > .text-8 {
 	margin: 0px 0px 0px 9px;
-	font-family: Trebuchet MS;
+	font-family: "Trebuchet MS";
 	font-size: 15px;
 	color: rgb(112, 126, 140);
 	display: inline-block;

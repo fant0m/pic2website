@@ -130,8 +130,8 @@ namespace RazorPagesMovie.Pages
             var container = new Container(layout);
             var text = new Text(new[] { "test" }, "arial", new int[] { 0, 0, 0 }, 30, false, false);
             var image = new Image("https://www.freeiconspng.com/uploads/format-png-image-resolution-3580x3402-size-1759-kb-star-png-image-star--6.png");
-            var row = new Row(1);
-            var col = new Column(1);
+            var row = new Row();
+            var col = new Column();
             row.Columns.Add(col);
             col.Elements.Add(text);
             col.Elements.Add(image);

@@ -1,36 +1,18 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
 using OpenCvSharp;
 using RazorPagesMovie.core.convertor;
 using RazorPagesMovie.core.model;
 using RazorPagesMovie.core.model.elements;
 using RazorPagesMovie.core.model.elements.basic;
 using RazorPagesMovie.core.model.elements.grid;
-using Tesseract;
 using Rect = OpenCvSharp.Rect;
 
 namespace RazorPagesMovie.core
 {
-    // @todo rename tripleext and move somewhere?
-    public class Triple<T, X, Y>
-    {
-        public T Item1 { get; set; }
-        public X Item2 { get; set; }
-        public Y Item3 { get; set; }
-    }
-    public class TripleExt<T, X, Y, Z>
-    {
-        public T Item1 { get; set; }
-        public X Item2 { get; set; }
-        public Y Item3 { get; set; }
-        public Z Element { get; set; }
-    }
-
     public class TemplateParser
     {
         private string _imagePath;
@@ -38,11 +20,9 @@ namespace RazorPagesMovie.core
         private Point[][] _contours;
         private HierarchyIndex[] _hierarchy;
         private TemplateStructure _templateStructure;
-        private TesseractEngine _tess;
         private Ocr _ocr;
         private ColorAnalyser _colorAnalyser;
         private int limit = 0;
-        private int test = 0;
 
         public const int MaxSeparatorHeight = 10;
         public const int MinSeparatorWidth = 400;
@@ -57,8 +37,6 @@ namespace RazorPagesMovie.core
 
         public string Analyse()
         {
-            _tess = new TesseractEngine(@"./wwwroot/tessdata", "eng", EngineMode.LstmOnly);
-
             byte[] imageData = File.ReadAllBytes(@"./wwwroot/images/template4.png");
             _image = Mat.FromImageData(imageData);
             _colorAnalyser = new ColorAnalyser(_image);
@@ -638,8 +616,8 @@ namespace RazorPagesMovie.core
             if (isImg)
             {
                 Debug.WriteLine("its directly image, skipping content parsing");
-                var row = new Row(1);
-                var column = new Column(1);
+                var row = new Row();
+                var column = new Column();
 
                 limit++;
 
@@ -672,7 +650,7 @@ namespace RazorPagesMovie.core
             sectionRects = sectionRects.OrderBy(rec => rec.Top).ToArray();
 
             // analyse section rows
-            var rows = new List<TripleExt<int, int, List<Rect>, Element>>(); // y start y end
+            var rows = new List<TemplateBlock<int, int, List<Rect>, Element>>(); // y start y end
             foreach (var rect in sectionRects)
             {
                 var rowIndex = FindRowForRect(rows, rect);
@@ -704,7 +682,7 @@ namespace RazorPagesMovie.core
                     }
 
                     // create section row
-                    var sectionRow = new Row(1);
+                    var sectionRow = new Row();
                     sectionRow.Rect = new Rect(parent.X, rect.Y, parent.Width, rect.Height);
 
                     // set section row styles
@@ -725,9 +703,8 @@ namespace RazorPagesMovie.core
                     // @todo test
                     //sectionRow.BackgroundColor = new[] { r.Next(0, 255), r.Next(0, 255), r.Next(0, 255) };
 
-                    var triple = new TripleExt<int, int, List<Rect>, Element>
+                    var triple = new TemplateBlock<int, int, List<Rect>, Element>
                     {
-                        
                         Item1 = rect.Top,
                         Item2 = rect.Bottom,
                         Item3 = new List<Rect> { rect },
@@ -774,11 +751,6 @@ namespace RazorPagesMovie.core
             {
                 var sectionRow = (Row) row.Element;
 
-                // @todo treba spracovať každý riadok do stĺpcov, t.j. taký istý princíp ako riadky - zoradia sa zľava doprava (čo už vlastne je vyššie):
-                // @todo zoberiem prvý element, zistím aká je medzera medzi ďalším a poďalším (za podmienky že existuje poďalší), ak sú medzery cca rovnaká (rátam s nejakou odchýlkou) tak ich pridám to 1 stĺpca a prejdem na ďalší
-                // @todo potom v sekcii ešte pozriem riadky a zistím či nemajú rovnaké stĺpce (prípadne s odchylkou) a ak hej tak spojím tie riadky
-                // @todo riadok teda bude obsahovať zoznam stĺpcov a každý stĺpec bude obsahovať zoznam riadkov, t.j. na každý stĺpec potom znova aplikujem algoritmus delenia na riadky už ale bez stĺpcovania (asi či?)
-
                 /* Columns start */
 
                 // align rects from the left to the right
@@ -786,7 +758,7 @@ namespace RazorPagesMovie.core
 
                 // analyse section columns
                 var fluidPercents = 0.0;
-                var columns = new List<TripleExt<int, int, List<Rect>, Element>>(); // x start, x end, list of items
+                var columns = new List<TemplateBlock<int, int, List<Rect>, Element>>(); // x start, x end, list of items
                 foreach (var rect in alignedRects)
                 {
                     var columnIndex = FindColumnForRect(columns, rect);
@@ -837,13 +809,13 @@ namespace RazorPagesMovie.core
                         }
 
                         // create new column
-                        var column = new Column(1);
+                        var column = new Column();
                         if (columns.Count == 0)
                         {
                             //column.Margin[3] = rect.Left - sectionRow.Rect.Left;
                         }
 
-                        var triple = new TripleExt<int, int, List<Rect>, Element>
+                        var triple = new TemplateBlock<int, int, List<Rect>, Element>
                         {
                             Item1 = rect.Left,
                             Item2 = rect.Right,
@@ -968,7 +940,7 @@ namespace RazorPagesMovie.core
                     var alignedColumnRects = column.Item3.OrderBy(rec => rec.Top).ToArray();
 
                     // detect column rows
-                    var columnRows = new List<TripleExt<int, int, List<Rect>, Element>>(); // y start y end
+                    var columnRows = new List<TemplateBlock<int, int, List<Rect>, Element>>(); // y start y end
                     foreach (var rect in alignedColumnRects)
                     {
                         var rowIndex = FindRowForRect(columnRows, rect);
@@ -976,7 +948,7 @@ namespace RazorPagesMovie.core
                         {
                             //var columnRow = new Row(1);
                             var columnRow = new Block();
-                            var triple = new TripleExt<int, int, List<Rect>, Element>
+                            var triple = new TemplateBlock<int, int, List<Rect>, Element>
                             {
                                 Item1 = rect.Top,
                                 Item2 = rect.Bottom,
@@ -1035,7 +1007,6 @@ namespace RazorPagesMovie.core
                             //Cv2.Rectangle(roi2, new Point(contour.X, contour.Y), new Point(contour.X + contour.Width, contour.Y + contour.Height), Scalar.FromRgb(r.Next(0, 255), r.Next(0, 255), r.Next(0, 255)));
                             //roi2.SaveImage("image2-" + test + ".png");
                             //l++;
-                            //test++;
                             //Cv2.Rectangle(copy, new Point(contour.X, contour.Y), new Point(contour.X + contour.Width, contour.Y + contour.Height), Scalar.FromRgb(r.Next(0, 255), r.Next(0, 255), r.Next(0, 255)));
                         //}
 
@@ -1524,7 +1495,7 @@ namespace RazorPagesMovie.core
             return true;
         }
 
-        private int FindRowForRect(List<TripleExt<int, int, List<Rect>, Element>> rows, Rect rect)
+        private int FindRowForRect(List<TemplateBlock<int, int, List<Rect>, Element>> rows, Rect rect)
         {
             int index = -1;
 
@@ -1549,7 +1520,7 @@ namespace RazorPagesMovie.core
             return index;
         }
 
-        private int FindColumnForRect(List<TripleExt<int, int, List<Rect>, Element>> columns, Rect rect)
+        private int FindColumnForRect(List<TemplateBlock<int, int, List<Rect>, Element>> columns, Rect rect)
         {
             int index = -1;
 

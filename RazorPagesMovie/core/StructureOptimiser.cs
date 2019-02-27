@@ -499,7 +499,7 @@ namespace RazorPagesMovie.core
                                     var columnWidth = 0;
                                     var columnElements = new List<Element>();
                                     var isList = pair.Item2 - pair.Item1 + 1 >= 4 && (row.Rect.Height - row.Padding[0] - row.Padding[2]) <= 100;
-                                    var newColumn = new Column(1);
+                                    var newColumn = new Column();
 
                                     for (var i = pair.Item1; i <= pair.Item2; i++)
                                     {
@@ -560,10 +560,28 @@ namespace RazorPagesMovie.core
                                             // replace font attributes if element is text
                                             if (unify != null && element.GetType() == typeof(Text))
                                             {
-                                                CopyTextStyle(unify, (Text)element);
+                                                CopyTextStyle(unify, element);
                                             }
 
                                             var item = new ListItem(element, "https://www.google.com", "blank");
+
+                                            // move styles from element to link
+                                            item.Link.Width = element.Width;
+                                            item.Link.Padding = element.Padding;
+                                            item.Link.Margin = element.Margin;
+                                            element.Width = 0;
+                                            element.Padding = new[] { 0, 0, 0, 0 };
+                                            element.Margin = new[] { 0, 0, 0, 0 };
+                                            element.Display = null;
+                                            if (element.GetType() == typeof(Text))
+                                            {
+                                                CopyTextStyle(element, item.Link);
+
+                                                // output text without element
+                                                element.Tag = "";
+                                                element.PairTag = false;
+                                            }
+
                                             list.Items.Add(item);
                                         }
 
@@ -588,7 +606,7 @@ namespace RazorPagesMovie.core
             }
         }
 
-        public static void CopyTextStyle(Text from, Text to)
+        public static void CopyTextStyle(Element from, Element to)
         {
             to.FontFamily = from.FontFamily;
             to.FontSize = from.FontSize;
@@ -722,7 +740,7 @@ namespace RazorPagesMovie.core
 
                         for (var j = 0; j < length; j++)
                         {
-                            var column = new Column(1);
+                            var column = new Column();
                             var previousColumn = previousRow.Columns[j];
                             column.Fluid = previousColumn.Fluid;
                             var match = matched[j] - 1;
@@ -1002,7 +1020,7 @@ namespace RazorPagesMovie.core
         /// <returns></returns>
         private static Row SplitRowsIntoColumns(List<Element> rows, bool fluid)
         {
-            var result = new Row(1);
+            var result = new Row();
             result.MergedColumns = true;
 
             var count = ((Row)rows[0]).Columns.Count;
@@ -1108,7 +1126,7 @@ namespace RazorPagesMovie.core
             var calcMargin = ((Row)rows[0]).Columns[0].MarginCalc[1].Contains("calc");
             for (var i = 0; i < count; i++)
             {
-                var column = new Column(1);
+                var column = new Column();
                 column.Width = maxContentWidth[i];
                 
                 column.Fluid = fluid;

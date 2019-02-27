@@ -6,7 +6,6 @@ namespace RazorPagesMovie.core.model.elements
 {
     public class Section : Element
     {
-        // @todo môže mať section viac containerov vôbec? teoreticky asi nie
         public Layout Layout { get; set; }
         public List<Container> Containers { get; set; }
         public int Top { get; set; }

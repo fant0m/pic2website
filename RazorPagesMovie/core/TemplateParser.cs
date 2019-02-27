@@ -40,22 +40,24 @@ namespace RazorPagesMovie.core
 
         public string Analyse()
         {
+            // @todo imagePath pôjde sem
             byte[] imageData = File.ReadAllBytes(@"./wwwroot/images/template4.png");
             _image = Mat.FromImageData(imageData);
             _colorAnalyser = new ColorAnalyser(_image);
-            //Convert the img1 to grayscale and then filter out the noise
-            Mat gray1 = Mat.FromImageData(imageData, ImreadModes.Grayscale);
-            // @todo naozaj to chceme blurovať? robí to len bordel a zbytočné contours
-            gray1 = gray1.GaussianBlur(new OpenCvSharp.Size(3, 3), 0);
 
-            //Canny Edge Detector
-            Mat cannyGray = gray1.Canny(15, 18); // 0, 12, blur 9; 2, 17,  blur 7; 0, 25 blur 13; 20 35 blur 0; 15, 25 blur 3
+            // Convert image to grayscale and then filter out the noise
+            Mat gray = Mat.FromImageData(imageData, ImreadModes.Grayscale);
+            gray = gray.GaussianBlur(new OpenCvSharp.Size(3, 3), 0);
+
+            // Canny Edge Detector
+            Mat cannyGray = gray.Canny(15, 18); // 0, 12, blur 9; 2, 17,  blur 7; 0, 25 blur 13; 20 35 blur 0; 15, 25 blur 3
 
             Random r = new Random();
-            int lastY = 0;
 
+            // Find contours
             Cv2.FindContours(cannyGray, out _contours, out _hierarchy, mode: RetrievalModes.Tree, method: ContourApproximationModes.ApproxSimple);
 
+            // Init a new template structure
             _templateStructure = new TemplateStructure();
             
 
@@ -65,13 +67,14 @@ namespace RazorPagesMovie.core
             //reduced.SaveImage("wwwroot/images/output.png");
             //Debug.WriteLine("rows " + reduced.Rows + "," + reduced.Cols + "," + gray1.Rows);
 
-            var draw = AnalyzeSections();
+            // Analyse sections
+            AnalyseSections();
 
             Mat copy = _image.Clone();
             Cv2.DrawContours(copy, _contours, -1, Scalar.Orange);
 
 
-            Debug.WriteLine("počet " + _contours.Length);
+            //Debug.WriteLine("počet " + _contours.Length);
 
 
             var convertor = new WebConvertor(_templateStructure);
@@ -88,7 +91,7 @@ namespace RazorPagesMovie.core
             return output;
         }
 
-        private int AnalyzeSections()
+        private int AnalyseSections()
         {
             var r = new Random();
 
@@ -246,7 +249,6 @@ namespace RazorPagesMovie.core
                 ColorAnalyser.AnalyseSectionBackground(section, rectangles, _image);
 
                 // Create a container
-                // @todo globálny counter na containery a ostatné veci ale asi až potom ako budú normalizované elementy takže teraz je to fuk čo tam je
                 var container = new Container(section.Layout);
                 Rect containerRect;
 
@@ -275,8 +277,6 @@ namespace RazorPagesMovie.core
                 // @todo pozadie elementov bude treba ešte tuning, niekedy treba aby row mal farbu; taktiež optimiser bude asi musieť prejsť a nechať farbu len v poslednej úrovni
                 // @todo text gap merging - space podľa fontu + info že je to text
                 // @todo replace element width with right padding
-                // @todo acsascolumn treba inak vyriešiť, actascolumn - ak je true dať elementu inú triedu (nie row ale napr. inline-block)
-                // @todo spájanie do zvlášť containera ak majú rovnaký štýl - rovnaká výška, medzery, ..
                 container.Rows = ProcessInnerBlocks(contours, copy, containerRect, section.BackgroundColor, section.Layout.Type == Layout.LayoutType.Fluid);
 
                 // Append container to section
@@ -565,7 +565,7 @@ namespace RazorPagesMovie.core
             {
                 // @todo not sure
                 isImg = true;
-                Debug.WriteLine("all contours are images");
+                //Debug.WriteLine("all contours are images");
             }
             else
             {
@@ -1549,8 +1549,6 @@ namespace RazorPagesMovie.core
         private bool IsRectSeparator(Rect rect)
         {
             // @todo prvá časť podmienky rect.X <= _mostLef || teoreticky na rect.X == 0
-            // @todo čo ak zoberie ten separator ako obdlznik s celym obsahom?
-            // @todo budeme zisťovať globálne mostLeft a mostRight?
             //return rect.Left <= _mostLeft && rect.Height <= MaxSeparatorHeight && rect.Width > MinSeparatorWidth;
             return rect.Left <= 0 && rect.Height <= MaxSeparatorHeight && rect.Width > MinSeparatorWidth;
         }

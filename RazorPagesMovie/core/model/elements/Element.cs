@@ -49,7 +49,6 @@ namespace RazorPagesMovie.core.model.elements
         public int FontWeight;
         public string FontStyle;
         public double LineHeight;
-        // @todo display by nebolo zlé dať aj ako enum
         public string Display;
         public Rect Rect;
         public bool Fluid;

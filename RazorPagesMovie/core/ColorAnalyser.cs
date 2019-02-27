@@ -209,10 +209,10 @@ namespace RazorPagesMovie.core
             }
         }
 
-        public static int[] AnalyseTextColor(Rectangle region, string image, Pix threshold)
+        public static int[] AnalyseTextColor(Rectangle region, Bitmap image, Pix threshold)
         {
             // load image
-            Mat src = Cv2.ImRead(@"./wwwroot/images/" + image);
+            Mat src = BitmapConverter.ToMat(image);
 
             // convert threshold to mat
             Bitmap bmp = PixToBitmapConverter.Convert(threshold);

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using OpenCvSharp;
@@ -9,6 +10,8 @@ using RazorPagesMovie.core.model;
 using RazorPagesMovie.core.model.elements;
 using RazorPagesMovie.core.model.elements.basic;
 using RazorPagesMovie.core.model.elements.grid;
+using Image = RazorPagesMovie.core.model.elements.basic.Image;
+using Point = OpenCvSharp.Point;
 using Rect = OpenCvSharp.Rect;
 
 namespace RazorPagesMovie.core
@@ -931,12 +934,9 @@ namespace RazorPagesMovie.core
                 // Process columns into rows
                 foreach (var column in columns)
                 {
-                    // @todo refactor rows, columns do metód
-
                     /* Column rows start */
 
                     // align rects from the top to the bottom
-                    // @todo works15.png, môže sa stať že bude nespojený rect mať rozmery celého obrázku a potom sa jednotlivé element nerozparsujú, možno nejaká podmienka že ak rozmery rectu sa približijú rozmerom columnu a row tak ho z listu alignedColumnRects vyhoď
                     var alignedColumnRects = column.Item3.OrderBy(rec => rec.Top).ToArray();
 
                     // detect column rows
@@ -1156,7 +1156,7 @@ namespace RazorPagesMovie.core
                                 var index = Array.IndexOf(sectionRectsUnsorted, rect);
 
                                 // There's just one row and one column so we dont need these elements
-                                // @todo toto už asi rieši optimiser
+                                // @todo remove - toto už asi rieši optimiser
                                 if (false && sectionRecursiveRows[index].Count == 1 && sectionRecursiveRows[index].First().GetType() == typeof(Row) && 
                                     ((Row)sectionRecursiveRows[index].First()).Columns.Count == 1 && ((Row)sectionRecursiveRows[index].First()).Columns.First().Elements.Count == 1)
                                 {
@@ -1249,8 +1249,6 @@ namespace RazorPagesMovie.core
 
                                 if (text)
                                 {
-                                    limit++;
-
                                     // tesseract needs a margin to read the text properly
                                     var margin = 2;
                                     var x = rect.X - margin;
@@ -1265,13 +1263,10 @@ namespace RazorPagesMovie.core
 
                                     var tessRect = new Rect(x, y, width, height);
 
-                                    // @todo treba to riešiť cez nejaký iný obrázok (aby to nešlo do výstupu užívateľovi), jeden názov iba nefunguje neviem prečo asi sa to hneď neuloží
                                     var roi = _image.Clone(tessRect);
-                                    roi.SaveImage("wwwroot/images/image-" + limit + ".png");
+                                    Bitmap bitmap = new Bitmap(roi.ToMemoryStream());
 
-                                    // @todo var text, niekde pri spájaní to bude mať ako atribút
-                                    // @todo do getText či sa nepošle rovno roi / rect
-                                    var textElem = _ocr.GetText("/image-" + limit + ".png");
+                                    var textElem = _ocr.GetText(bitmap);
                                     if (textElem == null || !IsTextValid(textElem, rect))
                                     {
                                         Debug.WriteLine("textelem = null or !IsTextValid, create img");

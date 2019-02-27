@@ -23,18 +23,17 @@ namespace RazorPagesMovie.core
             _tessLstm = new TesseractEngine(@"./wwwroot/tessdata", "eng", EngineMode.LstmOnly);
         }
 
-        public Text GetText(string image)
+        public Text GetText(Bitmap imgBmp)
         {
             // 1. Init font variables
             string text;
             string fontFamily;
             bool bold;
             bool italic;
-            Pix img = Pix.LoadFromFile(@"./wwwroot/images/" + image);
-            Bitmap imgBmp = new Bitmap(@"./wwwroot/images/" + image);
+            Pix img = BitmapToPixConverter.Convert(imgBmp);
             Rectangle region;
             Pix threshold;
-            
+
             // 2. detect font family
             var mode = PageSegMode.SingleLine;
             using (var page = _tessOnly.Process(img, mode))
@@ -74,7 +73,6 @@ namespace RazorPagesMovie.core
 
             // 4. detect font size
             // @todo maxWidth možno podľa iterator bounds, možno zapojiť aj tú height
-            // @todo tá font size nie je dobrá, bol tam všade tiež dáva asi by som to vypol globálne
             var size = DetectFontSize(bold, img.Width, img.Height, fontFamily, text);
             if (size == -1)
             {
@@ -83,7 +81,7 @@ namespace RazorPagesMovie.core
             var fontSize = PointsToPixels(size);
 
             // 5. detect font color
-            var fontColor = ColorAnalyser.AnalyseTextColor(region, image, threshold);
+            var fontColor = ColorAnalyser.AnalyseTextColor(region, imgBmp, threshold);
 
             //Debug.WriteLine("text=" + text);
 

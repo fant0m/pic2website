@@ -8,8 +8,8 @@ namespace RazorPagesMovie.core.convertor
 {
     interface IConvertor
     {
-        String Convert();
-        // @todo zoznam metód
-        // @todo napr. na uloženie do súboru, resp. nech to vráti zoznam súborov vygenerovaných / priečinok
+        void Convert();
+        void Save();
+        string GetContentPath();
     }
 }

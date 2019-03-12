@@ -22,7 +22,7 @@ namespace RazorPagesMovie.Pages
             //Test(img, canny1, canny2, blur);
             //Test3(img, canny1, canny2, blur);
 
-            ImageProcessing();
+            //ImageProcessing();
 
             /**
              * Postup:

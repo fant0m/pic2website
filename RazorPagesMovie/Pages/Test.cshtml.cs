@@ -58,7 +58,9 @@ namespace RazorPagesMovie.Pages
             fakeImage.Save("hm.jpg", ImageFormat.Jpeg);*/
 
 
-            Output = TestParser();
+            Output = "";
+            TestParser();
+            //Output = TestParser();
             //Output = TestConvertor();
 
 
@@ -89,6 +91,11 @@ namespace RazorPagesMovie.Pages
 
         }
 
+        public ActionResult OnGetDownloadFile()
+        {
+            return File("/style.css", "text/css", "style.css");
+        }
+
         private void Test3()
         {
             byte[] imageData = System.IO.File.ReadAllBytes(@"./wwwroot/images/template2.png");
@@ -114,14 +121,19 @@ namespace RazorPagesMovie.Pages
             copy.SaveImage("wwwroot/images/output.png");
         }
 
-        private string TestParser()
+        private void TestParser()
         {
             var templateParser = new TemplateParser("test5_1.png");
 
-            return templateParser.Analyse();
+            //HttpContext.Response.Headers.Clear();
+            //HttpContext.Response.ContentType = "application/zip";
+            //HttpContext.Response.Headers.Add("content-disposition", "attachment; filename=website.zip");
+
+            templateParser.Analyse();
+            templateParser.Convert(Response);
         }
 
-        private string TestConvertor()
+        private void TestConvertor()
         {
             var layout = new Layout(Layout.LayoutType.Centered, 750, 500, 0, 750);
             var structure = new TemplateStructure();
@@ -139,8 +151,10 @@ namespace RazorPagesMovie.Pages
             section.Containers.Add(container);
             structure.Sections.Add(section);
 
-            var convertor = new WebConvertor(structure);
-            return convertor.Convert();
+            var convertor = new WebConvertor();
+            convertor.SetTemplateStructure(structure);
+            convertor.Convert();
+            convertor.Save();
         }
 
         private string Test()

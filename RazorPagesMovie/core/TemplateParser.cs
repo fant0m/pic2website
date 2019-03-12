@@ -4,6 +4,9 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using Ionic.Zip;
+using Ionic.Zlib;
+using Microsoft.AspNetCore.Http;
 using OpenCvSharp;
 using RazorPagesMovie.core.convertor;
 using RazorPagesMovie.core.model;
@@ -25,6 +28,7 @@ namespace RazorPagesMovie.core
         private TemplateStructure _templateStructure;
         private Ocr _ocr;
         private ColorAnalyser _colorAnalyser;
+        private WebConvertor _convertor;
         private int limit = 0;
         private int test = 0;
 
@@ -36,13 +40,14 @@ namespace RazorPagesMovie.core
         public TemplateParser(string imagePath)
         {
             _imagePath = imagePath;
+            _convertor = new WebConvertor();
             _ocr = new Ocr();
         }
 
-        public string Analyse()
+        public void Analyse()
         {
             // @todo imagePath pôjde sem
-            byte[] imageData = File.ReadAllBytes(@"./wwwroot/images/template12.png");
+            byte[] imageData = File.ReadAllBytes(@"./wwwroot/images/works28.png");
             _image = Mat.FromImageData(imageData);
             _colorAnalyser = new ColorAnalyser(_image);
 
@@ -53,43 +58,37 @@ namespace RazorPagesMovie.core
             // Canny Edge Detector
             Mat cannyGray = gray.Canny(15, 18); // 0, 12, blur 9; 2, 17,  blur 7; 0, 25 blur 13; 20 35 blur 0; 15, 25 blur 3
 
-            Random r = new Random();
-
             // Find contours
             Cv2.FindContours(cannyGray, out _contours, out _hierarchy, mode: RetrievalModes.Tree, method: ContourApproximationModes.ApproxSimple);
 
             // Init a new template structure
             _templateStructure = new TemplateStructure();
-            
-
-            //var gray2 = Mat.FromImageData(imageData, ImreadModes.GrayScale);
-            //gray2 = gray2.AdaptiveThreshold(255, AdaptiveThresholdTypes.GaussianC, ThresholdTypes.BinaryInv, 105, 2);
-            //var reduced = gray2.Reduce(ReduceDimension.Row, ReduceTypes.Avg, 1);
-            //reduced.SaveImage("wwwroot/images/output.png");
-            //Debug.WriteLine("rows " + reduced.Rows + "," + reduced.Cols + "," + gray1.Rows);
+            _convertor.SetTemplateStructure(_templateStructure);
 
             // Analyse sections
             AnalyseSections();
 
             Mat copy = _image.Clone();
             Cv2.DrawContours(copy, _contours, -1, Scalar.Orange);
+        }
 
+        public void Convert(HttpResponse respnse)
+        {
+            _convertor.Convert();
+            _convertor.Save();
 
-            //Debug.WriteLine("počet " + _contours.Length);
+            // @todo move into test page? parser is probably not responsible for it
+            // select files from directory
+            var path = _convertor.GetContentPath();
 
-
-            var convertor = new WebConvertor(_templateStructure);
-            var output = convertor.Convert();
-            var fileOutpout = output.Replace("src=\".", "src=\"C:/Users/tomsh/source/repos/RazorPagesMovie/RazorPagesMovie/wwwroot");
-            fileOutpout = fileOutpout.Replace("href=\".", "href=\"C:/Users/tomsh/source/repos/RazorPagesMovie/RazorPagesMovie/wwwroot");
-
-            using (var tw = new StreamWriter("test.html"))
+            using (ZipFile zip = new ZipFile())
             {
-                tw.Write(fileOutpout);
-                tw.Close();
+                zip.CompressionLevel = CompressionLevel.None;
+                zip.AddDirectory(path);
+                zip.Save(path + "web.zip");
             }
 
-            return output;
+            //respnse.flush();
         }
 
         private int AnalyseSections()
@@ -163,7 +162,7 @@ namespace RazorPagesMovie.core
 
                     // Save section image
                     roi = _image.Clone(section.Rect);
-                    roi.SaveImage("./wwwroot/images/section-" + sectionId + ".png");
+                    roi.SaveImage(_convertor.GetContentPath() + "images/section-" + sectionId + ".png");
 
                     lastSectionY = rect.Y;
                     sectionContours.Add(sectionId, currentSectionContours);
@@ -189,7 +188,7 @@ namespace RazorPagesMovie.core
 
             // Save section image
             roi = _image.Clone(lastSection.Rect);
-            roi.SaveImage("./wwwroot/images/section-" + sectionId + ".png");
+            roi.SaveImage(_convertor.GetContentPath() + "images/section-" + sectionId + ".png");
             sections.Add(lastSection);
             sectionContours.Add(sectionId, currentSectionContours);
 
@@ -627,7 +626,7 @@ namespace RazorPagesMovie.core
 
                 // create image
                 var roi = _image.Clone(parent);
-                roi.SaveImage("wwwroot/images/image-" + limit + ".png");
+                roi.SaveImage(_convertor.GetContentPath() + "images/image-" + limit + ".png");
 
                 var image = new Image("./images/image-" + limit + ".png");
                 image.Display = "inline";
@@ -1289,7 +1288,7 @@ namespace RazorPagesMovie.core
                                     var roi = _image.Clone(rect);
                                     //Debug.WriteLine(rect.X + "," + rect.Y + "," + rect.Width + "," + rect.Height);
                                     //Debug.WriteLine(roi2.Width + "," + roi2.Height);
-                                    roi.SaveImage("wwwroot/images/image-" + limit + ".png");
+                                    roi.SaveImage(_convertor.GetContentPath() + "images/image-" + limit + ".png");
 
                                     var image = new Image("./images/image-" + limit + ".png");
                                     // align elements next each other
@@ -1460,7 +1459,7 @@ namespace RazorPagesMovie.core
             StructureOptimiser.MergeIntoLogicalColumns(sectionRows, fluid);
 
             // Optimiser text elements
-            //StructureOptimiser.OptimiseText(sectionRows);
+            StructureOptimiser.OptimiseText(sectionRows);
 
             // Draw rows
             foreach (var row in rows)

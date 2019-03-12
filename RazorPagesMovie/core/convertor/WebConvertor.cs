@@ -9,22 +9,32 @@ namespace RazorPagesMovie.core.convertor
 {
     public class WebConvertor : IConvertor
     {
-        private readonly TemplateStructure templateStructure;
+        private TemplateStructure templateStructure;
 
-        public WebConvertor(TemplateStructure templateStructure)
+        private long timestamp;
+        private string path;
+
+        private string htmlStart;
+        private string htmlBody;
+        private string htmlEnd;
+        private string styles;
+
+        public WebConvertor()
+        {
+            initPath();
+        }
+
+        public void SetTemplateStructure(TemplateStructure templateStructure)
         {
             this.templateStructure = templateStructure;
         }
 
-        public string Convert()
+        public void Convert()
         {
-            //long timestamp = new DateTimeOffset(DateTime.UtcNow).ToUnixTimeSeconds();
-            long timestamp = 0;
-
-            string htmlStart = $"<!DOCTYPE html>\n<html>\n<head>\n\t<link href=\"./style.css\" rel=\"stylesheet\">\n\t<link href=\"./custom-{timestamp}.css\" rel=\"stylesheet\">\n\t<meta charset=\"utf-8\" />\n\t<title>Test</title>\n</head>\n<body>\n";
-            string htmlBody = "";
-            string htmlEnd = "</body>\n</html>";
-            string styles = "";
+            htmlStart = $"<!DOCTYPE html>\n<html>\n<head>\n\t<link href=\"./style.css\" rel=\"stylesheet\">\n\t<link href=\"./custom.css\" rel=\"stylesheet\">\n\t<meta charset=\"utf-8\" />\n\t<title>Website</title>\n</head>\n<body>\n";
+            htmlBody = "";
+            htmlEnd = "</body>\n</html>";
+            styles = "";
 
             int header = -1;
             int footer = -1;
@@ -70,15 +80,40 @@ namespace RazorPagesMovie.core.convertor
                 htmlBody += section.Content(2);
                 htmlBody += section.EndTag(1);
             }
+        }
 
+        public string GetContentPath()
+        {
+            return path;
+        }
+
+        public void Save()
+        {
+            // save html content
+            using (var tw = new StreamWriter(path + "index.html"))
+            {
+                tw.Write(htmlStart + htmlBody + htmlEnd);
+                tw.Close();
+            }
+            
             // save custom styles
-            using (var tw = new StreamWriter("wwwroot/custom-" + timestamp + ".css"))
+            using (var tw = new StreamWriter(path + "custom.css"))
             {
                 tw.Write(styles);
                 tw.Close();
             }
 
-            return htmlStart + htmlBody + htmlEnd;
+            // copy static styles
+            File.Copy("wwwroot/style.css", path + "style.css");
+        }
+
+        private void initPath()
+        {
+            timestamp = new DateTimeOffset(DateTime.UtcNow).ToUnixTimeSeconds();
+            path = "wwwroot/output/output-" + timestamp + "/";
+
+            Directory.CreateDirectory(path);
+            Directory.CreateDirectory(path + "images/");
         }
     }
 }

@@ -19,8 +19,10 @@ namespace RazorPagesMovie.Pages
             var canny2 = Double.Parse(Request.Query["canny2"]);
             var blur = Double.Parse(Request.Query["blur"]);
 
-            Test3(img, canny1, canny2, blur);
             //Test(img, canny1, canny2, blur);
+            //Test3(img, canny1, canny2, blur);
+
+            ImageProcessing();
 
             /**
              * Postup:
@@ -36,6 +38,77 @@ namespace RazorPagesMovie.Pages
              * -trieda, ktor· bude drûaù cel˙ ötrukt˙ru hierarchicky webu
              * -t· sa potom poöle inej triede, ktor· ju skonvertuje na html & css (t· bude moûno rieöiù aj sp·janie rovnak˝ch elementov)
              */
+        }
+
+        private void ImageProcessing()
+        {
+            byte[] imageData = System.IO.File.ReadAllBytes(@"filter.jpg");
+            Mat img = Mat.FromImageData(imageData, ImreadModes.Color);
+
+            Mat gray = Mat.FromImageData(imageData, ImreadModes.Grayscale);
+            var blur = img.GaussianBlur(new OpenCvSharp.Size(49, 49), 0);
+            blur.SaveImage("blur.jpg");
+
+
+            byte[] imageData2 = System.IO.File.ReadAllBytes(@"text.png");
+            Mat img2 = Mat.FromImageData(imageData2, ImreadModes.Grayscale);
+            Mat img3 = Mat.FromImageData(imageData2, ImreadModes.Color);
+            Mat copy = img3.Clone();
+
+            var threshold = gray.Threshold(128, 255, ThresholdTypes.Binary);
+            threshold.SaveImage("threshold.png");
+
+            var erode = img2.Erode(Cv2.GetStructuringElement(MorphShapes.Rect, new Size(3, 3)));
+            erode.SaveImage("erode.png");
+            var dilate = img2.Dilate(Cv2.GetStructuringElement(MorphShapes.Rect, new Size(3, 3)));
+            dilate.SaveImage("dilate.png");
+
+
+            Point[][] contours;
+            Point[][] contours2;
+            HierarchyIndex[] hierarchy;
+            HierarchyIndex[] hierarchy2;
+            Cv2.FindContours(img2, out contours, out hierarchy, mode: RetrievalModes.List, method: ContourApproximationModes.ApproxSimple);
+            foreach (var contour in contours)
+            {
+                var rect = Cv2.BoundingRect(contour);
+                img3.Rectangle(rect, Scalar.DarkGreen);
+            }
+            img3.SaveImage("bounding.png");
+
+
+            Cv2.FindContours(img2, out contours2, out hierarchy2, mode: RetrievalModes.List, method: ContourApproximationModes.ApproxSimple);
+            Cv2.DrawContours(copy, contours2, -1, Scalar.Orange);
+            copy.SaveImage("contours.png");
+
+            gray = gray.GaussianBlur(new Size(3, 3), 0);
+
+            // compute the Scharr gradient magnitude representation of the images
+            // in both the x and y direction
+            var gradX = new Mat();
+            Cv2.Sobel(gray, gradX, MatType.CV_32F, xorder: 1, yorder: 0, ksize: -1);
+            //Cv2.Scharr(gray, gradX, MatType.CV_32F, xorder: 1, yorder: 0);
+
+            var gradY = new Mat();
+            Cv2.Sobel(gray, gradY, MatType.CV_32F, xorder: 0, yorder: 1, ksize: -1);
+            //Cv2.Scharr(gray, gradY, MatType.CV_32F, xorder: 0, yorder: 1);
+
+            // subtract the y-gradient from the x-gradient
+            var gradient = new Mat();
+            Cv2.Subtract(gradX, gradY, gradient);
+            Cv2.ConvertScaleAbs(gradient, gradient);
+
+            //Cv2.BitwiseNot(gradient, gradient);
+            gradient.SaveImage("sobel.png");
+
+
+            var canny = gray.Canny(20, 30);
+            //Cv2.BitwiseNot(canny, canny);
+            canny.SaveImage("canny.png");
+
+            var laplacian = gray.Laplacian(MatType.CV_8U);
+            //Cv2.BitwiseNot(laplacian, laplacian);
+            laplacian.SaveImage("laplacian.png");
         }
 
         private void Test2(double canny1, double canny2, double blur)
@@ -197,7 +270,7 @@ namespace RazorPagesMovie.Pages
             }*/
 
 
-            var j = 0;
+            /*var j = 0;
             while (j != -1)
             {
                 var index = hierarchy[j];
@@ -211,7 +284,7 @@ namespace RazorPagesMovie.Pages
                 Cv2.DrawContours(copy, contours, j, scalar);
 
                 j = index.Next;
-            }
+            }*/
             copy.SaveImage("wwwroot/images/output.png");
 
 

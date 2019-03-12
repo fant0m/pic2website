@@ -42,7 +42,7 @@ namespace RazorPagesMovie.core
         public string Analyse()
         {
             // @todo imagePath pôjde sem
-            byte[] imageData = File.ReadAllBytes(@"./wwwroot/images/template_1.jpg");
+            byte[] imageData = File.ReadAllBytes(@"./wwwroot/images/template12.png");
             _image = Mat.FromImageData(imageData);
             _colorAnalyser = new ColorAnalyser(_image);
 
@@ -1460,7 +1460,7 @@ namespace RazorPagesMovie.core
             StructureOptimiser.MergeIntoLogicalColumns(sectionRows, fluid);
 
             // Optimiser text elements
-            StructureOptimiser.OptimiseText(sectionRows);
+            //StructureOptimiser.OptimiseText(sectionRows);
 
             // Draw rows
             foreach (var row in rows)

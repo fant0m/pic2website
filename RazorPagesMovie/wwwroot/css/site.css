@@ -10,6 +10,7 @@ body {
 .body-content {
     padding-left: 15px;
     padding-right: 15px;
+    margin-top: 20px;
 }
 
 /* Carousel */
@@ -34,4 +35,13 @@ body {
     .carousel-caption {
         display: none;
     }
+}
+
+.box {
+    padding: 10px;
+    border: 1px solid lightgray;
+    transition: all 0.4s; 
+}
+.box:hover {
+    background: #eee;
 }

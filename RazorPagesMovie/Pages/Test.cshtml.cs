@@ -123,7 +123,7 @@ namespace RazorPagesMovie.Pages
 
         private void TestParser()
         {
-            var templateParser = new TemplateParser("test5_1.png");
+            var templateParser = new TemplateParser("test5_1.png", "1");
 
             //HttpContext.Response.Headers.Clear();
             //HttpContext.Response.ContentType = "application/zip";
@@ -151,7 +151,7 @@ namespace RazorPagesMovie.Pages
             section.Containers.Add(container);
             structure.Sections.Add(section);
 
-            var convertor = new WebConvertor();
+            var convertor = new WebConvertor("1");
             convertor.SetTemplateStructure(structure);
             convertor.Convert();
             convertor.Save();

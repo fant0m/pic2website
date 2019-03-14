@@ -37,17 +37,18 @@ namespace RazorPagesMovie.core
         public const int MaxTextGap = 6;
         public const int MinColumnGap = 10; // @todo možno podľa šírky layoutu
 
-        public TemplateParser(string imagePath)
+        public TemplateParser(string imagePath, string uuid)
         {
             _imagePath = imagePath;
-            _convertor = new WebConvertor();
+            _convertor = new WebConvertor(uuid);
             _ocr = new Ocr();
         }
 
         public void Analyse()
         {
             // @todo imagePath pôjde sem
-            byte[] imageData = File.ReadAllBytes(@"./wwwroot/images/works28.png");
+            //byte[] imageData = File.ReadAllBytes(@"./wwwroot/images/works28.png");
+            byte[] imageData = File.ReadAllBytes(@_imagePath);
             _image = Mat.FromImageData(imageData);
             _colorAnalyser = new ColorAnalyser(_image);
 
@@ -298,6 +299,7 @@ namespace RazorPagesMovie.core
             }
 
             copy.SaveImage("wwwroot/images/output.png");
+            copy.SaveImage(_convertor.GetContentPath() + "structure.png");
 
             return startIndex;
         }

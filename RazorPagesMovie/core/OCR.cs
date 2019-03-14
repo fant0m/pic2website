@@ -134,7 +134,7 @@ namespace RazorPagesMovie.core
                 return map[cut];
             }
 
-            return "";
+            return "Arial";
         }
 
         private int DetectFontSize(bool bold, int maxWidth, int maxHeight, string fontFamily, string text)

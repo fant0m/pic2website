@@ -11,7 +11,6 @@ namespace RazorPagesMovie.core.convertor
     {
         private TemplateStructure templateStructure;
 
-        private long timestamp;
         private string path;
 
         private string htmlStart;
@@ -19,9 +18,9 @@ namespace RazorPagesMovie.core.convertor
         private string htmlEnd;
         private string styles;
 
-        public WebConvertor()
+        public WebConvertor(string uuid)
         {
-            initPath();
+            path = "wwwroot/output/" + uuid + "/";
         }
 
         public void SetTemplateStructure(TemplateStructure templateStructure)
@@ -105,15 +104,6 @@ namespace RazorPagesMovie.core.convertor
 
             // copy static styles
             File.Copy("wwwroot/style.css", path + "style.css");
-        }
-
-        private void initPath()
-        {
-            timestamp = new DateTimeOffset(DateTime.UtcNow).ToUnixTimeSeconds();
-            path = "wwwroot/output/output-" + timestamp + "/";
-
-            Directory.CreateDirectory(path);
-            Directory.CreateDirectory(path + "images/");
         }
     }
 }

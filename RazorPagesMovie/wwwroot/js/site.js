@@ -11,4 +11,30 @@ $(document).ready(function () {
             $("#img").attr("src", "/images/output.png?" + d.getTime());
         });
     });
+
+    $('.ajax-form').on('submit', function (e) {
+        $('#error').addClass('d-none');
+        $('#loading').modal('show');
+
+        e.preventDefault();
+        $.ajax({
+            type: "POST",
+            url: "/",
+            data: new FormData($(this)[0]),
+            processData: false,
+            contentType: false,
+            success: function (data) {
+                if (data) {
+                    if (data.key == 'error') {
+                        $('#error').text(data.value).removeClass('d-none');
+
+                    } else if (data.key == 'success') {
+                        window.location.href = "/Result/" + data.value;
+                    }
+                }
+
+                $('#loading').modal('hide');
+            }
+        });
+    });
 });

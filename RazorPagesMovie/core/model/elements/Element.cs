@@ -40,7 +40,6 @@ namespace RazorPagesMovie.core.model.elements
         public int Height;
         public int[] Color;
         public string Class;
-        public Border Border;
         public int[] BackgroundColor;
         public string BackgroundImage;
         public string TextAlign;

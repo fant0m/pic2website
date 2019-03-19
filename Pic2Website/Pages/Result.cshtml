@@ -1,0 +1,21 @@
+﻿@page "{Uuid}"
+@model Pic2Website.Pages.ResultModel
+@{
+}
+
+<div class="alert alert-success">Success! Design has been succesfully converted into website. See details below.</div>
+<div class="mb-4">
+    <a asp-page-handler="DownloadFiles" class="btn btn-primary">
+        Download files
+    </a>
+</div>
+<div>
+    <h5>Analysed structure</h5>
+    <div style="max-width: 100%; max-height: 400px; overflow: auto;">
+        <img src="@Model.Path/structure.png" />
+    </div>
+</div>
+<div class="mt-4 mb-4">
+    <h5>Website preview</h5>
+    <iframe src="@Model.Path/index.html" style="width: 100%; min-height: 400px;"></iframe>
+</div>

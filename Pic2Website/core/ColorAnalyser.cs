@@ -218,12 +218,6 @@ namespace Pic2Website.core
             Bitmap bmp = PixToBitmapConverter.Convert(threshold);
             Mat mask = BitmapConverter.ToMat(bmp);
 
-
-            Mat roi = new Mat();
-            src.CopyTo(roi, mask);
-            roi.SaveImage("roi.png");
-
-
             // detect background color
             var bgColor = src.At<Vec3b>(0, 0);
 

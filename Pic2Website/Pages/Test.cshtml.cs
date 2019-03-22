@@ -123,12 +123,7 @@ namespace Pic2Website.Pages
 
         private void TestParser()
         {
-            var templateParser = new TemplateParser("wwwroot/images/bad-text-2-zoom.png", "1");
-
-            //HttpContext.Response.Headers.Clear();
-            //HttpContext.Response.ContentType = "application/zip";
-            //HttpContext.Response.Headers.Add("content-disposition", "attachment; filename=website.zip");
-
+            var templateParser = new TemplateParser("wwwroot/images/template6.png", "1");
             templateParser.Analyse();
             templateParser.Convert(Response);
         }

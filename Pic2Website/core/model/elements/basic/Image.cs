@@ -19,7 +19,7 @@ namespace Pic2Website.core.model.elements.basic
 
         public override List<Element> GetSubElements()
         {
-            return null;
+            return new List<Element>();
         }
     }
 }

@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using OpenCvSharp;
 using Pic2Website.core.model.elements.basic;
+using Pic2Website.core.model.elements.grid;
 
 namespace Pic2Website.core.model.elements
 {
@@ -68,7 +69,7 @@ namespace Pic2Website.core.model.elements
             return id != 0 ? (GetType().Name + "-" + id).ToLower() : GetType().Name.ToLower();
         }
 
-        public string GetStyles()
+        public string GetStyles(bool optimise = false)
         {
             var styles = "";
 
@@ -78,11 +79,14 @@ namespace Pic2Website.core.model.elements
                 return styles;
             }
 
-            if (Width > 0)
+            if (!optimise || GetType() != typeof(Link))
             {
-                styles += $"width: {Width}";
-                styles += Fluid ? "%" : "px";
-                styles += ";";
+                if (Width > 0)
+                {
+                    styles += $"width: {Width}";
+                    styles += Fluid ? "%" : "px";
+                    styles += ";";
+                }
             }
 
             if (MinWidth > 0)
@@ -175,19 +179,19 @@ namespace Pic2Website.core.model.elements
             return styles;
         }
 
-        public string GetStyleSheet(string parent, int subId = 0)
+        public string GetStyleSheet(string parent, int subId = 0, bool optimise = false)
         {
             var prefix = parent == "" ? "" : parent + " > ";
             var sheet = "";
 
-            if (subId != 0)
+            if (subId != 0 && !optimise)
             {
                 Id = subId;
             }
             var currentSelector = Id != 0 ? "." + GetId() : Tag;
             var selector = prefix + currentSelector;
 
-            var styles = GetStyles();
+            var styles = GetStyles(optimise);
             
             if (styles != "")
             {
@@ -205,6 +209,22 @@ namespace Pic2Website.core.model.elements
                 }
 
                 sheet += "\n}\n";
+
+                // check if items have gaps in between
+                if (optimise && Margin[1] != 0)
+                {
+                    if (GetType() == typeof(Link))
+                    {
+                        sheet += parent + ":last-of-type > " + currentSelector + " {\n";
+                    }
+                    else
+                    {
+                        sheet += selector + ":last-of-type {\n";
+                    }
+                    
+                    sheet += "\tmargin-right:0;\n";
+                    sheet += "\n}\n";
+                }
             }
 
             var subElements = GetSubElements();
@@ -218,10 +238,44 @@ namespace Pic2Website.core.model.elements
                 currentSelector = Id != 0 ? "." + GetId() : Tag;
                 selector = prefix + currentSelector;
 
-                for (var i = 0; i < subElements.Count; i++)
+                // check if subelement doesn't have same style
+                var subelementsOneStyle = CheckSubelementsOneStyle(subElements);
+                if (subelementsOneStyle)
                 {
-                    subId++;
-                    sheet += subElements[i].GetStyleSheet(selector, subId);
+                    // optimise subelements css
+
+                    // create just one style for each sub element
+                    var first = subElements[0];
+                    var firstStylesheet = first.GetStyleSheet(selector, subId, true);
+
+                    // save ids for other elements
+                    for (var i = 1; i < subElements.Count(); i++)
+                    {
+                        foreach (var subelement in subElements[i].GetSubElements())
+                        {
+                            subId++;
+                            subelement.Id = subId;
+                        }
+                    }
+
+                    sheet += firstStylesheet;
+                }
+                else
+                {
+                    // do not optimise subelements css
+                    for (var i = 0; i < subElements.Count; i++)
+                    {
+                        subId++;
+
+                        if (optimise)
+                        {
+                            sheet += subElements[i].GetStyleSheet(selector, subId, subElements.Count == 1);
+                        }
+                        else
+                        {
+                            sheet += subElements[i].GetStyleSheet(selector, subId, optimise);
+                        }
+                    }
                 }
             }
             else if (subElements == null && styles == "")
@@ -231,7 +285,115 @@ namespace Pic2Website.core.model.elements
 
             return sheet;
         }
-        
+
+        private bool CheckSubelementsOneStyle(List<Element> elements)
+        {
+            // we need more than 2 elements
+            if (elements.Count < 2)
+            {
+                return false;
+            }
+
+            var countSubelements = -1;
+            foreach (var element in elements)
+            {
+                // check if all elements have same number of subelements
+                if (countSubelements == -1)
+                {
+                    countSubelements = element.GetSubElements().Count();
+                }
+                else if (countSubelements != element.GetSubElements().Count())
+                {
+                    return false;
+                }
+
+                // we accept just two two level deep hierarchy
+                foreach (var subelement in element.GetSubElements())
+                {
+                    if (subelement.GetSubElements().Count() != 0 && subelement.GetType() != typeof(Link))
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            // check if elements have same style
+            for (var i = 0; i < elements.Count() - 1; i++)
+            {
+                var current = elements[i];
+                var next = elements[i + 1];
+                if (!current.StyleEquals(next))
+                {
+                    return false;
+                }
+            }
+
+            // check if subelements have same style
+            for (var i = 0; i < elements.Count() - 1; i++)
+            {
+                var current = elements[i].GetSubElements();
+                var next = elements[i + 1].GetSubElements();
+
+                for (var j = 0; j < current.Count() - 1; j++)
+                {
+                    if (!current[j].StyleEquals(next[j]))
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            return true;
+        }
+
+        public bool StyleEquals(Element other)
+        {
+            if (GetType() != other.GetType())
+            {
+                return false;
+            }
+
+            if ((GetType() == typeof(Column) || GetType() == typeof(Block)) && !Util.AreSame(Width, other.Width))
+            {
+                return false;
+            }
+
+            if (GetType() == typeof(Text))
+            {
+                for (var i = 0; i < 4; i++)
+                {
+                    if (!Util.AreSame(Margin[i], other.Margin[i], 5) || !Util.AreSame(Padding[i], other.Padding[i], 5))
+                    {
+                        return false;
+                    }
+                }
+
+                if (!Util.AreSame(FontSize, other.FontSize))
+                {
+                    return false;
+                }
+            }
+
+            if (GetType() == typeof(Image))
+            {
+                if (!Util.AreSame(Rect.Width, other.Rect.Width) || !Util.AreSame(Rect.Height, other.Rect.Height))
+                {
+                    return false;
+                }
+
+                for (var i = 0; i < 4; i++)
+                {
+                    if (!Util.AreSame(Margin[i], other.Margin[i]) || !Util.AreSame(Padding[i], other.Padding[i]))
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            return true;
+        }
+
+
         public string GetClassAttribute()
         {
             if (ClassNames.Count != 0)

@@ -14,8 +14,8 @@ namespace Pic2Website.core.model.elements
         Dictionary<string, string> Attributes { get; set; }
         string GetClassAttribute();
         string GetAttributes();
-        string GetStyles();
-        string GetStyleSheet(string parent, int subId);
+        string GetStyles(bool optimise);
+        string GetStyleSheet(string parent, int subId, bool optimise);
         string StartTag(int level);
         string Content(int level);
         string EndTag(int level);

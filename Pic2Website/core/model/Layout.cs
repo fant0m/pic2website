@@ -46,6 +46,11 @@ namespace Pic2Website.core.model
         {
             var values = Enum.GetValues(typeof(LayoutWidth)).Cast<LayoutWidth>().ToList();
             Width = values.OrderByDescending(x => (int)x >= width).First();
+
+            if (MostRight - MostLeft > (int)LayoutWidth.W1600)
+            {
+                Type = LayoutType.Fluid;
+            }
         }
     }
 }

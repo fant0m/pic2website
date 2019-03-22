@@ -105,7 +105,7 @@ namespace Pic2Website.core.convertor
             }
 
             // copy static styles
-            File.Copy("wwwroot/style.css", path + "style.css");
+            File.Copy("wwwroot/style.css", path + "style.css", true);
 
             // zip all files
             using (ZipFile zip = new ZipFile())

@@ -1141,10 +1141,10 @@ namespace Pic2Website.core
 
                                 // There's just one row and one column so we dont need these elements
                                 // @todo remove - toto už asi rieši optimiser
-                                if (false && sectionRecursiveRows[index].Count == 1 && sectionRecursiveRows[index].First().GetType() == typeof(Row) && 
+                                if (sectionRecursiveRows[index].Count == 1 && sectionRecursiveRows[index].First().GetType() == typeof(Row) && 
                                     ((Row)sectionRecursiveRows[index].First()).Columns.Count == 1 && ((Row)sectionRecursiveRows[index].First()).Columns.First().Elements.Count == 1)
                                 {
-                                    throw new Exception("kidding me?");
+                                    //throw new Exception("kidding me?");
                                     //foreach (var element in sectionRecursiveRows[index].First().Columns.First().Elements)
                                     //{
                                     //    block.Elements.Add(element);
@@ -1152,6 +1152,19 @@ namespace Pic2Website.core
                                     var firstRow = sectionRecursiveRows[index].First();
                                     var firstColumn = ((Row)firstRow).Columns.First();
                                     var element = firstColumn.Elements.First();
+
+                                    if (firstRow.Margin[3] == 0)
+                                    {
+                                        if (lastX != -1)
+                                        {
+                                            firstRow.Margin[3] = rect.X - lastX - 1;
+                                        }
+                                        else
+                                        {
+                                            firstRow.Margin[3] = rect.X - column.Item1;
+                                        }
+                                    }
+
                                     element.Margin = element.Margin.Zip(firstRow.Margin, (a, b) => a + b).ToArray();
                                     element.Padding = element.Padding.Zip(firstRow.Padding, (a, b) => a + b).ToArray();
 
@@ -1160,6 +1173,8 @@ namespace Pic2Website.core
                                         element.BackgroundColor = firstColumn.BackgroundColor;
                                         element.Width = firstColumn.Width;
                                     }
+
+                                    
 
                                     if (lastX != -1)
                                     {

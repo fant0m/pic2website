@@ -12,13 +12,13 @@ namespace Pic2Website.Pages
     public class IndexModel : PageModel
     {
         public List<Tuple<string, string, string>> SampleTemplates = new List<Tuple<string, string, string>>() {
-            new Tuple<string, string, string>("images/template4.png", "template4", "1200x800px, expected wait time 1 minute"),
-            new Tuple<string, string, string>("images/github.png", "github", "1500x900px, expected wait time 2 minutes")
+            new Tuple<string, string, string>("images/template4.png", "website template", "1920x3905px, expected wait time 1 minute"),
+            new Tuple<string, string, string>("images/github.png", "github", "1898x934px, expected wait time 1 minute")
         };
 
         public void OnGet()
         {
-            //Response.Redirect("/Test");
+            Response.Redirect("/Test");
         }
 
         public JsonResult OnPost()

@@ -180,6 +180,16 @@ namespace Pic2Website.core
                         {
                             MergeTextRows(column.Elements);
                         }
+
+                        if (column.Elements.Count == 1 && column.Padding.Sum() == 0 && column.BackgroundColor != null)
+                        {
+                            var firstElement = column.Elements.First();
+                            // column has background color with no effect - we should remove it
+                            if (firstElement.Padding.Sum() + firstElement.Margin.Sum() == 0)
+                            {
+                                column.BackgroundColor = null;
+                            }
+                        }
                     }
 
                     // rows were merged into columns inside row
@@ -609,6 +619,14 @@ namespace Pic2Website.core
                                             unify = MergeTexts(texts.ToArray(), false);
                                         }
 
+                                        // recalculate right margin
+                                        var total = 0.0;
+                                        foreach (var element in columnElements)
+                                        {
+                                            total += element.Margin[1];
+                                        }
+                                        var rightMargin = (int) Math.Floor(total / (columnElements.Count() - 1));
+
                                         foreach (var element in columnElements)
                                         {
                                             // replace font attributes if element is text
@@ -623,6 +641,7 @@ namespace Pic2Website.core
                                             item.Link.Width = element.Width;
                                             item.Link.Padding = element.Padding;
                                             item.Link.Margin = element.Margin;
+                                            item.Link.Margin[1] = rightMargin;
                                             element.Width = 0;
                                             element.Padding = new[] { 0, 0, 0, 0 };
                                             element.Margin = new[] { 0, 0, 0, 0 };

@@ -1174,8 +1174,6 @@ namespace Pic2Website.core
                                         element.Width = firstColumn.Width;
                                     }
 
-                                    
-
                                     if (lastX != -1)
                                     {
                                         //element.Margin[3] += rect.X - lastX - 1;
@@ -1272,7 +1270,14 @@ namespace Pic2Website.core
                                     var textElem = _ocr.GetText(bitmap);
                                     if (textElem == null || !IsTextValid(textElem, rect, connectedHorizontal.Count))
                                     {
-                                        Debug.WriteLine("textelem = null or !IsTextValid, create img");
+                                        if (textElem == null)
+                                        {
+                                            Debug.WriteLine("textelem = null, create img");
+                                        }
+                                        else
+                                        {
+                                            Debug.WriteLine("!IsTextValid = " + textElem.GetText()[0] + ", create img");
+                                        }
                                         text = false;
                                     }
                                     else
@@ -1482,7 +1487,13 @@ namespace Pic2Website.core
                 return false;
             }
 
-            if (numberOfElements == 1 && textElem.GetText()[0].Length <= 2)
+            // @todo not sure
+            if (numberOfElements == 1 && textElem.GetText()[0].Length <= 2 && rect.Width <= 40)
+            {
+                return false;
+            }
+
+            if (textElem.FontSize >= 25 && textElem.FontSize > rect.Height * 1.5)
             {
                 return false;
             }

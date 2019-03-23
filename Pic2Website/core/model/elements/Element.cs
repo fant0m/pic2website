@@ -108,7 +108,7 @@ namespace Pic2Website.core.model.elements
                 styles += $"background: rgb({BackgroundColor[0]}, {BackgroundColor[1]}, {BackgroundColor[2]});";
             }
 
-            if (Fluid)
+            if (Fluid && Margin.Sum() != 0)
             {
                 styles += $"margin: {Margin[0]}px {Margin[1]}% {Margin[2]}px {Margin[3]}%;";
             }
@@ -181,11 +181,10 @@ namespace Pic2Website.core.model.elements
 
         public string GetStyleSheet(string parent, int subId = 0, bool optimise = false)
         {
-            //var prefix = parent == "" ? "" : parent + " > ";
-            var prefix = parent == "" ? "" : parent + " ";
+            var prefix = parent == "" ? "" : parent + " > ";
             var sheet = "";
 
-            if (subId != 0 && !optimise)
+            if (subId != 0 && !optimise && GetType() != typeof(Container))
             {
                 Id = subId;
             }
@@ -237,13 +236,6 @@ namespace Pic2Website.core.model.elements
                 }
 
                 currentSelector = Id != 0 ? "." + GetId() : Tag;
-                // container has no styles
-                if (GetType() == typeof(Container))
-                {
-                    currentSelector = "";
-                    // remove space
-                    prefix = prefix.Remove(prefix.Length - 1);
-                }
                 selector = prefix + currentSelector;
 
                 // check if subelement doesn't have same style
@@ -296,6 +288,7 @@ namespace Pic2Website.core.model.elements
 
         private bool CheckSubelementsOneStyle(List<Element> elements)
         {
+            return false;
             // we need more than 2 elements
             if (elements.Count < 2)
             {
@@ -439,7 +432,6 @@ namespace Pic2Website.core.model.elements
                 var startTag = "<" + Tag;
                 startTag += GetClassAttribute();
                 startTag += GetAttributes();
-                //startTag += $" style=\"{GetStyles()}\"";
                 startTag += PairTag ? ">" : "/>";
 
                 return Util.Repeat('\t', level) + startTag + "\n";

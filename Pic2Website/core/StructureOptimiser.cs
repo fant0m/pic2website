@@ -62,7 +62,7 @@ namespace Pic2Website.core
                 {
                     var firstColumn = row.Columns.First();
                     var elementsCount = firstColumn.Elements.Count();
-                    if (elementsCount == 1 && firstColumn.MarginCalc[1] == "")
+                    if (elementsCount == 1 && firstColumn.MarginCalc[1] == "" /*&& !(firstColumn.Elements.First().GetType() == typeof(Text) && firstColumn.BackgroundColor != null)*/)
                     {
                         // we can remove useless row and column
                         var element = firstColumn.Elements.First();
@@ -641,7 +641,8 @@ namespace Pic2Website.core
                                             item.Link.Width = element.Width;
                                             item.Link.Padding = element.Padding;
                                             item.Link.Margin = element.Margin;
-                                            item.Link.Margin[1] = rightMargin;
+
+                                            item.Link.Margin[1] = element == columnElements.Last() ? 0 : rightMargin;
                                             element.Width = 0;
                                             element.Padding = new[] { 0, 0, 0, 0 };
                                             element.Margin = new[] { 0, 0, 0, 0 };

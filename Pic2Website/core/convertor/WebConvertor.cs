@@ -37,6 +37,7 @@ namespace Pic2Website.core.convertor
             htmlEnd = "</body>\n</html>";
             styles = "";
 
+            // find header and footer
             int header = -1;
             int footer = -1;
             if (templateStructure.Sections.Count > 2)
@@ -60,6 +61,30 @@ namespace Pic2Website.core.convertor
                 }
             }
 
+            // optimise css container
+            var centeredLayout = false;
+            foreach (var section in templateStructure.Sections)
+            {
+                // move padding from container to section
+                var container = section.Containers.First();
+                section.Padding = container.Padding;
+
+                // find first centered layout container
+                if (!centeredLayout && section.Layout.Type == Layout.LayoutType.Centered)
+                {
+                    // create single css container declarion
+                    centeredLayout = true;
+                    styles += ".container" + " {\n";
+                    styles += "\twidth: " + container.Width + "px;\n";
+                    styles += "\n}\n";
+                }
+
+                // remove styles from container
+                container.Width = 0;
+                container.Padding = new[] { 0, 0, 0, 0 };
+            }
+
+            // process sections
             for (var i = 0; i < templateStructure.Sections.Count; i++)
             {
                 var section = templateStructure.Sections[i];

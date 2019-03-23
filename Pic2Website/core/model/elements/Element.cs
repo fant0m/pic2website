@@ -181,7 +181,8 @@ namespace Pic2Website.core.model.elements
 
         public string GetStyleSheet(string parent, int subId = 0, bool optimise = false)
         {
-            var prefix = parent == "" ? "" : parent + " > ";
+            //var prefix = parent == "" ? "" : parent + " > ";
+            var prefix = parent == "" ? "" : parent + " ";
             var sheet = "";
 
             if (subId != 0 && !optimise)
@@ -236,6 +237,13 @@ namespace Pic2Website.core.model.elements
                 }
 
                 currentSelector = Id != 0 ? "." + GetId() : Tag;
+                // container has no styles
+                if (GetType() == typeof(Container))
+                {
+                    currentSelector = "";
+                    // remove space
+                    prefix = prefix.Remove(prefix.Length - 1);
+                }
                 selector = prefix + currentSelector;
 
                 // check if subelement doesn't have same style

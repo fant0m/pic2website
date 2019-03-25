@@ -123,7 +123,7 @@ namespace Pic2Website.Pages
 
         private void TestParser()
         {
-            var templateParser = new TemplateParser("wwwroot/images/template6.png", "1");
+            var templateParser = new TemplateParser("wwwroot/images/template16.png", "1");
             templateParser.Analyse();
             templateParser.Convert(Response);
         }
@@ -135,7 +135,7 @@ namespace Pic2Website.Pages
 
             var section = new Section(1);
             var container = new Container(layout);
-            var text = new Text(new[] { "test" }, "arial", new int[] { 0, 0, 0 }, 30, false, false);
+            var text = new Text(new[] { "test" }, "arial", new int[] { 0, 0, 0 }, 30, false, false, "");
             var image = new Image("https://www.freeiconspng.com/uploads/format-png-image-resolution-3580x3402-size-1759-kb-star-png-image-star--6.png");
             var row = new Row();
             var col = new Column();

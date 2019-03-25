@@ -74,11 +74,16 @@ namespace Pic2Website.core.convertor
                     centeredLayout = true;
                     styles += ".container" + " {\n";
                     styles += "\twidth: " + container.Width + "px;";
+                    if (container.Padding.Sum() != 0)
+                    {
+                        styles += $"\n\tpadding: {container.Padding[0]}px {container.Padding[1]}px {container.Padding[2]}px {container.Padding[3]}px;";
+                    }
                     styles += "\n}\n";
                 }
 
-                // remove width from container
+                // remove applied styles from container
                 container.Width = 0;
+                container.Padding = new int[] { 0, 0, 0, 0 };
             }
 
             // process sections

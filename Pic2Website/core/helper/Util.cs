@@ -26,5 +26,15 @@ namespace Pic2Website.core
         {
             return new string(repeat, length);
         }
+
+        public static bool SameColors(int[] first, int[] second)
+        {
+            if (first == null || second == null)
+            {
+                return false;
+            }
+
+            return first[0] == second[0] && first[1] == second[1] && first[2] == second[2];
+        }
     }
 }

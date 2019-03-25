@@ -166,6 +166,8 @@ namespace Pic2Website.core
                             }
                         }
 
+                        element.Fluid = row.Fluid;
+
                         rows[i] = element;
                     }
                 }
@@ -185,7 +187,7 @@ namespace Pic2Website.core
                         {
                             var firstElement = column.Elements.First();
                             // column has background color with no effect - we should remove it
-                            if (firstElement.Padding.Sum() + firstElement.Margin.Sum() == 0)
+                            if (firstElement.Padding.Sum() + firstElement.Margin.Sum() == 0 || Util.SameColors(firstElement.Color, column.BackgroundColor))
                             {
                                 column.BackgroundColor = null;
                             }
@@ -281,6 +283,13 @@ namespace Pic2Website.core
                 var merge = false;
                 var firstRow = rows[i];
                 var secondRow = rows[i + 1];
+
+                // check if items are really rows and not just words next to each other
+                if (secondRow.Rect.Top < firstRow.Rect.Bottom)
+                {
+                    return;
+                }
+
                 var firstGap = secondRow.Margin[0] + secondRow.Padding[0] + firstRow.Padding[2] + firstRow.Margin[2];
 
                 if (i < rows.Count - 2)
@@ -380,6 +389,7 @@ namespace Pic2Website.core
             var fontWeights = new int[length];
             var fontFamilies = new string[length];
             var fontStyles = new string[length];
+            var fontTransforms = new string[length];
             var margins = new int[length - 1];
             var merge = "";
             for (var i = 0; i < length; i++)
@@ -421,6 +431,7 @@ namespace Pic2Website.core
                 fontWeights[i] = textElem.FontWeight != 0 ? textElem.FontWeight : 400;
                 fontFamilies[i] = textElem.FontFamily;
                 fontStyles[i] = textElem.FontStyle;
+                fontTransforms[i] = textElem.FontTransform;
             }
 
             var fontColor = fontColors.MostCommon();
@@ -429,8 +440,15 @@ namespace Pic2Website.core
             var fontFamily = fontFamilies.MostCommon();
             var fontWeight = fontWeights.MostCommon();
             var fontStyle = fontStyles.MostCommon();
+            var fontTransform = fontTransforms.MostCommon();
 
-            var textElement = new Text(text, fontFamily, fontColor, fontSize, fontWeight == 700, fontStyle == "italic");
+            // make sure all chars in text are lowercase when font transform is uppercase
+            if (fontTransform == "uppercase")
+            {
+                text = text.Select(s => s.ToLowerInvariant()).ToArray();
+            }
+
+            var textElement = new Text(text, fontFamily, fontColor, fontSize, fontWeight == 700, fontStyle == "italic", fontTransform);
             if (textElements[0].TextAlign == "center" && textElements[length - 1].TextAlign == "center")
             {
                 textElement.TextAlign = "center";
@@ -550,7 +568,7 @@ namespace Pic2Website.core
                             }
                         }
 
-                        if (pairs.Count > 1)
+                        if (pairs.Count >= 1)
                         {
                             foreach (var pair in pairs)
                             {
@@ -642,7 +660,10 @@ namespace Pic2Website.core
                                             item.Link.Padding = element.Padding;
                                             item.Link.Margin = element.Margin;
 
+                                            // items should have same space in between
                                             item.Link.Margin[1] = element == columnElements.Last() ? 0 : rightMargin;
+                                            // items have vertical align middle
+                                            item.Link.Margin[0] = item.Link.Margin[2] = 0;
                                             element.Width = 0;
                                             element.Padding = new[] { 0, 0, 0, 0 };
                                             element.Margin = new[] { 0, 0, 0, 0 };
@@ -687,6 +708,7 @@ namespace Pic2Website.core
             to.Color = from.Color;
             to.FontWeight = from.FontWeight;
             to.FontStyle = from.FontStyle;
+            to.FontTransform = from.FontTransform;
         }
 
         /// <summary>

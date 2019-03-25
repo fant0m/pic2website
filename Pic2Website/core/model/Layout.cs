@@ -18,7 +18,8 @@ namespace Pic2Website.core.model
         {
             W800 = 800,
             W1200 = 1200,
-            W1600 = 1600
+            W1600 = 1600,
+            W1800 = 1800
         }
 
         public LayoutType Type { get; set; }
@@ -51,6 +52,12 @@ namespace Pic2Website.core.model
             {
                 Type = LayoutType.Fluid;
             }
+        }
+
+        public static LayoutWidth DetectLayoutWidth(double width)
+        {
+            var values = Enum.GetValues(typeof(LayoutWidth)).Cast<LayoutWidth>().ToList();
+            return values.OrderByDescending(x => (int)x >= width).First();
         }
     }
 }

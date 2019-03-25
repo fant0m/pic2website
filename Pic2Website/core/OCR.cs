@@ -83,10 +83,18 @@ namespace Pic2Website.core
             // 5. detect font color
             var fontColor = ColorAnalyser.AnalyseTextColor(region, imgBmp, threshold);
 
+            // 6. look for font transform properties
+            string fontTransform = "";
+            if (text.ToUpper() == text)
+            {
+                text = text.ToLower();
+                fontTransform = "uppercase";
+            }
+
             //Debug.WriteLine("text=" + text);
 
-            // 6. return new text instance
-            return new Text(new[] { text }, fontFamily, fontColor, fontSize, bold, italic);
+            // 7. return new text instance
+            return new Text(new[] { text }, fontFamily, fontColor, fontSize, bold, italic, fontTransform);
         }
 
         public static IEnumerable<Color> GetPixels(Bitmap bitmap)

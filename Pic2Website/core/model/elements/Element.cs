@@ -48,6 +48,7 @@ namespace Pic2Website.core.model.elements
         public int FontSize;
         public int FontWeight;
         public string FontStyle;
+        public string FontTransform;
         public double LineHeight;
         public string Display;
 
@@ -143,6 +144,11 @@ namespace Pic2Website.core.model.elements
             if (!string.IsNullOrEmpty(FontStyle))
             {
                 styles += $"font-style: {FontStyle};";
+            }
+
+            if (!string.IsNullOrEmpty(FontTransform))
+            {
+                styles += $"text-transform: {FontTransform};";
             }
 
             if (FontSize > 0)
@@ -288,7 +294,6 @@ namespace Pic2Website.core.model.elements
 
         private bool CheckSubelementsOneStyle(List<Element> elements)
         {
-            return false;
             // we need more than 2 elements
             if (elements.Count < 2)
             {

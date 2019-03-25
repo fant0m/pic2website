@@ -8,12 +8,13 @@ namespace Pic2Website.core.model.elements.basic
         public override string Tag { get; set; } = "p";
         public override bool PairTag { get; set; } = true;
 
-        public Text(string[] text, string fontFamily, int[] fontColor, int fontSize, bool bold, bool italic)
+        public Text(string[] text, string fontFamily, int[] fontColor, int fontSize, bool bold, bool italic, string fontTransform)
         {
             _text = text;
             FontFamily = fontFamily;
             FontSize = fontSize;
             Color = fontColor;
+            FontTransform = fontTransform;
 
             if (bold)
             {

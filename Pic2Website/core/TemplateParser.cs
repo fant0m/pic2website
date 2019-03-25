@@ -208,6 +208,13 @@ namespace Pic2Website.core
             mostRightSections.Sort();
             mostRightSections.Reverse();
 
+            // @todo jaspravimm.png, môže sa stať že most left a most right má dokopy viac ako max layout, a stále sa môže stať že nenájde takú veľkú hodnotu takže bude treba zmeniť tie sekcie na fluid a vyhodiť z mostLeft a mostRight hodnoty
+            // sections have correct maxLayout but global most left and most right is bigger than maxLayout
+            if (mostRightSections.FirstOrDefault() - mostLeftSections.FirstOrDefault() > (int)maxLayout)
+            {
+                maxLayout = Layout.DetectLayoutWidth(mostRightSections.FirstOrDefault() - mostLeftSections.FirstOrDefault());
+            }
+             
             // Process sections
             foreach (var section in sections)
             {
@@ -261,6 +268,7 @@ namespace Pic2Website.core
                 // @todo text gap merging - space podľa fontu + info že je to text
                 // @todo replace element width with right padding
                 container.Rows = ProcessInnerBlocks(contours, copy, containerRect, section.BackgroundColor, section.Layout.Type == Layout.LayoutType.Fluid);
+                //container.Rows = new List<Element>();
 
                 // Append container to section
                 section.Containers.Add(container);
@@ -983,13 +991,13 @@ namespace Pic2Website.core
                         //var l = 0;
                         //foreach (var contour in alignHorizontal)
                         //{
-                        //    //var roi2 = _image.Clone(contour);
-                        //    var roi2 = _image.Clone();
-                        //    Cv2.Rectangle(roi2, new Point(contour.X, contour.Y), new Point(contour.X + contour.Width, contour.Y + contour.Height), Scalar.FromRgb(r.Next(0, 255), r.Next(0, 255), r.Next(0, 255)));
-                        //    roi2.SaveImage("image2-" + test + ".png");
-                        //    l++;
-                        //    test++;
-                        //    Cv2.Rectangle(copy, new Point(contour.X, contour.Y), new Point(contour.X + contour.Width, contour.Y + contour.Height), Scalar.FromRgb(r.Next(0, 255), r.Next(0, 255), r.Next(0, 255)));
+                            //var roi2 = _image.Clone(contour);
+                            //var roi2 = _image.Clone();
+                            //Cv2.Rectangle(roi2, new Point(contour.X, contour.Y), new Point(contour.X + contour.Width, contour.Y + contour.Height), Scalar.FromRgb(r.Next(0, 255), r.Next(0, 255), r.Next(0, 255)));
+                            //roi2.SaveImage("image2-" + test + ".png");
+                            //l++;
+                            //test++;
+                            //Cv2.Rectangle(copy, new Point(contour.X, contour.Y), new Point(contour.X + contour.Width, contour.Y + contour.Height), Scalar.FromRgb(r.Next(0, 255), r.Next(0, 255), r.Next(0, 255)));
                         //}
 
                         //Debug.WriteLine("počet " + alignHorizontal.Length);
@@ -1039,17 +1047,22 @@ namespace Pic2Website.core
                                     if (!merge.IntersectsWith(nextRect))
                                     {
                                         mergedWidths.Add(nextRect.Width);
-                                        if (gap > maxGap) maxGap = gap;
-                                        //Debug.WriteLine("adding gap " + firstGap);
-                                        // calculate new max text gap
-                                        var ratio = mergedWidths.Average() > 15 ? 3 : 2.5;
-                                        maxTextGap = (int) (maxGap * ratio);
-                                        if (maxTextGap < MaxTextGap)
-                                        {
-                                            maxTextGap = MaxTextGap;
-                                        }
-                                        //Debug.WriteLine("new max text gap " + maxTextGap);
                                     }
+                                    else
+                                    {
+                                        mergedWidths.Add((merge | nextRect).Width);
+                                    }
+
+                                    if (gap > maxGap) maxGap = gap;
+                                    //Debug.WriteLine("adding gap " + firstGap);
+                                    // calculate new max text gap
+                                    var ratio = mergedWidths.Average() > 15 ? 3 : 2.5;
+                                    maxTextGap = (int)(maxGap * ratio);
+                                    if (maxTextGap < MaxTextGap)
+                                    {
+                                        maxTextGap = MaxTextGap;
+                                    }
+                                    //Debug.WriteLine("new max text gap " + maxTextGap);
 
                                     // Merge items
                                     merge = merge | nextRect;
@@ -1282,6 +1295,7 @@ namespace Pic2Website.core
                                     }
                                     else
                                     {
+                                        textElem.Rect = rect;
                                         result = textElem;
                                     }
                                 }
@@ -1493,7 +1507,7 @@ namespace Pic2Website.core
                 return false;
             }
 
-            if (textElem.FontSize >= 25 && textElem.FontSize > rect.Height * 1.5)
+            if (textElem.FontSize >= 25 && textElem.FontSize > rect.Height * 1.65)
             {
                 return false;
             }
@@ -1503,7 +1517,17 @@ namespace Pic2Website.core
                 return false;
             }
 
-            var allowedChars = new char[] { ' ', ',', '.', '/', '©', '@', '-', ':', '+', '(', ')', '\'', '|', '#', '&', '"', '?', '=', '‘', '’', '$', '€' };
+            if (textElem.FontSize >= 30 && textElem.GetText()[0].Length <= 3 && numberOfElements == 1)
+            {
+                var allowed = new char[] { ' ', ',', '.', '#', ':', '$', '€', '+', '?', '!' };
+                bool check = textElem.GetText()[0].All(c => char.IsLetterOrDigit(c) || allowed.Contains(c));
+                if (!check)
+                {
+                    return false;
+                }
+            }
+
+            var allowedChars = new char[] { ' ', ',', '.', '/', '©', '@', '-', ':', '+', '(', ')', '\'', '|', '#', '&', '"', '?', '=', '‘', '’', '$', '€', '”', '*', '>', '<' };
             bool result = textElem.GetText()[0].All(c => char.IsLetterOrDigit(c) || allowedChars.Contains(c));
             if (!result)
             {

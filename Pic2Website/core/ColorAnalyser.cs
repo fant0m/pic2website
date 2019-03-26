@@ -204,8 +204,51 @@ namespace Pic2Website.core
             }
             else
             {
-                // background seems to be more complicated (image)
-                section.BackgroundImage = $"https://via.placeholder.com/{section.Rect.Width}x{section.Rect.Height}";
+                // check if colors arent close to each other (bad quality image)
+
+                var average = new[] { 0, 0, 0 };
+                // sum r, g, b values
+                for (var i = 0; i < colors.Length; i++)
+                {
+                    for (var j = 0; j < 3; j++)
+                    {
+                        average[j] += colors[i][j];
+                    }
+                }
+
+                // calculate average values
+                for (var i = 0; i < 3; i++)
+                {
+                    average[i] /= colors.Length;
+                }
+
+                // calculate distances from original colors to the average value
+                var distances = new int[colors.Length];
+                for (var i = 0; i < colors.Length; i++)
+                {
+                    var b = average[0] - colors[i][0];
+                    var g = average[1] - colors[i][1];
+                    var r = average[2] - colors[i][2];
+                    distances[i] = (int)Math.Sqrt(b * b + g * g + r * r);
+                }
+
+                // if distance is not big we can closest color
+                if (distances.Max() <= 30)
+                {
+                    // find the closest
+                    var closest = distances
+                        .Select((x, i) => new KeyValuePair<int, int>(i, x))
+                        .OrderBy(x => x.Value)
+                        .First();
+                    var closestIndex = closest.Key;
+
+                    section.BackgroundColor = new int[] { colors[closestIndex][2], colors[closestIndex][1], colors[closestIndex][0] };
+                }
+                else
+                {
+                    // background seems to be more complicated (image)
+                    section.BackgroundImage = $"https://via.placeholder.com/{section.Rect.Width}x{section.Rect.Height}";
+                }
             }
         }
 

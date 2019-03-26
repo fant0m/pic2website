@@ -19,8 +19,8 @@ namespace Pic2Website.core
 
         public Ocr()
         {
-            _tessOnly = new TesseractEngine(@"./wwwroot/tessdata", "eng", EngineMode.TesseractOnly);
-            _tessLstm = new TesseractEngine(@"./wwwroot/tessdata", "eng", EngineMode.LstmOnly);
+            _tessOnly = new TesseractEngine(@"./wwwroot/tessdata", "slk", EngineMode.TesseractOnly);
+            _tessLstm = new TesseractEngine(@"./wwwroot/tessdata", "slk", EngineMode.LstmOnly);
         }
 
         public Text GetText(Bitmap imgBmp)
@@ -91,7 +91,7 @@ namespace Pic2Website.core
                 fontTransform = "uppercase";
             }
 
-            //Debug.WriteLine("text=" + text);
+            Debug.WriteLine("text=" + text);
 
             // 7. return new text instance
             return new Text(new[] { text }, fontFamily, fontColor, fontSize, bold, italic, fontTransform);

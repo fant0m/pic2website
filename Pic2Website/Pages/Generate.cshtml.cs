@@ -150,7 +150,7 @@ namespace Pic2Website.Pages
         {
             var tess = new TesseractEngine(@"./wwwroot/tessdata", "eng", EngineMode.LstmOnly);
 
-            byte[] imageData = System.IO.File.ReadAllBytes(@"./wwwroot/images/template4.png");
+            byte[] imageData = System.IO.File.ReadAllBytes(@"./wwwroot/images/" + img);
             Mat img1 = Mat.FromImageData(imageData, ImreadModes.Color);
             //Convert the img1 to grayscale and then filter out the noise
             Mat gray1 = Mat.FromImageData(imageData, ImreadModes.Grayscale)/*.PyrDown().PyrUp()*/;

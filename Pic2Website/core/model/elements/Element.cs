@@ -197,6 +197,24 @@ namespace Pic2Website.core.model.elements
             var currentSelector = Id != 0 ? "." + GetId() : Tag;
             var selector = prefix + currentSelector;
 
+            // first element might have big margin to the left
+            if (optimise && Margin[3] != 0)
+            {
+                if (GetType() == typeof(Link))
+                {
+                    sheet += parent + ":first-of-type > " + currentSelector + " {\n";
+                }
+                else
+                {
+                    sheet += selector + ":first-of-type {\n";
+                }
+
+                sheet += "\tmargin-left:" + Margin[3] + "px;\n";
+                sheet += "\n}\n";
+
+                Margin[3] = 0;
+            }
+
             var styles = GetStyles(optimise);
             
             if (styles != "")
@@ -227,7 +245,7 @@ namespace Pic2Website.core.model.elements
                     {
                         sheet += selector + ":last-of-type {\n";
                     }
-                    
+
                     sheet += "\tmargin-right:0;\n";
                     sheet += "\n}\n";
                 }

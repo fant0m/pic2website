@@ -12,9 +12,9 @@ namespace Pic2Website.core
 {
     public static class StructureOptimiser
     {
-        public static void CheckForUnmergedTexts(Block block)
+        public static void CheckForUnmergedTexts(Element block)
         {
-            var elements = block.Elements;
+            var elements = block.GetType() == typeof(Block) ? ((Block)block).Elements : ((Column)block).Elements;
             var onlyTexts = true;
 
             if (elements.Count <= 1)
@@ -41,8 +41,16 @@ namespace Pic2Website.core
 
                 var unify = MergeTexts(texts, false);
 
-                block.Elements.Clear();
-                block.Elements.Add(unify);
+                if (block.GetType() == typeof(Block))
+                {
+                    ((Block)block).Elements.Clear();
+                    ((Block)block).Elements.Add(unify);
+                }
+                else
+                {
+                    ((Column)block).Elements.Clear();
+                    ((Column)block).Elements.Add(unify);
+                }
             }
         }
 
@@ -57,11 +65,19 @@ namespace Pic2Website.core
                 var row = (Row)rows.ElementAt(i);
                 var columnsCount = row.Columns.Count();
 
-                // check if there's not just one column and one element inside row
                 if (columnsCount == 1)
                 {
                     var firstColumn = row.Columns.First();
                     var elementsCount = firstColumn.Elements.Count();
+
+                    // check for unmerged texts
+                    if (elementsCount > 1)
+                    {
+                        CheckForUnmergedTexts(firstColumn);
+                        elementsCount = firstColumn.Elements.Count();
+                    }
+
+                    // check if there's not just one column and one element inside row
                     if (elementsCount == 1 && firstColumn.MarginCalc[1] == "" /*&& !(firstColumn.Elements.First().GetType() == typeof(Text) && firstColumn.BackgroundColor != null)*/)
                     {
                         // we can remove useless row and column
@@ -170,6 +186,7 @@ namespace Pic2Website.core
 
                         rows[i] = element;
                     }
+                  
                 }
                 // check if there aren't text rows inside columns
                 else if (columnsCount > 1)
@@ -211,15 +228,27 @@ namespace Pic2Website.core
                             }
                         }
 
-                        if (titles.Count > 0)
+                        if (titles.Count > 1)
                         {
-                            var unify = MergeTexts(titles.ToArray(), false);
-                            foreach (var column in row.Columns)
+                            var sameSize = true;
+                            for (var j = 0; j < titles.Count - 1; j++)
                             {
-                                var element = column.Elements.First();
-                                if (element.GetType() == typeof(Text))
+                                if (!Util.AreSame(titles[j].FontSize, titles[j + 1].FontSize, 8))
                                 {
-                                    CopyTextStyle(unify, (Text)element);
+                                    sameSize = false;
+                                }
+                            }
+
+                            if (sameSize)
+                            {
+                                var unify = MergeTexts(titles.ToArray(), false);
+                                foreach (var column in row.Columns)
+                                {
+                                    var element = column.Elements.First();
+                                    if (element.GetType() == typeof(Text))
+                                    {
+                                        CopyTextStyle(unify, (Text)element);
+                                    }
                                 }
                             }
                         }
@@ -285,7 +314,7 @@ namespace Pic2Website.core
                 var secondRow = rows[i + 1];
 
                 // check if items are really rows and not just words next to each other
-                if (secondRow.Rect.Top < firstRow.Rect.Bottom)
+                if (secondRow.Rect.Top < firstRow.Rect.Bottom && secondRow.Rect.Width != 0 && firstRow.Rect.Width != 0)
                 {
                     return;
                 }
@@ -504,7 +533,7 @@ namespace Pic2Website.core
                             index++;
                             previousGap = firstGap;
 
-                            if (index + 2 == columns.Count && Util.AreSame(firstGap, secondGap, 4))
+                            if (index + 2 == columns.Count && Util.AreSame(firstGap, secondGap, 4) && secondColumn.Elements.Count == 1)
                             {
                                 mergePairs.Add(new Tuple<int, int>(index, index + 1));
                             }
@@ -580,7 +609,7 @@ namespace Pic2Website.core
                                 {
                                     var columnWidth = 0;
                                     var columnElements = new List<Element>();
-                                    var isList = pair.Item2 - pair.Item1 + 1 >= 4 && (row.Rect.Height - row.Margin[0] - row.Margin[2]) <= 100;
+                                    var isList = pair.Item2 - pair.Item1 + 1 >= 3 && (row.Rect.Height - row.Margin[0] - row.Margin[2]) <= 100;
                                     var newColumn = new Column();
 
                                     for (var i = pair.Item1; i <= pair.Item2; i++)
@@ -643,6 +672,8 @@ namespace Pic2Website.core
                                         {
                                             total += element.Margin[1];
                                         }
+                                        var topMargin = (int) columnElements.Average(e => e.Margin[0]);
+                                        var bottomMargin = (int) columnElements.Average(e => e.Margin[2]);
                                         var rightMargin = (int) Math.Floor(total / (columnElements.Count() - 1));
 
                                         foreach (var element in columnElements)
@@ -662,8 +693,8 @@ namespace Pic2Website.core
 
                                             // items should have same space in between
                                             item.Link.Margin[1] = element == columnElements.Last() ? 0 : rightMargin;
-                                            // items have vertical align middle
-                                            item.Link.Margin[0] = item.Link.Margin[2] = 0;
+                                            item.Link.Margin[0] = topMargin;
+                                            item.Link.Margin[2] = bottomMargin;
                                             element.Width = 0;
                                             element.Padding = new[] { 0, 0, 0, 0 };
                                             element.Margin = new[] { 0, 0, 0, 0 };
@@ -815,6 +846,12 @@ namespace Pic2Website.core
                         {
                             match = -1;
                         }*/
+
+                        // rows are too far from each other
+                        if (currentRow.Rect.Top - previousRow.Rect.Bottom > 20)
+                        {
+                            match = -1;
+                        }
 
                         // it has other background
                         if (match != -1 && fluid && column.MarginCalc[1].Contains("calc"))
@@ -1279,7 +1316,7 @@ namespace Pic2Website.core
                         if (j == 0 || element.Width != 0 && elementsAccumulator <= columns[i].Width)
                         {
                             // texts need only padding (because of margin collapsing)
-                            if (element.GetType() == typeof(Text))
+                            if (element.GetType() == typeof(Text) && element.BackgroundColor == null)
                             {
                                 element.Padding = element.Padding.Zip(element.Margin, (a, b) => a + b).ToArray();
                                 element.Margin = new int[] { 0, 0, 0, 0 };
@@ -1314,7 +1351,7 @@ namespace Pic2Website.core
                             }
                         }
 
-                        if (column.BackgroundColor != null)
+                        if (column.BackgroundColor != null && !Util.SameColors(column.BackgroundColor, element.Color))
                         {
                             element.BackgroundColor = column.BackgroundColor;
                         }

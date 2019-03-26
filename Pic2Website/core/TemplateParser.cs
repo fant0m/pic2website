@@ -991,13 +991,13 @@ namespace Pic2Website.core
                         //var l = 0;
                         //foreach (var contour in alignHorizontal)
                         //{
-                            //var roi2 = _image.Clone(contour);
-                            //var roi2 = _image.Clone();
-                            //Cv2.Rectangle(roi2, new Point(contour.X, contour.Y), new Point(contour.X + contour.Width, contour.Y + contour.Height), Scalar.FromRgb(r.Next(0, 255), r.Next(0, 255), r.Next(0, 255)));
-                            //roi2.SaveImage("image2-" + test + ".png");
-                            //l++;
-                            //test++;
-                            //Cv2.Rectangle(copy, new Point(contour.X, contour.Y), new Point(contour.X + contour.Width, contour.Y + contour.Height), Scalar.FromRgb(r.Next(0, 255), r.Next(0, 255), r.Next(0, 255)));
+                        //    //var roi2 = _image.Clone(contour);
+                        //    var roi2 = _image.Clone();
+                        //    Cv2.Rectangle(roi2, new Point(contour.X, contour.Y), new Point(contour.X + contour.Width, contour.Y + contour.Height), Scalar.FromRgb(r.Next(0, 255), r.Next(0, 255), r.Next(0, 255)));
+                        //    roi2.SaveImage("image2-" + test + ".png");
+                        //    l++;
+                        //    test++;
+                        //    //Cv2.Rectangle(copy, new Point(contour.X, contour.Y), new Point(contour.X + contour.Width, contour.Y + contour.Height), Scalar.FromRgb(r.Next(0, 255), r.Next(0, 255), r.Next(0, 255)));
                         //}
 
                         //Debug.WriteLine("počet " + alignHorizontal.Length);
@@ -1043,6 +1043,7 @@ namespace Pic2Website.core
 
                                 while (gap <= maxTextGap || merge.IntersectsWith(nextRect) || horizontalMerge)
                                 {
+                                    // @todo logku veľkosti medzery treba prerobiť
                                     // Add merging item's width
                                     if (!merge.IntersectsWith(nextRect))
                                     {
@@ -1527,7 +1528,7 @@ namespace Pic2Website.core
                 }
             }
 
-            var allowedChars = new char[] { ' ', ',', '.', '/', '©', '@', '-', ':', '+', '(', ')', '\'', '|', '#', '&', '"', '?', '=', '‘', '’', '$', '€', '”', '*', '>', '<' };
+            var allowedChars = new char[] { ' ', ',', '.', '/', '©', '@', '-', ':', '+', '(', ')', '\'', '|', '#', '&', '"', '?', '=', '‘', '’', '$', '€', '”', '*', /*'>', '<',*/ '“', '»', '«' };
             bool result = textElem.GetText()[0].All(c => char.IsLetterOrDigit(c) || allowedChars.Contains(c));
             if (!result)
             {
@@ -1624,7 +1625,7 @@ namespace Pic2Website.core
                 var rect = Cv2.BoundingRect(edges);
                 var area = Cv2.ContourArea(edges, false);
 
-                //Debug.WriteLine("area " + area + " left " + rect.Left + " right " + rect.Right + " width " + rect.Width);
+                Debug.WriteLine("area " + area + " left " + rect.Left + " right " + rect.Right + " width " + rect.Width);
 
                 // add left corners from 50 % left-most of image
                 //if (rect.Left < width * 0.50 && (area > 100 || rect.Width * rect.Height > 100))

@@ -123,7 +123,7 @@ namespace Pic2Website.Pages
 
         private void TestParser()
         {
-            var templateParser = new TemplateParser("wwwroot/images/template16.png", "1");
+            var templateParser = new TemplateParser("wwwroot/images/fri6.png", "1");
             templateParser.Analyse();
             templateParser.Convert(Response);
         }

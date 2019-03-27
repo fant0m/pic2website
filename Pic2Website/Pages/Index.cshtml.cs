@@ -15,6 +15,7 @@ namespace Pic2Website.Pages
             new Tuple<string, string, string, string>("images/template4.png", "Portfolio template", "1920x3905px, expected wait time 1 minute", "eng"),
             new Tuple<string, string, string, string>("images/discover-greece.jpg", "Discover Greece template", "1470x5560px, expected wait time 1 minute", "eng"),
             new Tuple<string, string, string, string>("images/lms.png", "Learning management system template", "1920x5758px, expected wait time 1 minute", "eng"),
+            //new Tuple<string, string, string, string>("images/template6.png", "Portfolio 2 template", "1920x13427px, expected wait time 2 minutes", "eng"),
             new Tuple<string, string, string, string>("images/template12.png", "E-shop template", "1500x2187px, expected wait time 1 minute", "eng"),
             new Tuple<string, string, string, string>("images/email-template.png", "E-mail template", "800x1816px, expected wait time 30 seconds", "eng"),
             new Tuple<string, string, string, string>("images/maker.png", "Agency template", "1580x5290px, expected wait time 1 minute", "eng"),

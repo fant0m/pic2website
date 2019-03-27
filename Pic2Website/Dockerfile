@@ -1,9 +1,9 @@
-FROM microsoft/dotnet:3.0-aspnetcore-runtime-stretch-slim AS base
+FROM mcr.microsoft.com/dotnet/core/aspnet:2.2-stretch-slim AS base
 WORKDIR /app
 EXPOSE 80
 EXPOSE 443
 
-FROM microsoft/dotnet:3.0-sdk-stretch AS build
+FROM mcr.microsoft.com/dotnet/core/sdk:2.2-stretch AS build
 WORKDIR /src
 COPY ["Pic2Website/Pic2Website.csproj", "Pic2Website/"]
 RUN dotnet restore "Pic2Website/Pic2Website.csproj"

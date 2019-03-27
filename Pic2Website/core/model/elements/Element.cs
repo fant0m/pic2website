@@ -209,7 +209,7 @@ namespace Pic2Website.core.model.elements
                     sheet += selector + ":first-of-type {\n";
                 }
 
-                sheet += "\tmargin-left:" + Margin[3] + "px;\n";
+                sheet += "\tmargin-left: " + Margin[3] + "px;";
                 sheet += "\n}\n";
 
                 Margin[3] = 0;
@@ -246,7 +246,7 @@ namespace Pic2Website.core.model.elements
                         sheet += selector + ":last-of-type {\n";
                     }
 
-                    sheet += "\tmargin-right:0;\n";
+                    sheet += "\tmargin-right: 0;";
                     sheet += "\n}\n";
                 }
             }

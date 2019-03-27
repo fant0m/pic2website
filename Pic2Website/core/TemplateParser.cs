@@ -35,11 +35,11 @@ namespace Pic2Website.core
         public const int MaxTextGap = 6;
         public const int MinColumnGap = 10; // @todo možno podľa šírky layoutu
 
-        public TemplateParser(string imagePath, string uuid)
+        public TemplateParser(string imagePath, string uuid, string language)
         {
             _imagePath = imagePath;
             _convertor = new WebConvertor(uuid);
-            _ocr = new Ocr();
+            _ocr = new Ocr(language);
         }
 
         public void Analyse()

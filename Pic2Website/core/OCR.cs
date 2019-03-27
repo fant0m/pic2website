@@ -17,10 +17,10 @@ namespace Pic2Website.core
         private TesseractEngine _tessOnly;
         private TesseractEngine _tessLstm;
 
-        public Ocr()
+        public Ocr(string language)
         {
-            _tessOnly = new TesseractEngine(@"./wwwroot/tessdata", "slk", EngineMode.TesseractOnly);
-            _tessLstm = new TesseractEngine(@"./wwwroot/tessdata", "slk", EngineMode.LstmOnly);
+            _tessOnly = new TesseractEngine(@"./wwwroot/tessdata", language, EngineMode.TesseractOnly);
+            _tessLstm = new TesseractEngine(@"./wwwroot/tessdata", language, EngineMode.LstmOnly);
         }
 
         public Text GetText(Bitmap imgBmp)

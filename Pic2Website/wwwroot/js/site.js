@@ -27,12 +27,17 @@ $(document).ready(function () {
                 if (data) {
                     if (data.key == 'error') {
                         $('#error').text(data.value).removeClass('d-none');
-
+                        $("html, body").animate({ scrollTop: 0 }, 600);
                     } else if (data.key == 'success') {
                         window.location.href = "/Result/" + data.value;
                     }
                 }
 
+                $('#loading').modal('hide');
+            },
+            error: function () {
+                $("html, body").animate({ scrollTop: 0 }, 600);
+                $('#error').text('Whoops. Server is busy please try again later.').removeClass('d-none');
                 $('#loading').modal('hide');
             }
         });

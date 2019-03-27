@@ -15,16 +15,13 @@ namespace Pic2Website
     {
         public static void Main(string[] args)
         {
-            CreateHostBuilder(args)
+            CreateWebHostBuilder(args)
                 .Build()
                 .Run();
         }
 
-        public static IHostBuilder CreateHostBuilder(string[] args) =>
-            Host.CreateDefaultBuilder(args)
-            .ConfigureWebHostDefaults(webBuilder =>
-            {
-                webBuilder.UseStartup<Startup>();
-            });
+        public static IWebHostBuilder CreateWebHostBuilder(string[] args) =>
+            WebHost.CreateDefaultBuilder(args)
+                .UseStartup<Startup>();
     }
 }

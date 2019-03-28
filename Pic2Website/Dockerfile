@@ -3,6 +3,20 @@ WORKDIR /app
 EXPOSE 80
 EXPOSE 443
 
+# install System.Drawing & leptonica native dependencies
+RUN apt-get update \
+    && apt-get install -y --allow-unauthenticated \
+        libc6-dev \
+        libgdiplus \
+        libx11-dev \
+		libgif7 \
+		libjpeg62 \
+		libopenjp2-7 \
+		libpng16-16 \
+		libtiff5 \
+		libwebp6 \
+     && rm -rf /var/lib/apt/lists/*
+
 FROM mcr.microsoft.com/dotnet/core/sdk:3.0-stretch AS build
 WORKDIR /src
 COPY ["Pic2Website/Pic2Website.csproj", "Pic2Website/"]

@@ -22,7 +22,7 @@
     <PackageReference Include="OpenCvSharp4" Version="4.0.0.20190108" />
     <PackageReference Include="OpenCvSharp4.runtime.ubuntu.18.04-x64" Version="4.0.0.20181225" />
     <PackageReference Include="OpenCvSharp4.runtime.win" Version="4.0.0.20190108" />
-    <PackageReference Include="Tesseract-test" Version="4.0.0-beta15" />
+    <PackageReference Include="Tesseract-test" Version="4.0.0-beta16" />
 
   </ItemGroup>
 
@@ -35,5 +35,19 @@
 
   <ItemGroup>
     <None Include="wwwroot\style.css" />
+  </ItemGroup>
+
+
+  <ItemGroup>
+    <None Update="C:\Users\tomsh\.nuget\packages\tesseract-test\4.0.0-beta16\build\\..\lib\x64\liblept1760.so">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+
+  <ItemGroup>
+    <None Update="C:\Users\tomsh\.nuget\packages\tesseract-test\4.0.0-beta16\build\\..\lib\x64\libtesseract400.so">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 </Project>

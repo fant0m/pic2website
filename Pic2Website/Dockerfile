@@ -15,6 +15,7 @@ RUN apt-get update \
 		libpng16-16 \
 		libtiff5 \
 		libwebp6 \
+		tesseract-ocr \
      && rm -rf /var/lib/apt/lists/*
 
 FROM mcr.microsoft.com/dotnet/core/sdk:3.0-stretch AS build

@@ -161,7 +161,10 @@ namespace Pic2Website.core
                                 // @todo not sure, môže byť situácia button ale vo vnútri zoberie text ako obrázok takže chceme mať aj bg color
                                 //if (element.GetType() != typeof(Image))
                                 //{
+                                if (!Util.SameColors(firstColumn.BackgroundColor, element.Color))
+                                {
                                     element.BackgroundColor = firstColumn.BackgroundColor;
+                                }
 
                                 //}
                                 

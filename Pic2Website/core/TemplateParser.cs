@@ -288,7 +288,7 @@ namespace Pic2Website.core
                 _templateStructure.Sections.Add(section);
             }
 
-            copy.SaveImage("wwwroot/images/output.png");
+            //copy.SaveImage("wwwroot/images/output.png");
             copy.SaveImage(_convertor.GetContentPath() + "structure.png");
 
             return startIndex;

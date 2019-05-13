@@ -208,7 +208,6 @@ namespace Pic2Website.core
             mostRightSections.Sort();
             mostRightSections.Reverse();
 
-            // @todo jaspravimm.png, môže sa stať že most left a most right má dokopy viac ako max layout, a stále sa môže stať že nenájde takú veľkú hodnotu takže bude treba zmeniť tie sekcie na fluid a vyhodiť z mostLeft a mostRight hodnoty
             // sections have correct maxLayout but global most left and most right is bigger than maxLayout
             if (mostRightSections.FirstOrDefault() - mostLeftSections.FirstOrDefault() > (int)maxLayout)
             {
@@ -234,7 +233,6 @@ namespace Pic2Website.core
                 var contours = sectionContours[section.Id];
 
                 // Analyse section background image / color
-                // @todo vymyslieť ako sa to má správať pri ďalších elementoch, či tam proste pošlem vždy len Element, alebo aj zoznam ktoré elementy nemá prechádzať atď.
                 var rectangles = ContoursToRects(contours);
                 ColorAnalyser.AnalyseSectionBackground(section, rectangles, _image);
 
@@ -263,10 +261,6 @@ namespace Pic2Website.core
                 }
 
                 // Process inner blocks
-                // @todo hm7.png nezoberie dobre text button ako sublement, algoritmu určite vadia rohy, to by chcelo nejak zisťovať a rovno aplikovať border-radius len pozor aby si to nemýlilo s inými tvarmi potom, kontrolovať sa musia iba rohy
-                // @todo pozadie elementov bude treba ešte tuning, niekedy treba aby row mal farbu; taktiež optimiser bude asi musieť prejsť a nechať farbu len v poslednej úrovni
-                // @todo text gap merging - space podľa fontu + info že je to text
-                // @todo replace element width with right padding
                 container.Rows = ProcessInnerBlocks(contours, copy, containerRect, section.BackgroundColor, section.Layout.Type == Layout.LayoutType.Fluid);
                 //container.Rows = new List<Element>();
 
@@ -439,7 +433,7 @@ namespace Pic2Website.core
             Debug.WriteLine("check is image " + contours.Count() + "," + parentRect.Width + "," + parentRect.Height);
 
             var checkSmallElements = rects.Where(e => (e.Width < 8 && e.Height < 8) || e.Height < 5 || e.Width < 5).Count();
-            Debug.WriteLine("počet malých elem " + checkSmallElements);
+            //Debug.WriteLine("počet malých elem " + checkSmallElements);
             if (checkSmallElements * 1.0 / rects.Count() >= 0.7)
             {
                 return true;
@@ -696,7 +690,6 @@ namespace Pic2Website.core
                     //    sectionRow.Padding[2] = latestBottom - rect.Bottom;
                     //}
 
-                    // @todo test
                     //sectionRow.BackgroundColor = new[] { r.Next(0, 255), r.Next(0, 255), r.Next(0, 255) };
 
                     var triple = new TemplateBlock<int, int, List<Rect>, Element>
@@ -771,7 +764,6 @@ namespace Pic2Website.core
                             latestElem.Rect = new Rect(latest.Item1, row.Item1, latest.Item2 - latest.Item1, row.Item2 - row.Item1);
                             if (latestElem.Rect.Height > 20)
                             {
-                                // @todo možno až na konci toto aplikovať, nakoľko v tomto momente nevieme či je dobrý nápad to aplikovať (vo vnútri môže byť text a na pozadie dá farbu textu)
                                 latestElem.BackgroundColor = _colorAnalyser.AnalyseRect(latestElem.Rect, color);
                             }
 
@@ -780,7 +772,6 @@ namespace Pic2Website.core
                                 var margin = (parent.Width / 100 * sectionRow.Margin[1]) * 2;
 
                                 // replace width with percentage value
-                                // @todo možno pozrieť aká je tam medzera a ak nie dosť veľká tak to tu nedávať
                                 if (latestElem.BackgroundColor != null)
                                 {
                                     var percents = Math.Ceiling(latestElem.Width / (parent.Width - margin) * 100);
@@ -1005,9 +996,6 @@ namespace Pic2Website.core
                         /* Column row letters merging start */
 
                         // connect letters into words
-                        // @todo tú medzeru medzi textom asi bude treba riešiť tak že sa zistí typ fontu, veľkosť a zistí sa koľko by mala mať px medzera
-                        // @todo taktiež sa bude spájať iba to čo je jasné že je text, t.j. podľa rozmerov určite nemôže spojiť input a button ako v template2
-                        // @todo asi bude aj tak problém zisťovať napr. či nie je vedľa textu ikona, bude sa musieť kontrolovať gap medzi ikonou a samotnými písmenami
                         var maxTextGap = MaxTextGap;
                         var mergedWidths = new List<double>();
                         var maxGap = 0;
@@ -1154,7 +1142,6 @@ namespace Pic2Website.core
                                 var index = Array.IndexOf(sectionRectsUnsorted, rect);
 
                                 // There's just one row and one column so we dont need these elements
-                                // @todo remove - toto už asi rieši optimiser
                                 if (sectionRecursiveRows[index].Count == 1 && sectionRecursiveRows[index].First().GetType() == typeof(Row) && 
                                     ((Row)sectionRecursiveRows[index].First()).Columns.Count == 1 && ((Row)sectionRecursiveRows[index].First()).Columns.First().Elements.Count == 1)
                                 {
@@ -1457,14 +1444,6 @@ namespace Pic2Website.core
                     }
                 }
 
-                /* Adjust column widths start */
-
-                // @todo asi width ostanú a len marginy sa nastavia, alebo všetky riadky budú musieť vedieť že majú fixnú width
-                // @todo neviem čo to malo robiť :-D
-
-                /* Adjust column widths end */
-
-
                 sectionRows.Add(sectionRow);
                 c++;
             }
@@ -1625,7 +1604,7 @@ namespace Pic2Website.core
                 var rect = Cv2.BoundingRect(edges);
                 var area = Cv2.ContourArea(edges, false);
 
-                Debug.WriteLine("area " + area + " left " + rect.Left + " right " + rect.Right + " width " + rect.Width);
+                //Debug.WriteLine("area " + area + " left " + rect.Left + " right " + rect.Right + " width " + rect.Width);
 
                 // add left corners from 50 % left-most of image
                 //if (rect.Left < width * 0.50 && (area > 100 || rect.Width * rect.Height > 100))

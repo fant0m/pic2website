@@ -612,7 +612,7 @@ namespace Pic2Website.core
                                 {
                                     var columnWidth = 0;
                                     var columnElements = new List<Element>();
-                                    var isList = pair.Item2 - pair.Item1 + 1 >= 3 && (row.Rect.Height - row.Margin[0] - row.Margin[2]) <= 100;
+                                    var isList = ((pair.Item2 - pair.Item1 + 1 >= 3 && columns.Count > 3) || pair.Item2 - pair.Item1 + 1 >= 4) && (row.Rect.Height - row.Margin[0] - row.Margin[2]) <= 100;
                                     var newColumn = new Column();
 
                                     for (var i = pair.Item1; i <= pair.Item2; i++)
